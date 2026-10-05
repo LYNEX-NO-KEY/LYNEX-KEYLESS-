@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local Lighting = game:GetService("Lighting")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -84,10 +85,7 @@ PlayerGroup:AddLabel("معرف اللاعب: " .. tostring(LocalPlayer.UserId))
 PlayerGroup:AddLabel("البينغ: " .. getPing() .. " ms")
 PlayerGroup:AddLabel("اللاعبين: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers)
 
--- ⚠️ FPS (جديد)
 Options.FPSLabel = PlayerGroup:AddLabel("الفريمات (FPS): ...")
-
--- ⚠️ وقت تشغيل السكربت (جديد)
 Options.SessionLabel = PlayerGroup:AddLabel("وقت التشغيل: 0 ث")
 
 PlayerGroup:AddButton("نسخ معرف اللاعب", function()
@@ -188,7 +186,7 @@ CommunityGroup:AddButton("نسخ رابط الديسكورد", function()
     end
 end)
 
--- ⚠️ تشغيل FPS counter
+-- FPS Counter
 local frameCount = 0
 local lastTime = tick()
 
@@ -205,7 +203,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ⚠️ تشغيل Session Time counter
+-- Session Time Counter
 local startTime = tick()
 
 task.spawn(function()
@@ -451,7 +449,6 @@ Toggles.AntiAFK = AntiGroup:AddToggle("AntiAFK", {
     end
 })
 
--- تطبيق المضادات
 task.spawn(function()
     while task.wait(0.1) do
         local char = LocalPlayer.Character
@@ -687,6 +684,7 @@ Options.FlightVerticalSpeed = FlightGroup:AddSlider("FlightVerticalSpeed", {
     Suffix = " وحدة/ث",
 })
 
+-- ميزات خاصة
 local SpecialGroup = Tabs["Player Options"]:AddLeftGroupbox("ميزات خاصة")
 
 Toggles.InfJump = SpecialGroup:AddToggle("InfJump", {
@@ -898,6 +896,89 @@ Toggles.Fly:OnChanged(function(state)
     end
 end)
 
+-- ⚠️ أوقات اليوم (جديد)
+local TimeGroup = Tabs["Player Options"]:AddRightGroupbox("الوقت والجودة")
+
+-- زر الليل
+TimeGroup:AddButton("🌙 ليل (Night)", function()
+    Lighting.ClockTime = 0  -- 12 منتصف الليل
+    Lighting.Brightness = 1
+    Lighting.OutdoorAmbient = Color3.fromRGB(20, 20, 40)
+    Lighting.Ambient = Color3.fromRGB(10, 10, 20)
+    Library:Notify("تم تغيير الوقت إلى الليل", 3)
+end)
+
+-- زر النهار
+TimeGroup:AddButton("☀️ نهار (Day)", function()
+    Lighting.ClockTime = 12  -- 12 الظهر
+    Lighting.Brightness = 2
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+    Library:Notify("تم تغيير الوقت إلى النهار", 3)
+end)
+
+-- زر زيادة الجودة
+TimeGroup:AddButton("⬆️ زيادة الجودة (High Quality)", function()
+    -- تحسين الإضاءة
+    Lighting.GlobalShadows = true
+    Lighting.ShadowSoftness = 0.5
+    Lighting.Brightness = 2
+    Lighting.EnvironmentDiffuseScale = 0.5
+    Lighting.EnvironmentSpecularScale = 0.5
+    Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+    
+    -- تحسين جودة الرندر
+    pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level10
+    end)
+    
+    -- إصلاح الرسومات
+    for _, effect in ipairs(Lighting:GetChildren()) do
+        if effect:IsA("BlurEffect") then effect.Size = 0
+        elseif effect:IsA("SunRaysEffect") then effect.Intensity = 0.1
+        elseif effect:IsA("ColorCorrectionEffect") then effect.Enabled = false
+        elseif effect:IsA("BloomEffect") then effect.Enabled = false
+        end
+    end
+    
+    -- تحسين جودة الأرضيات والتفاصيل
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("ResetButtonCallback", true)
+    end)
+    
+    Library:Notify("تم تفعيل الجودة العالية", 3)
+end)
+
+-- زر تقليل الجودة
+TimeGroup:AddButton("⬇️ تقليل الجودة (Low Quality)", function()
+    -- تقليل الإضاءة
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 1
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+    Lighting.OutdoorAmbient = Color3.fromRGB(100, 100, 100)
+    Lighting.Ambient = Color3.fromRGB(50, 50, 50)
+    
+    -- تقليل جودة الرندر
+    pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level1
+    end)
+    
+    -- إخفاء التفاصيل
+    for _, effect in ipairs(Lighting:GetChildren()) do
+        if effect:IsA("SunRaysEffect") then effect.Enabled = false
+        elseif effect:IsA("BloomEffect") then effect.Enabled = false
+        elseif effect:IsA("DepthOfFieldEffect") then effect.Enabled = false
+        end
+    end
+    
+    Library:Notify("تم تفعيل الجودة المنخفضة", 3)
+end)
+
+-- إضافة قسم للتحكم بالرسومات
+TimeGroup:AddLabel("ℹ️ الأزرار تغير الإضاءة والجودة")
+
 LocalPlayer.CharacterAdded:Connect(function()
     if Toggles.Fly.Value then
         Toggles.Fly:SetValue(false)
@@ -914,7 +995,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.6.0")
+NewsGroup:AddLabel("الإصدار: 1.7.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -924,11 +1005,11 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
+ChangelogGroup:AddLabel("[v1.7.0] الوقت والجودة")
+ChangelogGroup:AddLabel("- إضافة زر ليل/نهار")
+ChangelogGroup:AddLabel("- إضافة زر زيادة/تقليل الجودة")
 ChangelogGroup:AddLabel("[v1.6.0] FPS + Session Time")
-ChangelogGroup:AddLabel("- إضافة عداد الفريمات")
-ChangelogGroup:AddLabel("- إضافة وقت التشغيل")
 ChangelogGroup:AddLabel("[v1.5.0] مضاد AFK")
-ChangelogGroup:AddLabel("[v1.4.0] المضادات")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
