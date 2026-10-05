@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -350,7 +351,7 @@ end)
 CashGroup:AddLabel("ℹ️ اضغط الزر لتشغيل السكربت الأصلي")
 
 -- ═══════════════════════════════════════════
--- تبويب مضادات (جديد)
+-- تبويب مضادات
 -- ═══════════════════════════════════════════
 local AntiGroup = Tabs.AntiCheat:AddLeftGroupbox("مضادات الحماية")
 
@@ -419,6 +420,19 @@ Toggles.AntiCheatBypass = AntiGroup:AddToggle("AntiCheatBypass", {
     end
 })
 
+-- ⚠️ مضاد AFK (جديد)
+Toggles.AntiAFK = AntiGroup:AddToggle("AntiAFK", {
+    Text = "مضاد AFK",
+    Default = false,
+    Callback = function(state)
+        if state then
+            Library:Notify("تم تفعيل مضاد AFK", 3)
+        else
+            Library:Notify("تم إيقاف مضاد AFK", 3)
+        end
+    end
+})
+
 -- ═══ تطبيق المضادات ═══
 
 -- منطق مضاد الموت + مضاد التجميد + مضاد مكافحة الغش
@@ -428,14 +442,14 @@ task.spawn(function()
         if char then
             local hum = char:FindFirstChildOfClass("Humanoid")
             
-            -- مضاد الموت: يرجع الصحة كاملة
+            -- مضاد الموت
             if Toggles.AntiDeath and Toggles.AntiDeath.Value and hum then
                 if hum.Health <= 0 then
                     hum.Health = hum.MaxHealth
                 end
             end
             
-            -- مضاد التجميد: يشيل التجميد
+            -- مضاد التجميد
             if Toggles.AntiFreeze and Toggles.AntiFreeze.Value and hum then
                 if hum.WalkSpeed == 0 or hum.JumpPower == 0 then
                     hum.WalkSpeed = 16
@@ -443,7 +457,7 @@ task.spawn(function()
                 end
             end
             
-            -- مضاد مكافحة الغش: يرجع الخصائص للأصل
+            -- مضاد مكافحة الغش
             if Toggles.AntiCheatBypass and Toggles.AntiCheatBypass.Value and hum then
                 if hum.WalkSpeed > 500 then hum.WalkSpeed = 16 end
                 if hum.JumpPower > 500 then hum.JumpPower = 50 end
@@ -472,7 +486,6 @@ Toggles.AntiFling:OnChanged(function(state)
             if char then
                 local root = char:FindFirstChild("HumanoidRootPart")
                 if root then
-                    -- نثبت السرعة الدورانية
                     if root.AssemblyAngularVelocity.Magnitude > 100 then
                         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     end
@@ -486,6 +499,24 @@ Toggles.AntiFling:OnChanged(function(state)
         if flingConnection then
             flingConnection:Disconnect()
             flingConnection = nil
+        end
+    end
+end)
+
+-- ⚠️ منطق مضاد AFK (جديد)
+local afkConnection
+Toggles.AntiAFK:OnChanged(function(state)
+    if state then
+        afkConnection = LocalPlayer.Idled:Connect(function()
+            -- نستخدم VirtualUser لمنع الطرد
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+            Library:Notify("تم منع الطرد بسبب AFK", 3)
+        end)
+    else
+        if afkConnection then
+            afkConnection:Disconnect()
+            afkConnection = nil
         end
     end
 end)
@@ -721,7 +752,7 @@ Toggles.Noclip:OnChanged(function(state)
     end
 end)
 
--- ⚠️ زر الاختفاء (جديد)
+-- زر الاختفاء
 Toggles.Invisible = SpecialGroup:AddToggle("Invisible", {
     Text = "اختفاء (Invisible)",
     Default = false,
@@ -730,7 +761,6 @@ Toggles.Invisible = SpecialGroup:AddToggle("Invisible", {
         if not char then return end
         
         if state then
-            -- نخفي كل الأجزاء
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                     part.Transparency = 1
@@ -740,7 +770,6 @@ Toggles.Invisible = SpecialGroup:AddToggle("Invisible", {
             end
             Library:Notify("تم تفعيل الاختفاء", 3)
         else
-            -- نرجع الشفافية الأصلية
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                     part.Transparency = 0
@@ -884,7 +913,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.4.0")
+NewsGroup:AddLabel("الإصدار: 1.5.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -894,11 +923,12 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
-ChangelogGroup:AddLabel("[v1.4.0] تحديث المضادات")
+ChangelogGroup:AddLabel("[v1.5.0] مضاد AFK")
+ChangelogGroup:AddLabel("- إضافة مضاد AFK")
+ChangelogGroup:AddLabel("[v1.4.0] المضادات")
 ChangelogGroup:AddLabel("- إضافة تبويب المضادات")
 ChangelogGroup:AddLabel("- إضافة زر الاختفاء")
 ChangelogGroup:AddLabel("[v1.3.0] سرقة الفلوس")
-ChangelogGroup:AddLabel("[v1.2.0] إعدادات اللاعب")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
@@ -930,6 +960,10 @@ Library:OnUnload(function()
     if flingConnection then
         flingConnection:Disconnect()
         flingConnection = nil
+    end
+    if afkConnection then
+        afkConnection:Disconnect()
+        afkConnection = nil
     end
     print("Unloaded")
 end)
