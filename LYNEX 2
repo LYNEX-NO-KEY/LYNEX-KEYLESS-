@@ -84,6 +84,12 @@ PlayerGroup:AddLabel("معرف اللاعب: " .. tostring(LocalPlayer.UserId))
 PlayerGroup:AddLabel("البينغ: " .. getPing() .. " ms")
 PlayerGroup:AddLabel("اللاعبين: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers)
 
+-- ⚠️ FPS (جديد)
+Options.FPSLabel = PlayerGroup:AddLabel("الفريمات (FPS): ...")
+
+-- ⚠️ وقت تشغيل السكربت (جديد)
+Options.SessionLabel = PlayerGroup:AddLabel("وقت التشغيل: 0 ث")
+
 PlayerGroup:AddButton("نسخ معرف اللاعب", function()
     if setclipboard then
         setclipboard(tostring(LocalPlayer.UserId))
@@ -179,6 +185,48 @@ CommunityGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
         setclipboard("https://discord.gg/CkqKSRYau")
         Library:Notify("تم نسخ رابط الديسكورد!", 3)
+    end
+end)
+
+-- ⚠️ تشغيل FPS counter
+local frameCount = 0
+local lastTime = tick()
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = tick()
+    if now - lastTime >= 1 then
+        local fps = math.floor(frameCount / (now - lastTime))
+        if Options.FPSLabel then
+            Options.FPSLabel:Set("الفريمات (FPS): " .. fps)
+        end
+        frameCount = 0
+        lastTime = now
+    end
+end)
+
+-- ⚠️ تشغيل Session Time counter
+local startTime = tick()
+
+task.spawn(function()
+    while task.wait(1) do
+        local elapsed = math.floor(tick() - startTime)
+        local hours = math.floor(elapsed / 3600)
+        local minutes = math.floor((elapsed % 3600) / 60)
+        local seconds = elapsed % 60
+        
+        local timeStr
+        if hours > 0 then
+            timeStr = string.format("%d س %d د %d ث", hours, minutes, seconds)
+        elseif minutes > 0 then
+            timeStr = string.format("%d د %d ث", minutes, seconds)
+        else
+            timeStr = string.format("%d ث", seconds)
+        end
+        
+        if Options.SessionLabel then
+            Options.SessionLabel:Set("وقت التشغيل: " .. timeStr)
+        end
     end
 end)
 
@@ -355,101 +403,67 @@ CashGroup:AddLabel("ℹ️ اضغط الزر لتشغيل السكربت الأ�
 -- ═══════════════════════════════════════════
 local AntiGroup = Tabs.AntiCheat:AddLeftGroupbox("مضادات الحماية")
 
--- مضاد الموت
 Toggles.AntiDeath = AntiGroup:AddToggle("AntiDeath", {
     Text = "مضاد الموت",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد الموت", 3)
-        else
-            Library:Notify("تم إيقاف مضاد الموت", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد الموت" or "تم إيقاف مضاد الموت", 3)
     end
 })
 
--- مضاد القفز
 Toggles.AntiJump = AntiGroup:AddToggle("AntiJump", {
     Text = "مضاد القفز",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد القفز", 3)
-        else
-            Library:Notify("تم إيقاف مضاد القفز", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد القفز" or "تم إيقاف مضاد القفز", 3)
     end
 })
 
--- مضاد الفلينغ
 Toggles.AntiFling = AntiGroup:AddToggle("AntiFling", {
     Text = "مضاد الفلينغ",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد الفلينغ", 3)
-        else
-            Library:Notify("تم إيقاف مضاد الفلينغ", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد الفلينغ" or "تم إيقاف مضاد الفلينغ", 3)
     end
 })
 
--- مضاد التجميد
 Toggles.AntiFreeze = AntiGroup:AddToggle("AntiFreeze", {
     Text = "مضاد التجميد",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد التجميد", 3)
-        else
-            Library:Notify("تم إيقاف مضاد التجميد", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد التجميد" or "تم إيقاف مضاد التجميد", 3)
     end
 })
 
--- مضاد مكافحة الغش
 Toggles.AntiCheatBypass = AntiGroup:AddToggle("AntiCheatBypass", {
     Text = "مضاد مكافحة الغش",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد مكافحة الغش", 3)
-        else
-            Library:Notify("تم إيقاف مضاد مكافحة الغش", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد مكافحة الغش" or "تم إيقاف مضاد مكافحة الغش", 3)
     end
 })
 
--- ⚠️ مضاد AFK (جديد)
 Toggles.AntiAFK = AntiGroup:AddToggle("AntiAFK", {
     Text = "مضاد AFK",
     Default = false,
     Callback = function(state)
-        if state then
-            Library:Notify("تم تفعيل مضاد AFK", 3)
-        else
-            Library:Notify("تم إيقاف مضاد AFK", 3)
-        end
+        Library:Notify(state and "تم تفعيل مضاد AFK" or "تم إيقاف مضاد AFK", 3)
     end
 })
 
--- ═══ تطبيق المضادات ═══
-
--- منطق مضاد الموت + مضاد التجميد + مضاد مكافحة الغش
+-- تطبيق المضادات
 task.spawn(function()
     while task.wait(0.1) do
         local char = LocalPlayer.Character
         if char then
             local hum = char:FindFirstChildOfClass("Humanoid")
             
-            -- مضاد الموت
             if Toggles.AntiDeath and Toggles.AntiDeath.Value and hum then
                 if hum.Health <= 0 then
                     hum.Health = hum.MaxHealth
                 end
             end
             
-            -- مضاد التجميد
             if Toggles.AntiFreeze and Toggles.AntiFreeze.Value and hum then
                 if hum.WalkSpeed == 0 or hum.JumpPower == 0 then
                     hum.WalkSpeed = 16
@@ -457,7 +471,6 @@ task.spawn(function()
                 end
             end
             
-            -- مضاد مكافحة الغش
             if Toggles.AntiCheatBypass and Toggles.AntiCheatBypass.Value and hum then
                 if hum.WalkSpeed > 500 then hum.WalkSpeed = 16 end
                 if hum.JumpPower > 500 then hum.JumpPower = 50 end
@@ -467,7 +480,6 @@ task.spawn(function()
     end
 end)
 
--- منطق مضاد القفز
 UserInputService.JumpRequest:Connect(function()
     if Toggles.AntiJump and Toggles.AntiJump.Value then
         local hum = GetHumanoid(LocalPlayer)
@@ -477,7 +489,6 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- منطق مضاد الفلينغ
 local flingConnection
 Toggles.AntiFling:OnChanged(function(state)
     if state then
@@ -503,12 +514,10 @@ Toggles.AntiFling:OnChanged(function(state)
     end
 end)
 
--- ⚠️ منطق مضاد AFK (جديد)
 local afkConnection
 Toggles.AntiAFK:OnChanged(function(state)
     if state then
         afkConnection = LocalPlayer.Idled:Connect(function()
-            -- نستخدم VirtualUser لمنع الطرد
             VirtualUser:CaptureController()
             VirtualUser:ClickButton2(Vector2.new())
             Library:Notify("تم منع الطرد بسبب AFK", 3)
@@ -549,7 +558,6 @@ local function GetTargetPlayer()
     return Players:FindFirstChild(selected)
 end
 
--- السرعة
 local SpeedGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات السرعة")
 
 Toggles.SpeedEnabled = SpeedGroup:AddToggle("SpeedEnabled", {
@@ -586,7 +594,6 @@ Options.SpeedValue:OnChanged(function(value)
     end
 end)
 
--- القفز
 local JumpGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات القفز")
 
 Toggles.JumpEnabled = JumpGroup:AddToggle("JumpEnabled", {
@@ -625,7 +632,6 @@ Options.JumpValue:OnChanged(function(value)
     end
 end)
 
--- الجاذبية
 local GravityGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات الجاذبية")
 
 Toggles.GravityEnabled = GravityGroup:AddToggle("GravityEnabled", {
@@ -661,7 +667,6 @@ Options.GravityValue:OnChanged(function(value)
     end
 end)
 
--- الطيران
 local FlightGroup = Tabs["Player Options"]:AddLeftGroupbox("إعدادات الطيران")
 
 Options.FlightSpeed = FlightGroup:AddSlider("FlightSpeed", {
@@ -682,7 +687,6 @@ Options.FlightVerticalSpeed = FlightGroup:AddSlider("FlightVerticalSpeed", {
     Suffix = " وحدة/ث",
 })
 
--- ميزات خاصة
 local SpecialGroup = Tabs["Player Options"]:AddLeftGroupbox("ميزات خاصة")
 
 Toggles.InfJump = SpecialGroup:AddToggle("InfJump", {
@@ -715,7 +719,6 @@ task.spawn(function()
     end
 end)
 
--- اختراق الجدران
 Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
     Text = "اختراق الجدران",
     Default = false,
@@ -752,7 +755,6 @@ Toggles.Noclip:OnChanged(function(state)
     end
 end)
 
--- زر الاختفاء
 Toggles.Invisible = SpecialGroup:AddToggle("Invisible", {
     Text = "اختفاء (Invisible)",
     Default = false,
@@ -782,7 +784,6 @@ Toggles.Invisible = SpecialGroup:AddToggle("Invisible", {
     end
 })
 
--- الطيران
 Toggles.Fly = SpecialGroup:AddToggle("Fly", {
     Text = "وضع الطيران (جوال + كمبيوتر)",
     Default = false,
@@ -913,7 +914,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.5.0")
+NewsGroup:AddLabel("الإصدار: 1.6.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -923,12 +924,11 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
+ChangelogGroup:AddLabel("[v1.6.0] FPS + Session Time")
+ChangelogGroup:AddLabel("- إضافة عداد الفريمات")
+ChangelogGroup:AddLabel("- إضافة وقت التشغيل")
 ChangelogGroup:AddLabel("[v1.5.0] مضاد AFK")
-ChangelogGroup:AddLabel("- إضافة مضاد AFK")
 ChangelogGroup:AddLabel("[v1.4.0] المضادات")
-ChangelogGroup:AddLabel("- إضافة تبويب المضادات")
-ChangelogGroup:AddLabel("- إضافة زر الاختفاء")
-ChangelogGroup:AddLabel("[v1.3.0] سرقة الفلوس")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
