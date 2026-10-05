@@ -12,6 +12,7 @@ local Toggles = Library.Toggles
 -- الخدمات
 -- ═══════════════════════════════════════════
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -65,6 +66,7 @@ local Tabs = {
     Home = Window:AddTab("الرئيسية"),
     Players = Window:AddTab("اللاعبين"),
     Teleports = Window:AddTab("الانتقالات"),
+    CashStealer = Window:AddTab("سرقة فلوس تلقائي"),
     ["Player Options"] = Window:AddTab("إعدادات اللاعب"),
     News = Window:AddTab("الأخبار"),
     ["UI Settings"] = Window:AddTab("إعدادات الواجهة")
@@ -134,7 +136,6 @@ ServerGroup:AddButton("تغيير السيرفر", function()
     end
 end)
 
--- ⚠️ قسم معلومات المطور (جديد)
 local DevGroup = Tabs.Home:AddLeftGroupbox("معلومات المطور")
 
 DevGroup:AddLabel("المطور: @hamza000599")
@@ -301,6 +302,285 @@ OtherGroup:AddButton("البيانو", function() TeleportTo(CFrame.new(113.23, 
 OtherGroup:AddButton("الملعب", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
 OtherGroup:AddButton("المخيم", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
 OtherGroup:AddButton("الكوخ", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
+
+-- ═══════════════════════════════════════════
+-- تبويب سرقة فلوس تلقائي (جديد)
+-- ═══════════════════════════════════════════
+local CashGroup = Tabs.CashStealer:AddLeftGroupbox("سرقة الفلوس")
+
+_G.CashStealer = false
+_G.MaxRetries = 60
+_G.RetryDelay = 0.05
+_G.TeleportHeight = 3
+_G.Depth = 10
+
+local collected = 0
+local failed = 0
+local activeCount = 0
+local cashConnection = nil
+local activeJobs = {}
+local originalCFrame = nil
+
+local hasProx = pcall(function() return fireproximityprompt end)
+local hasClick = pcall(function() return fireclickdetector end)
+local hasTouch = pcall(function() return firetouchinterest end)
+
+local function updateUI()
+    if Options.CollectedLabel then
+        Options.CollectedLabel:Set("تم الجمع: " .. collected .. " | فشل: " .. failed)
+    end
+    if Options.ActiveLabel then
+        Options.ActiveLabel:Set("نشط: " .. activeCount)
+    end
+end
+
+local function isBlacklisted(fullName)
+    local n = fullName:lower()
+    for _, w in ipairs({"table","board","game","ludo","جلسة","طاولة","seat","chair","bench","lockedframe","barrier"}) do
+        if n:find(w) then return true end
+    end
+    return false
+end
+
+local function pressAll(item, char)
+    if not item or not item.Parent then return end
+    
+    local prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    if prompt and hasProx then
+        pcall(function()
+            if prompt.HoldDuration > 0 then prompt.HoldDuration = 0 end
+            fireproximityprompt(prompt)
+        end)
+    end
+    
+    local clicker = item:FindFirstChildOfClass("ClickDetector")
+    if clicker and hasClick then
+        pcall(fireclickdetector, clicker, 100)
+    end
+    
+    if hasTouch and item:IsA("BasePart") and char then
+        pcall(function()
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                firetouchinterest(root, item, 0)
+                firetouchinterest(root, item, 1)
+            end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    firetouchinterest(part, item, 0)
+                    firetouchinterest(part, item, 1)
+                end
+            end
+        end)
+    end
+    
+    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
+        local remote = ReplicatedStorage:FindFirstChild(name, true)
+        if remote then
+            pcall(function()
+                if remote:IsA("RemoteEvent") then
+                    remote:FireServer(item)
+                elseif remote:IsA("RemoteFunction") then
+                    remote:InvokeServer(item)
+                end
+            end)
+        end
+    end
+end
+
+local function isItemGone(item)
+    if not item or not item.Parent then return true end
+    if item:IsA("BasePart") and item.Transparency >= 0.95 then return true end
+    return false
+end
+
+local function goUnderground(pos)
+    local root = GetRoot(LocalPlayer)
+    if not root then return end
+    local targetPos = Vector3.new(pos.X, pos.Y - _G.Depth, pos.Z)
+    root.CFrame = CFrame.new(targetPos)
+end
+
+local function collectItem(item)
+    if not _G.CashStealer then return end
+    if activeJobs[item] then return end
+    if not item or not item.Parent then return end
+    
+    activeJobs[item] = true
+    activeCount += 1
+    updateUI()
+    
+    task.spawn(function()
+        pcall(function()
+            local root = GetRoot(LocalPlayer)
+            if not root then 
+                activeJobs[item] = nil
+                activeCount -= 1
+                updateUI()
+                return 
+            end
+            
+            local savedCFrame = originalCFrame or root.CFrame
+            local savedPos = savedCFrame.Position
+            
+            goUnderground(savedPos)
+            task.wait(0.03)
+            
+            local attempt = 0
+            while _G.CashStealer and attempt < _G.MaxRetries do
+                if not item or not item.Parent then break end
+                attempt += 1
+                
+                if root.Parent then
+                    root.CFrame = item.CFrame + Vector3.new(0, _G.TeleportHeight, 0)
+                else
+                    break
+                end
+                
+                local char = LocalPlayer.Character
+                if char then pressAll(item, char) end
+                
+                task.wait(_G.RetryDelay)
+                
+                if isItemGone(item) then break end
+            end
+            
+            if item and item.Parent then
+                failed += 1
+            else
+                collected += 1
+            end
+            
+            if root.Parent then
+                goUnderground(savedPos)
+                task.wait(0.02)
+            end
+            
+            if root.Parent then
+                root.CFrame = savedCFrame
+            end
+            
+            updateUI()
+        end)
+        activeJobs[item] = nil
+        activeCount -= 1
+        if activeCount < 0 then activeCount = 0 end
+        updateUI()
+    end)
+end
+
+local function startCash()
+    local root = GetRoot(LocalPlayer)
+    if root then originalCFrame = root.CFrame end
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.spawn(collectItem, obj)
+        end
+    end
+    
+    cashConnection = workspace.DescendantAdded:Connect(function(obj)
+        if not _G.CashStealer then return end
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.wait(0.03)
+            task.spawn(collectItem, obj)
+        end
+    end)
+end
+
+local function stopCash()
+    if cashConnection then cashConnection:Disconnect() cashConnection = nil end
+    activeJobs = {}
+    activeCount = 0
+    updateUI()
+    
+    local root = GetRoot(LocalPlayer)
+    if root and originalCFrame then
+        root.CFrame = originalCFrame
+    end
+end
+
+-- عناصر الواجهة
+Options.CollectedLabel = CashGroup:AddLabel("تم الجمع: 0 | فشل: 0")
+Options.ActiveLabel = CashGroup:AddLabel("نشط: 0")
+
+Toggles.CashStealer = CashGroup:AddToggle("CashStealer", {
+    Text = "تفعيل سرقة الفلوس التلقائية",
+    Default = false,
+    Callback = function(state)
+        _G.CashStealer = state
+        if state then
+            Library:Notify("تم تفعيل سرقة الفلوس!", 3)
+            startCash()
+        else
+            Library:Notify("تم إيقاف سرقة الفلوس", 3)
+            stopCash()
+        end
+    end
+})
+
+local SettingsGroup = Tabs.CashStealer:AddRightGroupbox("الإعدادات")
+
+Options.MaxRetries = SettingsGroup:AddSlider("MaxRetries", {
+    Text = "أقصى محاولات",
+    Default = 60,
+    Min = 10,
+    Max = 200,
+    Rounding = 1,
+    Callback = function(value)
+        _G.MaxRetries = value
+    end
+})
+
+Options.RetryDelay = SettingsGroup:AddSlider("RetryDelay", {
+    Text = "تأخير المحاولة",
+    Default = 0.05,
+    Min = 0.01,
+    Max = 0.5,
+    Rounding = 0.01,
+    Suffix = " ث",
+    Callback = function(value)
+        _G.RetryDelay = value
+    end
+})
+
+Options.TeleportHeight = SettingsGroup:AddSlider("TeleportHeight", {
+    Text = "ارتفاع الانتقال",
+    Default = 3,
+    Min = 0,
+    Max = 20,
+    Rounding = 1,
+    Callback = function(value)
+        _G.TeleportHeight = value
+    end
+})
+
+Options.Depth = SettingsGroup:AddSlider("Depth", {
+    Text = "عمق النزول تحت الأرض",
+    Default = 10,
+    Min = 0,
+    Max = 100,
+    Rounding = 1,
+    Callback = function(value)
+        _G.Depth = value
+    end,
+})
+
+SettingsGroup:AddButton("إعادة تعيين الإحصائيات", function()
+    collected = 0
+    failed = 0
+    updateUI()
+    Library:Notify("تم إعادة تعيين الإحصائيات", 3)
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    originalCFrame = nil
+    task.wait(2)
+    if _G.CashStealer then
+        local root = GetRoot(LocalPlayer)
+        if root then originalCFrame = root.CFrame end
+    end
+end)
 
 -- ═══════════════════════════════════════════
 -- تبويب إعدادات اللاعب
@@ -496,7 +776,7 @@ task.spawn(function()
     end
 end)
 
--- ⚠️ اختراق الجدران (Noclip) - جديد
+-- اختراق الجدران
 Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
     Text = "اختراق الجدران",
     Default = false,
@@ -505,7 +785,6 @@ Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
 local noclipConnection
 Toggles.Noclip:OnChanged(function(state)
     if state then
-        -- تفعيل الاختراق
         noclipConnection = RunService.Stepped:Connect(function()
             local char = LocalPlayer.Character
             if char then
@@ -518,12 +797,10 @@ Toggles.Noclip:OnChanged(function(state)
         end)
         Library:Notify("تم تفعيل اختراق الجدران", 3)
     else
-        -- إيقاف الاختراق
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
-        -- إرجاع التصادم
         local char = LocalPlayer.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
@@ -664,7 +941,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.1.0")
+NewsGroup:AddLabel("الإصدار: 1.2.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -674,13 +951,13 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
-ChangelogGroup:AddLabel("[v1.1.0] تحديث جديد")
+ChangelogGroup:AddLabel("[v1.2.0] تحديث جديد")
+ChangelogGroup:AddLabel("- إضافة سرقة الفلوس التلقائي")
+ChangelogGroup:AddLabel("[v1.1.0] تحديث سابق")
 ChangelogGroup:AddLabel("- إضافة معلومات المطور")
 ChangelogGroup:AddLabel("- إضافة اختراق الجدران")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
 ChangelogGroup:AddLabel("- إضافة الانتقالات (21 مكان)")
-ChangelogGroup:AddLabel("- إضافة مشاهدة اللاعبين")
-ChangelogGroup:AddLabel("- إضافة وضع الطيران")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
 CreditsGroup:AddLabel("المطور: فريق LYNEX")
@@ -707,6 +984,10 @@ Library:OnUnload(function()
     if noclipConnection then
         noclipConnection:Disconnect()
         noclipConnection = nil
+    end
+    if cashConnection then
+        cashConnection:Disconnect()
+        cashConnection = nil
     end
     print("Unloaded")
 end)
