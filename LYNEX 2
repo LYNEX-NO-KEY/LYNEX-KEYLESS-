@@ -1,1 +1,635 @@
+-- ═══════════════════════════════════════════
+-- LinoriaLib Load
+-- ═══════════════════════════════════════════
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/addons/SaveManager.lua"))()
 
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+-- ═══════════════════════════════════════════
+-- Services
+-- ═══════════════════════════════════════════
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ═══════════════════════════════════════════
+-- Helper Functions
+-- ═══════════════════════════════════════════
+local function getPing()
+    local ok, result = pcall(function()
+        return math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    end)
+    if ok and result then return result end
+    return 0
+end
+
+local function GetHumanoid(player)
+    if not player or not player.Character then return nil end
+    return player.Character:FindFirstChildOfClass("Humanoid")
+end
+
+local function GetRoot(player)
+    if not player or not player.Character then return nil end
+    return player.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function TeleportTo(cframe)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = cframe
+        Library:Notify("Teleported!", 2)
+    else
+        Library:Notify("Character not found", 3)
+    end
+end
+
+-- ═══════════════════════════════════════════
+-- Create Window
+-- ═══════════════════════════════════════════
+local Window = Library:CreateWindow({
+    Title = "LYNEX Hub",
+    Center = true,
+    AutoShow = true,
+    TabPadding = 8,
+    MenuFadeTime = 0.2
+})
+
+local Tabs = {
+    Home = Window:AddTab("Home"),
+    Players = Window:AddTab("Players"),
+    Teleports = Window:AddTab("Teleports"),
+    ["Player Options"] = Window:AddTab("Player Options"),
+    News = Window:AddTab("News"),
+    ["UI Settings"] = Window:AddTab("UI Settings")
+}
+
+-- ═══════════════════════════════════════════
+-- HOME TAB
+-- ═══════════════════════════════════════════
+local PlayerGroup = Tabs.Home:AddLeftGroupbox("Player Info")
+
+PlayerGroup:AddLabel("Username: @" .. LocalPlayer.Name)
+PlayerGroup:AddLabel("User ID: " .. tostring(LocalPlayer.UserId))
+PlayerGroup:AddLabel("Ping: " .. getPing() .. " ms")
+PlayerGroup:AddLabel("Players: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers)
+
+PlayerGroup:AddButton("Copy User ID", function()
+    if setclipboard then
+        setclipboard(tostring(LocalPlayer.UserId))
+        Library:Notify("User ID Copied: " .. tostring(LocalPlayer.UserId), 3)
+    end
+end)
+
+local ServerGroup = Tabs.Home:AddRightGroupbox("Server Info")
+
+local ok, gameInfo = pcall(function()
+    return MarketplaceService:GetProductInfo(game.PlaceId)
+end)
+local gameName = (ok and gameInfo and gameInfo.Name) or "Unknown"
+
+ServerGroup:AddLabel("Game: " .. gameName)
+ServerGroup:AddLabel("Place ID: " .. tostring(game.PlaceId))
+ServerGroup:AddLabel("Job ID: " .. game.JobId)
+
+ServerGroup:AddButton("Copy Job ID", function()
+    if setclipboard then
+        setclipboard(game.JobId)
+        Library:Notify("Job ID Copied", 3)
+    end
+end)
+
+ServerGroup:AddButton("Rejoin Server", function()
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+end)
+
+ServerGroup:AddButton("Server Hop", function()
+    Library:Notify("Searching for server...", 3)
+    local ok2, result = pcall(function()
+        return HttpService:GetAsync(
+            "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
+        )
+    end)
+    if ok2 then
+        local data = HttpService:JSONDecode(result)
+        local servers = {}
+        for _, server in ipairs(data.data) do
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                table.insert(servers, server.id)
+            end
+        end
+        if #servers > 0 then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
+        else
+            Library:Notify("No servers found", 3)
+        end
+    else
+        Library:Notify("Failed to fetch servers", 3)
+    end
+end)
+
+local CommunityGroup = Tabs.Home:AddLeftGroupbox("Community")
+
+CommunityGroup:AddButton("Copy Discord Link", function()
+    if setclipboard then
+        setclipboard("https://discord.gg/CkqKSRYau")
+        Library:Notify("Discord link copied!", 3)
+    end
+end)
+
+-- ═══════════════════════════════════════════
+-- PLAYERS TAB
+-- ═══════════════════════════════════════════
+local PlayersGroup = Tabs.Players:AddLeftGroupbox("Players Online")
+
+_G.Spectating = nil
+
+local function StopSpectate()
+    local camera = workspace.CurrentCamera
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        camera.CameraSubject = char.Humanoid
+    end
+    _G.Spectating = nil
+    Library:Notify("Stopped spectating", 2)
+end
+
+local function StartSpectate(player)
+    local camera = workspace.CurrentCamera
+    local targetChar = player.Character
+    if targetChar and targetChar:FindFirstChildOfClass("Humanoid") then
+        camera.CameraSubject = targetChar.Humanoid
+        _G.Spectating = player
+        Library:Notify("Spectating @" .. player.Name, 2)
+    else
+        Library:Notify("Cannot spectate @" .. player.Name, 2)
+    end
+end
+
+local PlayerItems = {}
+
+local function CreatePlayerItems(player)
+    if PlayerItems[player] then return end
+
+    local specToggle = PlayersGroup:AddToggle("Spec_" .. player.UserId, {
+        Text = "Spectate: @" .. player.Name,
+        Default = false,
+        Callback = function(state)
+            if state then
+                if _G.Spectating and _G.Spectating ~= player then
+                    local oldToggle = Options["Spec_" .. _G.Spectating.UserId]
+                    if oldToggle then oldToggle:SetValue(false) end
+                end
+                StartSpectate(player)
+            else
+                if _G.Spectating == player then StopSpectate() end
+            end
+        end
+    })
+
+    local tpBtn = PlayersGroup:AddButton("Teleport to @" .. player.Name, function()
+        local char = LocalPlayer.Character
+        local targetChar = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+            Library:Notify("Teleported to @" .. player.Name, 3)
+        else
+            Library:Notify("Cannot teleport", 3)
+        end
+    end)
+
+    PlayerItems[player] = { toggle = specToggle, button = tpBtn }
+end
+
+local function RemovePlayerItems(player)
+    if PlayerItems[player] then
+        pcall(function() PlayerItems[player].toggle:Remove() end)
+        pcall(function() PlayerItems[player].button:Remove() end)
+        PlayerItems[player] = nil
+    end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then CreatePlayerItems(player) end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    task.wait(0.5)
+    CreatePlayerItems(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    RemovePlayerItems(player)
+end)
+
+-- ═══════════════════════════════════════════
+-- TELEPORTS TAB (جديد)
+-- ═══════════════════════════════════════════
+local StartGroup = Tabs.Teleports:AddLeftGroupbox("Start")
+local IslandGroup = Tabs.Teleports:AddLeftGroupbox("Islands")
+local FishingGroup = Tabs.Teleports:AddLeftGroupbox("Fishing")
+local ShopsGroup = Tabs.Teleports:AddRightGroupbox("Shops")
+local BanksGroup = Tabs.Teleports:AddRightGroupbox("Banks")
+local OtherGroup = Tabs.Teleports:AddRightGroupbox("Other")
+
+-- Start
+StartGroup:AddButton("Start", function() TeleportTo(CFrame.new(-154.62, 5.17, 4.80)) end)
+
+-- Islands
+IslandGroup:AddButton("Coffee", function() TeleportTo(CFrame.new(46.80, 4.86, -282.78)) end)
+IslandGroup:AddButton("Tent", function() TeleportTo(CFrame.new(-308.12, 4.62, -257.02)) end)
+IslandGroup:AddButton("Stage", function() TeleportTo(CFrame.new(-307.16, 8.82, -176.99)) end)
+IslandGroup:AddButton("Restaurant", function() TeleportTo(CFrame.new(-153.43, 8.18, 262.25)) end)
+IslandGroup:AddButton("Shop", function() TeleportTo(CFrame.new(-90.87, 5.55, 282.49)) end)
+IslandGroup:AddButton("Snow Island", function() TeleportTo(CFrame.new(-35.88, 5.34, 505.95)) end)
+IslandGroup:AddButton("Desert", function() TeleportTo(CFrame.new(-33.01, 5.18, -180.50)) end)
+IslandGroup:AddButton("Private Island", function() TeleportTo(CFrame.new(644.16, 227.76, -98.30)) end)
+
+-- Fishing
+FishingGroup:AddButton("Fishing 1", function() TeleportTo(CFrame.new(-317.16, 15.29, 382.65)) end)
+FishingGroup:AddButton("Fishing 2", function() TeleportTo(CFrame.new(-234.03, 5.07, 535.67)) end)
+FishingGroup:AddButton("Fishing 3", function() TeleportTo(CFrame.new(-268.61, 5.07, 693.13)) end)
+FishingGroup:AddButton("Fishing 4", function() TeleportTo(CFrame.new(197.76, 18.99, 644.84)) end)
+FishingGroup:AddButton("Fishing 5", function() TeleportTo(CFrame.new(-59.19, 15.25, 454.89)) end)
+
+-- Shops
+ShopsGroup:AddButton("Car Shop", function() TeleportTo(CFrame.new(238.83, 5.17, 164.67)) end)
+ShopsGroup:AddButton("Fish Shop", function() TeleportTo(CFrame.new(-106.07, 5.43, 612.25)) end)
+
+-- Banks
+BanksGroup:AddButton("Bank 1", function() TeleportTo(CFrame.new(265.02, 5.17, 179.93)) end)
+BanksGroup:AddButton("Bank 2", function() TeleportTo(CFrame.new(-128.40, 5.17, 22.61)) end)
+
+-- Other
+OtherGroup:AddButton("Piano", function() TeleportTo(CFrame.new(113.23, 7.01, -383.69)) end)
+OtherGroup:AddButton("Stadium", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
+OtherGroup:AddButton("Camp", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
+OtherGroup:AddButton("Cabin", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
+
+-- ═══════════════════════════════════════════
+-- PLAYER OPTIONS TAB
+-- ═══════════════════════════════════════════
+local TargetGroup = Tabs["Player Options"]:AddLeftGroupbox("Target Player")
+
+local playerNames = {}
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        table.insert(playerNames, player.Name)
+    end
+end
+
+Options.TargetPlayer = TargetGroup:AddDropdown("TargetPlayer", {
+    Values = playerNames,
+    Default = 1,
+    Multi = false,
+    Text = "Select Player",
+    Callback = function(value)
+        print("Target:", value)
+    end,
+})
+
+local function GetTargetPlayer()
+    local selected = Options.TargetPlayer.Value
+    if not selected then return nil end
+    return Players:FindFirstChild(selected)
+end
+
+-- Speed
+local SpeedGroup = Tabs["Player Options"]:AddRightGroupbox("Speed Settings")
+
+Toggles.SpeedEnabled = SpeedGroup:AddToggle("SpeedEnabled", {
+    Text = "Enable Speed",
+    Default = false,
+})
+
+Options.SpeedValue = SpeedGroup:AddSlider("SpeedValue", {
+    Text = "Walk Speed",
+    Default = 16,
+    Min = 16,
+    Max = 500,
+    Rounding = 1,
+    Suffix = " studs",
+})
+
+Toggles.SpeedEnabled:OnChanged(function(state)
+    local target = GetTargetPlayer()
+    if not target then return end
+    local hum = GetHumanoid(target)
+    if hum then
+        hum.WalkSpeed = state and Options.SpeedValue.Value or 16
+    end
+end)
+
+Options.SpeedValue:OnChanged(function(value)
+    if Toggles.SpeedEnabled.Value then
+        local target = GetTargetPlayer()
+        if not target then return end
+        local hum = GetHumanoid(target)
+        if hum then
+            hum.WalkSpeed = value
+        end
+    end
+end)
+
+-- Jump
+local JumpGroup = Tabs["Player Options"]:AddRightGroupbox("Jump Settings")
+
+Toggles.JumpEnabled = JumpGroup:AddToggle("JumpEnabled", {
+    Text = "Enable Jump Power",
+    Default = false,
+})
+
+Options.JumpValue = JumpGroup:AddSlider("JumpValue", {
+    Text = "Jump Power",
+    Default = 50,
+    Min = 50,
+    Max = 500,
+    Rounding = 1,
+    Suffix = " studs",
+})
+
+Toggles.JumpEnabled:OnChanged(function(state)
+    local target = GetTargetPlayer()
+    if not target then return end
+    local hum = GetHumanoid(target)
+    if hum then
+        hum.UseJumpPower = true
+        hum.JumpPower = state and Options.JumpValue.Value or 50
+    end
+end)
+
+Options.JumpValue:OnChanged(function(value)
+    if Toggles.JumpEnabled.Value then
+        local target = GetTargetPlayer()
+        if not target then return end
+        local hum = GetHumanoid(target)
+        if hum then
+            hum.UseJumpPower = true
+            hum.JumpPower = value
+        end
+    end
+end)
+
+-- Gravity
+local GravityGroup = Tabs["Player Options"]:AddRightGroupbox("Gravity Settings")
+
+Toggles.GravityEnabled = GravityGroup:AddToggle("GravityEnabled", {
+    Text = "Enable Gravity",
+    Default = false,
+})
+
+Options.GravityValue = GravityGroup:AddSlider("GravityValue", {
+    Text = "Gravity",
+    Default = 196,
+    Min = 0,
+    Max = 500,
+    Rounding = 1,
+})
+
+Toggles.GravityEnabled:OnChanged(function(state)
+    local target = GetTargetPlayer()
+    if not target then return end
+    local hum = GetHumanoid(target)
+    if hum then
+        hum.Gravity = state and Options.GravityValue.Value or 196
+    end
+end)
+
+Options.GravityValue:OnChanged(function(value)
+    if Toggles.GravityEnabled.Value then
+        local target = GetTargetPlayer()
+        if not target then return end
+        local hum = GetHumanoid(target)
+        if hum then
+            hum.Gravity = value
+        end
+    end
+end)
+
+-- Flight
+local FlightGroup = Tabs["Player Options"]:AddLeftGroupbox("Flight Settings")
+
+Options.FlightSpeed = FlightGroup:AddSlider("FlightSpeed", {
+    Text = "Flight Speed",
+    Default = 50,
+    Min = 10,
+    Max = 500,
+    Rounding = 1,
+    Suffix = " studs/s",
+})
+
+Options.FlightVerticalSpeed = FlightGroup:AddSlider("FlightVerticalSpeed", {
+    Text = "Vertical Speed",
+    Default = 30,
+    Min = 5,
+    Max = 200,
+    Rounding = 1,
+    Suffix = " studs/s",
+})
+
+-- Special Features
+local SpecialGroup = Tabs["Player Options"]:AddLeftGroupbox("Special Features")
+
+Toggles.InfJump = SpecialGroup:AddToggle("InfJump", {
+    Text = "Infinite Jump",
+    Default = false,
+})
+
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfJump.Value then
+        local hum = GetHumanoid(LocalPlayer)
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+Toggles.Spin = SpecialGroup:AddToggle("Spin", {
+    Text = "Spin Player",
+    Default = false,
+})
+
+task.spawn(function()
+    while task.wait() do
+        if Toggles.Spin.Value then
+            local root = GetRoot(LocalPlayer)
+            if root then
+                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(5), 0)
+            end
+        end
+    end
+end)
+
+-- Fly Mode
+Toggles.Fly = SpecialGroup:AddToggle("Fly", {
+    Text = "Fly Mode (Mobile + PC)",
+    Default = false,
+})
+
+local flyConnection
+local flyBodyGyro
+local flyBodyVelocity
+
+local function StopFly()
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+
+    local char = LocalPlayer.Character
+    if char then
+        local root = char:FindFirstChild("HumanoidRootPart")
+        local hum = GetHumanoid(LocalPlayer)
+
+        if root then
+            if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+            if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+        end
+
+        if hum then
+            hum.PlatformStand = false
+        end
+    end
+
+    Library:Notify("Fly disabled", 3)
+end
+
+local function StartFly()
+    local char = LocalPlayer.Character
+    if not char then
+        Library:Notify("No character found", 3)
+        return
+    end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = GetHumanoid(LocalPlayer)
+    if not root or not hum then
+        Library:Notify("Cannot start fly", 3)
+        return
+    end
+
+    hum.PlatformStand = true
+
+    flyBodyGyro = Instance.new("BodyGyro")
+    flyBodyGyro.P = 9e4
+    flyBodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    flyBodyGyro.CFrame = root.CFrame
+    flyBodyGyro.Parent = root
+
+    flyBodyVelocity = Instance.new("BodyVelocity")
+    flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    flyBodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    flyBodyVelocity.Parent = root
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        local hum2 = GetHumanoid(LocalPlayer)
+        local root2 = GetRoot(LocalPlayer)
+        if not hum2 or not root2 then return end
+
+        local speed = Options.FlightSpeed.Value
+        local verticalSpeed = Options.FlightVerticalSpeed.Value
+
+        local camera = workspace.CurrentCamera
+        local moveDirection = hum2.MoveDirection
+
+        local velocity = Vector3.new(0, 0, 0)
+
+        if moveDirection.Magnitude > 0 then
+            local cameraCF = camera.CFrame
+            local forward = cameraCF.LookVector
+            local right = cameraCF.RightVector
+
+            forward = Vector3.new(forward.X, 0, forward.Z).Unit
+            right = Vector3.new(right.X, 0, right.Z).Unit
+
+            local worldMove = (forward * moveDirection.Z + right * moveDirection.X).Unit
+            velocity = worldMove * speed
+        end
+
+        local cameraLook = camera.CFrame.LookVector
+        local verticalInput = cameraLook.Y
+
+        if math.abs(verticalInput) > 0.1 then
+            velocity = velocity + Vector3.new(0, verticalInput * verticalSpeed, 0)
+        end
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            velocity = velocity + Vector3.new(0, verticalSpeed, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            velocity = velocity - Vector3.new(0, verticalSpeed, 0)
+        end
+
+        flyBodyVelocity.Velocity = velocity
+        flyBodyGyro.CFrame = CFrame.new(root2.Position, root2.Position + cameraLook)
+    end)
+
+    Library:Notify("Fly enabled - استخدم الجويستيك للحركة", 4)
+end
+
+Toggles.Fly:OnChanged(function(state)
+    if state then
+        StartFly()
+    else
+        StopFly()
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if Toggles.Fly.Value then
+        Toggles.Fly:SetValue(false)
+    end
+end)
+
+-- ═══════════════════════════════════════════
+-- NEWS TAB
+-- ═══════════════════════════════════════════
+local NewsGroup = Tabs.News:AddLeftGroupbox("Latest Updates")
+NewsGroup:AddLabel("Version: 1.0.0")
+NewsGroup:AddLabel("Status: Active")
+NewsGroup:AddButton("Copy Discord Link", function()
+    if setclipboard then
+        setclipboard("https://discord.gg/CkqKSRYau")
+        Library:Notify("Discord link copied!", 3)
+    end
+end)
+
+local ChangelogGroup = Tabs.News:AddRightGroupbox("Changelog")
+ChangelogGroup:AddLabel("[v1.0.0] Initial Release")
+ChangelogGroup:AddLabel("- Added Teleports (21 locations)")
+ChangelogGroup:AddLabel("- Added Player Spectate")
+ChangelogGroup:AddLabel("- Added Fly Mode")
+ChangelogGroup:AddLabel("- Added Speed/Jump/Gravity")
+
+local CreditsGroup = Tabs.News:AddLeftGroupbox("Credits")
+CreditsGroup:AddLabel("Developer: LYNEX Team")
+CreditsGroup:AddLabel("UI Library: LinoriaLib")
+CreditsGroup:AddLabel("Executor: Delta")
+
+-- ═══════════════════════════════════════════
+-- ThemeManager + SaveManager
+-- ═══════════════════════════════════════════
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+ThemeManager:SetFolder("LYNEXHub")
+SaveManager:SetFolder("LYNEXHub")
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+
+Library:Notify("Welcome @" .. LocalPlayer.Name .. " to LYNEX Hub", 5)
+
+Library:OnUnload(function()
+    StopSpectate()
+    StopFly()
+    print("Unloaded")
+end)
+
+print("✅ LYNEX Hub - Loaded")
