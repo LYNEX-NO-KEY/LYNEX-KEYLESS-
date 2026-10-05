@@ -304,7 +304,7 @@ OtherGroup:AddButton("المخيم", function() TeleportTo(CFrame.new(-112.13, 5
 OtherGroup:AddButton("الكوخ", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
 
 -- ═══════════════════════════════════════════
--- تبويب سرقة فلوس تلقائي (جديد)
+-- تبويب سرقة فلوس تلقائي
 -- ═══════════════════════════════════════════
 local CashGroup = Tabs.CashStealer:AddLeftGroupbox("سرقة الفلوس")
 
@@ -325,6 +325,8 @@ local hasProx = pcall(function() return fireproximityprompt end)
 local hasClick = pcall(function() return fireclickdetector end)
 local hasTouch = pcall(function() return firetouchinterest end)
 
+print("[Cash] Prox:", hasProx, "| Click:", hasClick, "| Touch:", hasTouch)
+
 local function updateUI()
     if Options.CollectedLabel then
         Options.CollectedLabel:Set("تم الجمع: " .. collected .. " | فشل: " .. failed)
@@ -336,9 +338,25 @@ end
 
 local function isBlacklisted(fullName)
     local n = fullName:lower()
-    for _, w in ipairs({"table","board","game","ludo","جلسة","طاولة","seat","chair","bench","lockedframe","barrier"}) do
+    for _, w in ipairs({"table","board","game","ludo","جلسة","طاولة","seat","chair","bench","lockedframe","barrier","player","character","humanoid"}) do
         if n:find(w) then return true end
     end
+    return false
+end
+
+local function isCashItem(obj)
+    if not obj or not obj.Parent then return false end
+    if isBlacklisted(obj:GetFullName()) then return false end
+    
+    local name = obj.Name:lower()
+    
+    if name == "cashdrop" then return true end
+    if name:find("cash") and not name:find("cashier") then return true end
+    if name:find("money") and not name:find("moneybag") then return true end
+    if name:find("coin") then return true end
+    if name:find("drop") and obj:IsA("BasePart") then return true end
+    if name:find("pickup") then return true end
+    
     return false
 end
 
@@ -346,6 +364,9 @@ local function pressAll(item, char)
     if not item or not item.Parent then return end
     
     local prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    if not prompt then
+        prompt = item:FindFirstChild("ProximityPrompt", true)
+    end
     if prompt and hasProx then
         pcall(function()
             if prompt.HoldDuration > 0 then prompt.HoldDuration = 0 end
@@ -354,6 +375,9 @@ local function pressAll(item, char)
     end
     
     local clicker = item:FindFirstChildOfClass("ClickDetector")
+    if not clicker then
+        clicker = item:FindFirstChild("ClickDetector", true)
+    end
     if clicker and hasClick then
         pcall(fireclickdetector, clicker, 100)
     end
@@ -365,16 +389,10 @@ local function pressAll(item, char)
                 firetouchinterest(root, item, 0)
                 firetouchinterest(root, item, 1)
             end
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    firetouchinterest(part, item, 0)
-                    firetouchinterest(part, item, 1)
-                end
-            end
         end)
     end
     
-    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
+    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash","ClaimCash","TakeCash"}) do
         local remote = ReplicatedStorage:FindFirstChild(name, true)
         if remote then
             pcall(function()
@@ -394,11 +412,15 @@ local function isItemGone(item)
     return false
 end
 
-local function goUnderground(pos)
-    local root = GetRoot(LocalPlayer)
-    if not root then return end
-    local targetPos = Vector3.new(pos.X, pos.Y - _G.Depth, pos.Z)
-    root.CFrame = CFrame.new(targetPos)
+local function findAllCash()
+    local cashItems = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if isCashItem(obj) then
+            table.insert(cashItems, obj)
+        end
+    end
+    print("[Cash] Found items:", #cashItems)
+    return cashItems
 end
 
 local function collectItem(item)
@@ -421,18 +443,17 @@ local function collectItem(item)
             end
             
             local savedCFrame = originalCFrame or root.CFrame
-            local savedPos = savedCFrame.Position
-            
-            goUnderground(savedPos)
-            task.wait(0.03)
             
             local attempt = 0
             while _G.CashStealer and attempt < _G.MaxRetries do
                 if not item or not item.Parent then break end
                 attempt += 1
                 
+                local itemPos = item.Position
+                local targetPos = itemPos + Vector3.new(0, _G.TeleportHeight, 0)
+                
                 if root.Parent then
-                    root.CFrame = item.CFrame + Vector3.new(0, _G.TeleportHeight, 0)
+                    root.CFrame = CFrame.new(targetPos)
                 else
                     break
                 end
@@ -452,11 +473,6 @@ local function collectItem(item)
             end
             
             if root.Parent then
-                goUnderground(savedPos)
-                task.wait(0.02)
-            end
-            
-            if root.Parent then
                 root.CFrame = savedCFrame
             end
             
@@ -473,16 +489,15 @@ local function startCash()
     local root = GetRoot(LocalPlayer)
     if root then originalCFrame = root.CFrame end
     
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
-            task.spawn(collectItem, obj)
-        end
+    local cashItems = findAllCash()
+    for _, obj in ipairs(cashItems) do
+        task.spawn(collectItem, obj)
     end
     
     cashConnection = workspace.DescendantAdded:Connect(function(obj)
         if not _G.CashStealer then return end
-        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
-            task.wait(0.03)
+        if isCashItem(obj) then
+            task.wait(0.05)
             task.spawn(collectItem, obj)
         end
     end)
@@ -500,7 +515,6 @@ local function stopCash()
     end
 end
 
--- عناصر الواجهة
 Options.CollectedLabel = CashGroup:AddLabel("تم الجمع: 0 | فشل: 0")
 Options.ActiveLabel = CashGroup:AddLabel("نشط: 0")
 
@@ -518,6 +532,20 @@ Toggles.CashStealer = CashGroup:AddToggle("CashStealer", {
         end
     end
 })
+
+CashGroup:AddButton("🔍 تشخيص: ابحث عن الفلوس", function()
+    local items = findAllCash()
+    if #items > 0 then
+        Library:Notify("تم العثور على " .. #items .. " فلوس!", 5)
+        for i, item in ipairs(items) do
+            if i <= 5 then
+                print("[Cash] " .. item.Name .. " | " .. item.ClassName .. " | " .. item:GetFullName())
+            end
+        end
+    else
+        Library:Notify("ما في فلوس في الخريطة حالياً", 5)
+    end
+end)
 
 local SettingsGroup = Tabs.CashStealer:AddRightGroupbox("الإعدادات")
 
@@ -941,7 +969,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.2.0")
+NewsGroup:AddLabel("الإصدار: 1.3.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -951,13 +979,12 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
-ChangelogGroup:AddLabel("[v1.2.0] تحديث جديد")
-ChangelogGroup:AddLabel("- إضافة سرقة الفلوس التلقائي")
-ChangelogGroup:AddLabel("[v1.1.0] تحديث سابق")
-ChangelogGroup:AddLabel("- إضافة معلومات المطور")
-ChangelogGroup:AddLabel("- إضافة اختراق الجدران")
+ChangelogGroup:AddLabel("[v1.3.0] تحديث سرقة الفلوس")
+ChangelogGroup:AddLabel("- دعم أسماء فلوس متعددة")
+ChangelogGroup:AddLabel("- زر تشخيص الفلوس")
+ChangelogGroup:AddLabel("[v1.2.0] إضافة سرقة الفلوس")
+ChangelogGroup:AddLabel("[v1.1.0] معلومات المطور + Noclip")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
-ChangelogGroup:AddLabel("- إضافة الانتقالات (21 مكان)")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
 CreditsGroup:AddLabel("المطور: فريق LYNEX")
