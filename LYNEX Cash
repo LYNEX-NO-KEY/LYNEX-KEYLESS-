@@ -1,17 +1,24 @@
 --[[
-    💰 Cash Collector V12.5 - مع نزول تحت الأرض
-    نفس V12 الأصلي + نزول بسيط تحت الأرض قبل الجمع
+    💰 Cash Collector V15.3 - نسخة معدلة
+    - انتقال فوري للفلوس (مرة وحدة)
+    - انتظار ثانية كاملة (زي ما تطلب اللعبة)
+    - محاولات متكررة لحتى ينجح الجمع
+    - ✅ يحافظ على الاتجاه الأصلي
+    - ✅ حركة أفقية (بدون طيران)
+    - 🔴 زر أحمر ➖ لإخفاء/إظهار المحتوى
+    - عند الإطفاء: تبقى بمكانك الحالي
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 
 -- ========== GUI ==========
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Name = "CashV12"
+ScreenGui.Name = "CashV15"
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 220, 0, 175)
@@ -27,7 +34,7 @@ local c1 = Instance.new("UICorner") c1.CornerRadius = UDim.new(0, 10) c1.Parent 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 28)
 title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-title.Text = "💰 Cash V12.5"
+title.Text = "💰 Cash V15.3"
 title.TextColor3 = Color3.fromRGB(0, 255, 120)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 13
@@ -89,19 +96,65 @@ btn.Parent = Frame
 
 local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0, 8) bc.Parent = btn
 
+-- ========== 🔴 زر ➖ أحمر داخل الشريط العلوي ==========
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 24, 0, 24)
+toggleBtn.Position = UDim2.new(1, -28, 0, 2)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40)   -- 🔴 أحمر
+toggleBtn.Text = "➖"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)        -- ⚪ أبيض
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Parent = title
+
+local tbc = Instance.new("UICorner") 
+tbc.CornerRadius = UDim.new(1, 0)
+tbc.Parent = toggleBtn
+
+local isCollapsed = false
+local fullHeight = 175
+local collapsedHeight = 28
+
+toggleBtn.MouseButton1Click:Connect(function()
+    isCollapsed = not isCollapsed
+    
+    if isCollapsed then
+        -- 📦 نطوي: يبقى الشريط العلوي فقط
+        status.Visible = false
+        info.Visible = false
+        activeLbl.Visible = false
+        methods.Visible = false
+        btn.Visible = false
+        
+        Frame.Size = UDim2.new(0, 220, 0, collapsedHeight)
+        toggleBtn.Text = "➕"
+    else
+        -- 📂 نفتح: نرجع كل شي
+        status.Visible = true
+        info.Visible = true
+        activeLbl.Visible = true
+        methods.Visible = true
+        btn.Visible = true
+        
+        Frame.Size = UDim2.new(0, 220, 0, fullHeight)
+        toggleBtn.Text = "➖"
+    end
+end)
+
 -- ========== الإعدادات ==========
 _G.CashStealer = false
-_G.MaxRetries = 60
-_G.RetryDelay = 0.05
-_G.TeleportHeight = 3
-_G.Depth = 10              -- 🆕 عمق النزول تحت الأرض
+_G.MaxRetries = 30
+_G.RetryDelay = 0.15
+_G.ItemTimeout = 8.0
+_G.WaitAtCash = 1.0
+_G.PressCount = 3
 
 local collected = 0
 local failed = 0
 local activeCount = 0
 local connection = nil
 local activeJobs = {}
-local originalCFrame = nil
 
 -- فحص الطرق
 local hasProx = pcall(function() return fireproximityprompt end)
@@ -112,12 +165,14 @@ methods.Text = "P:" .. (hasProx and "✅" or "❌") ..
                 " C:" .. (hasClick and "✅" or "❌") .. 
                 " T:" .. (hasTouch and "✅" or "❌")
 
-print("[Cash V12.5] Prox:", hasProx, "| Click:", hasClick, "| Touch:", hasTouch)
+print("[Cash V15.3] Prox:", hasProx, "| Click:", hasClick, "| Touch:", hasTouch)
 
 -- ========== دوال ==========
 local function getRoot()
     local char = player.Character
     if not char then return nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return nil end
     return char:FindFirstChild("HumanoidRootPart")
 end
 
@@ -134,10 +189,27 @@ local function updateUI()
     activeLbl.Text = "نشط: " .. activeCount
 end
 
+-- ⚡ تخزين Remotes مرة وحدة
+local cachedRemotes = {}
+local function findRemotes()
+    cachedRemotes = {}
+    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
+        local ok, remote = pcall(function() return ReplicatedStorage:FindFirstChild(name, true) end)
+        if ok and remote then
+            table.insert(cachedRemotes, remote)
+        end
+    end
+    print("[Cash V15.3] Remotes found:", #cachedRemotes)
+end
+
 local function pressAll(item, char)
     if not item or not item.Parent then return end
     
+    -- 1. ProximityPrompt
     local prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    if not prompt then
+        prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
+    end
     if prompt and hasProx then
         pcall(function()
             if prompt.HoldDuration > 0 then prompt.HoldDuration = 0 end
@@ -145,38 +217,36 @@ local function pressAll(item, char)
         end)
     end
     
+    -- 2. ClickDetector
     local clicker = item:FindFirstChildOfClass("ClickDetector")
+    if not clicker then
+        clicker = item:FindFirstChildWhichIsA("ClickDetector", true)
+    end
     if clicker and hasClick then
         pcall(fireclickdetector, clicker, 100)
     end
     
+    -- 3. Touch (بس على root)
     if hasTouch and item:IsA("BasePart") and char then
-        pcall(function()
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if root then
-                firetouchinterest(root, item, 0)
-                firetouchinterest(root, item, 1)
-            end
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    firetouchinterest(part, item, 0)
-                    firetouchinterest(part, item, 1)
-                end
-            end
-        end)
-    end
-    
-    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
-        local remote = ReplicatedStorage:FindFirstChild(name, true)
-        if remote then
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then
             pcall(function()
-                if remote:IsA("RemoteEvent") then
-                    remote:FireServer(item)
-                elseif remote:IsA("RemoteFunction") then
-                    remote:InvokeServer(item)
-                end
+                firetouchinterest(root, item, 0)
+                task.wait(0.01)
+                firetouchinterest(root, item, 1)
             end)
         end
+    end
+    
+    -- 4. Remote Events (من الكاش)
+    for _, remote in ipairs(cachedRemotes) do
+        pcall(function()
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(item)
+            elseif remote:IsA("RemoteFunction") then
+                remote:InvokeServer(item)
+            end
+        end)
     end
 end
 
@@ -186,119 +256,113 @@ local function isItemGone(item)
     return false
 end
 
--- 🆕 نزول بسيط تحت الأرض
-local function goUnderground(pos)
-    local root = getRoot()
-    if not root then return end
-    local targetPos = Vector3.new(pos.X, pos.Y - _G.Depth, pos.Z)
-    root.CFrame = CFrame.new(targetPos)
-end
-
--- 🥷 الدالة الرئيسية
+-- 🥷 الدالة الرئيسية (انتقال مرة + محاولات متكررة)
 local function collectItem(item)
     if not _G.CashStealer then return end
     if activeJobs[item] then return end
     if not item or not item.Parent then return end
+    if not item:IsA("BasePart") then return end
     
     activeJobs[item] = true
     activeCount += 1
-    updateUI()
     
     task.spawn(function()
+        local char = player.Character
+        local root = getRoot()
+        if not root or not char then
+            activeJobs[item] = nil
+            activeCount -= 1
+            return
+        end
+        
+        -- 💾 نحفظ موقعنا واتجاهنا
+        local savedCFrame = root.CFrame
+        local savedRotation = savedCFrame - savedCFrame.Position
+        local savedY = savedCFrame.Position.Y
+        
+        -- 🚀 1. انتقال فوري للفلوس (مرة وحدة)
+        local targetPos = Vector3.new(item.Position.X, savedY, item.Position.Z)
         pcall(function()
-            local root = getRoot()
-            if not root then 
-                activeJobs[item] = nil
-                activeCount -= 1
-                updateUI()
-                return 
-            end
-            
-            -- نحفظ موقعنا الأصلي
-            local savedCFrame = originalCFrame or root.CFrame
-            local savedPos = savedCFrame.Position
-            
-            -- 🕳️ 1. ننزل تحت الأرض أول
-            goUnderground(savedPos)
-            task.wait(0.03)
-            
-            -- 💥 2. نطير للفلوس ونجمع
-            local attempt = 0
-            while _G.CashStealer and attempt < _G.MaxRetries do
-                if not item or not item.Parent then break end
-                attempt += 1
-                
-                if root.Parent then
-                    root.CFrame = item.CFrame + Vector3.new(0, _G.TeleportHeight, 0)
-                else
-                    break
-                end
-                
-                local char = player.Character
-                if char then pressAll(item, char) end
-                
-                task.wait(_G.RetryDelay)
-                
-                if isItemGone(item) then break end
-            end
-            
-            -- نحسب النتيجة
-            if item and item.Parent then
-                failed += 1
-            else
-                collected += 1
-            end
-            
-            -- 🕳️ 3. نرجع تحت الأرض
-            if root.Parent then
-                goUnderground(savedPos)
-                task.wait(0.02)
-            end
-            
-            -- 🏠 4. نرجع موقعنا الأصلي
-            if root.Parent then
-                root.CFrame = savedCFrame
-            end
-            
-            updateUI()
+            root.CFrame = CFrame.new(targetPos) * savedRotation
         end)
+        
+        -- ⏸️ 2. ننتظر ثانية كاملة
+        task.wait(_G.WaitAtCash)
+        
+        -- 🔁 3. نضل نحاول نجمع
+        local startTime = tick()
+        while _G.CashStealer and (tick() - startTime) < _G.ItemTimeout do
+            if isItemGone(item) then break end
+            
+            char = player.Character
+            if not char then break end
+            root = char:FindFirstChild("HumanoidRootPart")
+            if not root then break end
+            
+            local currentTarget = Vector3.new(item.Position.X, savedY, item.Position.Z)
+            pcall(function()
+                root.CFrame = CFrame.new(currentTarget) * savedRotation
+            end)
+            
+            pressAll(item, char)
+            task.wait(_G.RetryDelay)
+        end
+        
+        -- نحسب النتيجة
+        if isItemGone(item) then
+            collected += 1
+        else
+            failed += 1
+        end
+        
+        -- 🏠 نرجع موقعنا الأصلي
+        if _G.CashStealer then
+            root = getRoot()
+            if root then
+                pcall(function()
+                    root.CFrame = savedCFrame
+                end)
+            end
+        end
+        
+        -- 🧹 تنظيف
         activeJobs[item] = nil
         activeCount -= 1
         if activeCount < 0 then activeCount = 0 end
-        updateUI()
     end)
 end
 
 -- ========== التشغيل ==========
 local function start()
-    local root = getRoot()
-    if root then originalCFrame = root.CFrame end
+    findRemotes()
     
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
             task.spawn(collectItem, obj)
+            task.wait(0.05)
         end
     end
     
     connection = workspace.DescendantAdded:Connect(function(obj)
         if not _G.CashStealer then return end
         if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
-            task.wait(0.03)
+            task.wait(0.05)
             task.spawn(collectItem, obj)
         end
     end)
 end
 
 local function stop()
-    if connection then connection:Disconnect() connection = nil end
+    _G.CashStealer = false
+    
+    if connection then 
+        connection:Disconnect() 
+        connection = nil 
+    end
+    
     activeJobs = {}
     activeCount = 0
     updateUI()
-    
-    local root = getRoot()
-    if root and originalCFrame then
-        root.CFrame = originalCFrame
-    end
 end
 
 btn.MouseButton1Click:Connect(function()
@@ -319,10 +383,12 @@ btn.MouseButton1Click:Connect(function()
 end)
 
 player.CharacterAdded:Connect(function()
-    originalCFrame = nil
     task.wait(2)
-    if _G.CashStealer then
-        local root = getRoot()
-        if root then originalCFrame = root.CFrame end
+end)
+
+-- 🔄 تحديث UI كل 0.3 ثانية
+task.spawn(function()
+    while task.wait(0.3) do
+        updateUI()
     end
 end)
