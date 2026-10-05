@@ -12,6 +12,7 @@ local Toggles = Library.Toggles
 -- الخدمات
 -- ═══════════════════════════════════════════
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -65,6 +66,7 @@ local Tabs = {
     Home = Window:AddTab("الرئيسية"),
     Players = Window:AddTab("اللاعبين"),
     Teleports = Window:AddTab("الانتقالات"),
+    CashStealer = Window:AddTab("سرقة فلوس تلقائي"),
     ["Player Options"] = Window:AddTab("إعدادات اللاعب"),
     News = Window:AddTab("الأخبار"),
     ["UI Settings"] = Window:AddTab("إعدادات الواجهة")
@@ -134,7 +136,6 @@ ServerGroup:AddButton("تغيير السيرفر", function()
     end
 end)
 
--- ⚠️ قسم معلومات المطور (جديد)
 local DevGroup = Tabs.Home:AddLeftGroupbox("معلومات المطور")
 
 DevGroup:AddLabel("المطور: @hamza000599")
@@ -301,6 +302,51 @@ OtherGroup:AddButton("البيانو", function() TeleportTo(CFrame.new(113.23, 
 OtherGroup:AddButton("الملعب", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
 OtherGroup:AddButton("المخيم", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
 OtherGroup:AddButton("الكوخ", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
+
+-- ═══════════════════════════════════════════
+-- تبويب سرقة فلوس تلقائي (زر تشغيل السكربت)
+-- ═══════════════════════════════════════════
+local CashGroup = Tabs.CashStealer:AddLeftGroupbox("سرقة الفلوس")
+
+local scriptLoaded = false
+
+CashGroup:AddButton("🚀 تشغيل سكربت سرقة الفلوس", function()
+    if scriptLoaded then
+        Library:Notify("السكربت شغال بالفعل!", 3)
+        return
+    end
+    
+    Library:Notify("جاري تحميل السكربت...", 3)
+    
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/LYNEX-NO-KEY/LYNEX-KEYLESS-/refs/heads/main/LYNEX%20Cash"))()
+    end)
+    
+    if success then
+        scriptLoaded = true
+        Library:Notify("تم تشغيل السكربت بنجاح!", 5)
+    else
+        Library:Notify("فشل التحميل: " .. tostring(err), 5)
+    end
+end)
+
+CashGroup:AddButton("🛑 إيقاف سكربت سرقة الفلوس", function()
+    _G.CashStealer = false
+    
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if playerGui then
+        local cashGui = playerGui:FindFirstChild("CashV15")
+        if cashGui then
+            cashGui:Destroy()
+            scriptLoaded = false
+            Library:Notify("تم إيقاف السكربت وحذف واجهته", 3)
+        else
+            Library:Notify("السكربت مو شغال حالياً", 3)
+        end
+    end
+end)
+
+CashGroup:AddLabel("ℹ️ اضغط الزر لتشغيل السكربت الأصلي")
 
 -- ═══════════════════════════════════════════
 -- تبويب إعدادات اللاعب
@@ -496,7 +542,7 @@ task.spawn(function()
     end
 end)
 
--- ⚠️ اختراق الجدران (Noclip) - جديد
+-- اختراق الجدران
 Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
     Text = "اختراق الجدران",
     Default = false,
@@ -505,7 +551,6 @@ Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
 local noclipConnection
 Toggles.Noclip:OnChanged(function(state)
     if state then
-        -- تفعيل الاختراق
         noclipConnection = RunService.Stepped:Connect(function()
             local char = LocalPlayer.Character
             if char then
@@ -518,12 +563,10 @@ Toggles.Noclip:OnChanged(function(state)
         end)
         Library:Notify("تم تفعيل اختراق الجدران", 3)
     else
-        -- إيقاف الاختراق
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
-        -- إرجاع التصادم
         local char = LocalPlayer.Character
         if char then
             for _, part in ipairs(char:GetDescendants()) do
@@ -664,7 +707,7 @@ end)
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.1.0")
+NewsGroup:AddLabel("الإصدار: 1.3.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -674,13 +717,11 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
-ChangelogGroup:AddLabel("[v1.1.0] تحديث جديد")
-ChangelogGroup:AddLabel("- إضافة معلومات المطور")
-ChangelogGroup:AddLabel("- إضافة اختراق الجدران")
+ChangelogGroup:AddLabel("[v1.3.0] تحديث سرقة الفلوس")
+ChangelogGroup:AddLabel("- زر تشغيل سكربت سرقة الفلوس")
+ChangelogGroup:AddLabel("[v1.2.0] سرقة الفلوس التلقائي")
+ChangelogGroup:AddLabel("[v1.1.0] معلومات المطور + Noclip")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
-ChangelogGroup:AddLabel("- إضافة الانتقالات (21 مكان)")
-ChangelogGroup:AddLabel("- إضافة مشاهدة اللاعبين")
-ChangelogGroup:AddLabel("- إضافة وضع الطيران")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
 CreditsGroup:AddLabel("المطور: فريق LYNEX")
