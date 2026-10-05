@@ -134,7 +134,43 @@ ServerGroup:AddButton("تغيير السيرفر", function()
     end
 end)
 
-local CommunityGroup = Tabs.Home:AddLeftGroupbox("المجتمع")
+-- ⚠️ قسم معلومات المطور (جديد)
+local DevGroup = Tabs.Home:AddLeftGroupbox("معلومات المطور")
+
+DevGroup:AddLabel("المطور: @hamza000599")
+DevGroup:AddLabel("ديسكورد: hamza.abc0")
+DevGroup:AddLabel("تيك توك: hamza.samodi6")
+DevGroup:AddLabel("انستقرام: _ha7mz")
+
+DevGroup:AddButton("نسخ اسم حساب روبلوكس", function()
+    if setclipboard then
+        setclipboard("hamza000599")
+        Library:Notify("تم نسخ: hamza000599", 3)
+    end
+end)
+
+DevGroup:AddButton("نسخ حساب الديسكورد", function()
+    if setclipboard then
+        setclipboard("hamza.abc0")
+        Library:Notify("تم نسخ: hamza.abc0", 3)
+    end
+end)
+
+DevGroup:AddButton("نسخ حساب التيك توك", function()
+    if setclipboard then
+        setclipboard("hamza.samodi6")
+        Library:Notify("تم نسخ: hamza.samodi6", 3)
+    end
+end)
+
+DevGroup:AddButton("نسخ حساب الانستقرام", function()
+    if setclipboard then
+        setclipboard("_ha7mz")
+        Library:Notify("تم نسخ: _ha7mz", 3)
+    end
+end)
+
+local CommunityGroup = Tabs.Home:AddRightGroupbox("المجتمع")
 
 CommunityGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -238,10 +274,8 @@ local ShopsGroup = Tabs.Teleports:AddRightGroupbox("المتاجر")
 local BanksGroup = Tabs.Teleports:AddRightGroupbox("البنوك")
 local OtherGroup = Tabs.Teleports:AddRightGroupbox("أماكن أخرى")
 
--- البداية
 StartGroup:AddButton("البداية", function() TeleportTo(CFrame.new(-154.62, 5.17, 4.80)) end)
 
--- الجزر
 IslandGroup:AddButton("الكوفي", function() TeleportTo(CFrame.new(46.80, 4.86, -282.78)) end)
 IslandGroup:AddButton("الخيمة", function() TeleportTo(CFrame.new(-308.12, 4.62, -257.02)) end)
 IslandGroup:AddButton("المسرح", function() TeleportTo(CFrame.new(-307.16, 8.82, -176.99)) end)
@@ -251,22 +285,18 @@ IslandGroup:AddButton("جزيرة الثلج", function() TeleportTo(CFrame.new(
 IslandGroup:AddButton("الصحراء", function() TeleportTo(CFrame.new(-33.01, 5.18, -180.50)) end)
 IslandGroup:AddButton("الجزيرة الخاصة", function() TeleportTo(CFrame.new(644.16, 227.76, -98.30)) end)
 
--- الصيد
 FishingGroup:AddButton("الصيد 1", function() TeleportTo(CFrame.new(-317.16, 15.29, 382.65)) end)
 FishingGroup:AddButton("الصيد 2", function() TeleportTo(CFrame.new(-234.03, 5.07, 535.67)) end)
 FishingGroup:AddButton("الصيد 3", function() TeleportTo(CFrame.new(-268.61, 5.07, 693.13)) end)
 FishingGroup:AddButton("الصيد 4", function() TeleportTo(CFrame.new(197.76, 18.99, 644.84)) end)
 FishingGroup:AddButton("الصيد 5", function() TeleportTo(CFrame.new(-59.19, 15.25, 454.89)) end)
 
--- المتاجر
 ShopsGroup:AddButton("متجر السيارات", function() TeleportTo(CFrame.new(238.83, 5.17, 164.67)) end)
 ShopsGroup:AddButton("متجر السمك", function() TeleportTo(CFrame.new(-106.07, 5.43, 612.25)) end)
 
--- البنوك
 BanksGroup:AddButton("البنك 1", function() TeleportTo(CFrame.new(265.02, 5.17, 179.93)) end)
 BanksGroup:AddButton("البنك 2", function() TeleportTo(CFrame.new(-128.40, 5.17, 22.61)) end)
 
--- أماكن أخرى
 OtherGroup:AddButton("البيانو", function() TeleportTo(CFrame.new(113.23, 7.01, -383.69)) end)
 OtherGroup:AddButton("الملعب", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
 OtherGroup:AddButton("المخيم", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
@@ -466,6 +496,46 @@ task.spawn(function()
     end
 end)
 
+-- ⚠️ اختراق الجدران (Noclip) - جديد
+Toggles.Noclip = SpecialGroup:AddToggle("Noclip", {
+    Text = "اختراق الجدران",
+    Default = false,
+})
+
+local noclipConnection
+Toggles.Noclip:OnChanged(function(state)
+    if state then
+        -- تفعيل الاختراق
+        noclipConnection = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+        Library:Notify("تم تفعيل اختراق الجدران", 3)
+    else
+        -- إيقاف الاختراق
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
+        end
+        -- إرجاع التصادم
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+        Library:Notify("تم إيقاف اختراق الجدران", 3)
+    end
+end)
+
 -- الطيران
 Toggles.Fly = SpecialGroup:AddToggle("Fly", {
     Text = "وضع الطيران (جوال + كمبيوتر)",
@@ -585,13 +655,16 @@ LocalPlayer.CharacterAdded:Connect(function()
     if Toggles.Fly.Value then
         Toggles.Fly:SetValue(false)
     end
+    if Toggles.Noclip.Value then
+        Toggles.Noclip:SetValue(false)
+    end
 end)
 
 -- ═══════════════════════════════════════════
 -- تبويب الأخبار
 -- ═══════════════════════════════════════════
 local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
-NewsGroup:AddLabel("الإصدار: 1.0.0")
+NewsGroup:AddLabel("الإصدار: 1.1.0")
 NewsGroup:AddLabel("الحالة: يعمل")
 NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
@@ -601,11 +674,13 @@ NewsGroup:AddButton("نسخ رابط الديسكورد", function()
 end)
 
 local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
+ChangelogGroup:AddLabel("[v1.1.0] تحديث جديد")
+ChangelogGroup:AddLabel("- إضافة معلومات المطور")
+ChangelogGroup:AddLabel("- إضافة اختراق الجدران")
 ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
 ChangelogGroup:AddLabel("- إضافة الانتقالات (21 مكان)")
 ChangelogGroup:AddLabel("- إضافة مشاهدة اللاعبين")
 ChangelogGroup:AddLabel("- إضافة وضع الطيران")
-ChangelogGroup:AddLabel("- إضافة السرعة/القفز/الجاذبية")
 
 local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
 CreditsGroup:AddLabel("المطور: فريق LYNEX")
@@ -629,6 +704,10 @@ Library:Notify("مرحبا @" .. LocalPlayer.Name .. " في مركز LYNEX", 5)
 Library:OnUnload(function()
     StopSpectate()
     StopFly()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
     print("Unloaded")
 end)
 
