@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════
--- LinoriaLib Load
+-- تحميل مكتبة LinoriaLib
 -- ═══════════════════════════════════════════
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/addons/ThemeManager.lua"))()
@@ -9,7 +9,7 @@ local Options = Library.Options
 local Toggles = Library.Toggles
 
 -- ═══════════════════════════════════════════
--- Services
+-- الخدمات
 -- ═══════════════════════════════════════════
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,7 +20,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ═══════════════════════════════════════════
--- Helper Functions
+-- دوال مساعدة
 -- ═══════════════════════════════════════════
 local function getPing()
     local ok, result = pcall(function()
@@ -44,17 +44,17 @@ local function TeleportTo(cframe)
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         char.HumanoidRootPart.CFrame = cframe
-        Library:Notify("Teleported!", 2)
+        Library:Notify("تم الانتقال!", 2)
     else
-        Library:Notify("Character not found", 3)
+        Library:Notify("لم يتم العثور على الشخصية", 3)
     end
 end
 
 -- ═══════════════════════════════════════════
--- Create Window
+-- إنشاء النافذة
 -- ═══════════════════════════════════════════
 local Window = Library:CreateWindow({
-    Title = "LYNEX Hub",
+    Title = "مركز LYNEX",
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -62,55 +62,55 @@ local Window = Library:CreateWindow({
 })
 
 local Tabs = {
-    Home = Window:AddTab("Home"),
-    Players = Window:AddTab("Players"),
-    Teleports = Window:AddTab("Teleports"),
-    ["Player Options"] = Window:AddTab("Player Options"),
-    News = Window:AddTab("News"),
-    ["UI Settings"] = Window:AddTab("UI Settings")
+    Home = Window:AddTab("الرئيسية"),
+    Players = Window:AddTab("اللاعبين"),
+    Teleports = Window:AddTab("الانتقالات"),
+    ["Player Options"] = Window:AddTab("إعدادات اللاعب"),
+    News = Window:AddTab("الأخبار"),
+    ["UI Settings"] = Window:AddTab("إعدادات الواجهة")
 }
 
 -- ═══════════════════════════════════════════
--- HOME TAB
+-- تبويب الرئيسية
 -- ═══════════════════════════════════════════
-local PlayerGroup = Tabs.Home:AddLeftGroupbox("Player Info")
+local PlayerGroup = Tabs.Home:AddLeftGroupbox("معلومات اللاعب")
 
-PlayerGroup:AddLabel("Username: @" .. LocalPlayer.Name)
-PlayerGroup:AddLabel("User ID: " .. tostring(LocalPlayer.UserId))
-PlayerGroup:AddLabel("Ping: " .. getPing() .. " ms")
-PlayerGroup:AddLabel("Players: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers)
+PlayerGroup:AddLabel("الاسم: @" .. LocalPlayer.Name)
+PlayerGroup:AddLabel("معرف اللاعب: " .. tostring(LocalPlayer.UserId))
+PlayerGroup:AddLabel("البينغ: " .. getPing() .. " ms")
+PlayerGroup:AddLabel("اللاعبين: " .. #Players:GetPlayers() .. " / " .. Players.MaxPlayers)
 
-PlayerGroup:AddButton("Copy User ID", function()
+PlayerGroup:AddButton("نسخ معرف اللاعب", function()
     if setclipboard then
         setclipboard(tostring(LocalPlayer.UserId))
-        Library:Notify("User ID Copied: " .. tostring(LocalPlayer.UserId), 3)
+        Library:Notify("تم نسخ معرف اللاعب: " .. tostring(LocalPlayer.UserId), 3)
     end
 end)
 
-local ServerGroup = Tabs.Home:AddRightGroupbox("Server Info")
+local ServerGroup = Tabs.Home:AddRightGroupbox("معلومات السيرفر")
 
 local ok, gameInfo = pcall(function()
     return MarketplaceService:GetProductInfo(game.PlaceId)
 end)
-local gameName = (ok and gameInfo and gameInfo.Name) or "Unknown"
+local gameName = (ok and gameInfo and gameInfo.Name) or "غير معروف"
 
-ServerGroup:AddLabel("Game: " .. gameName)
-ServerGroup:AddLabel("Place ID: " .. tostring(game.PlaceId))
-ServerGroup:AddLabel("Job ID: " .. game.JobId)
+ServerGroup:AddLabel("اللعبة: " .. gameName)
+ServerGroup:AddLabel("معرف المكان: " .. tostring(game.PlaceId))
+ServerGroup:AddLabel("معرف السيرفر: " .. game.JobId)
 
-ServerGroup:AddButton("Copy Job ID", function()
+ServerGroup:AddButton("نسخ معرف السيرفر", function()
     if setclipboard then
         setclipboard(game.JobId)
-        Library:Notify("Job ID Copied", 3)
+        Library:Notify("تم نسخ معرف السيرفر", 3)
     end
 end)
 
-ServerGroup:AddButton("Rejoin Server", function()
+ServerGroup:AddButton("إعادة دخول السيرفر", function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
 
-ServerGroup:AddButton("Server Hop", function()
-    Library:Notify("Searching for server...", 3)
+ServerGroup:AddButton("تغيير السيرفر", function()
+    Library:Notify("جاري البحث عن سيرفر...", 3)
     local ok2, result = pcall(function()
         return HttpService:GetAsync(
             "https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?limit=100"
@@ -127,26 +127,26 @@ ServerGroup:AddButton("Server Hop", function()
         if #servers > 0 then
             TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], LocalPlayer)
         else
-            Library:Notify("No servers found", 3)
+            Library:Notify("لا يوجد سيرفرات", 3)
         end
     else
-        Library:Notify("Failed to fetch servers", 3)
+        Library:Notify("فشل الاتصال", 3)
     end
 end)
 
-local CommunityGroup = Tabs.Home:AddLeftGroupbox("Community")
+local CommunityGroup = Tabs.Home:AddLeftGroupbox("المجتمع")
 
-CommunityGroup:AddButton("Copy Discord Link", function()
+CommunityGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
         setclipboard("https://discord.gg/CkqKSRYau")
-        Library:Notify("Discord link copied!", 3)
+        Library:Notify("تم نسخ رابط الديسكورد!", 3)
     end
 end)
 
 -- ═══════════════════════════════════════════
--- PLAYERS TAB
+-- تبويب اللاعبين
 -- ═══════════════════════════════════════════
-local PlayersGroup = Tabs.Players:AddLeftGroupbox("Players Online")
+local PlayersGroup = Tabs.Players:AddLeftGroupbox("اللاعبين المتصلين")
 
 _G.Spectating = nil
 
@@ -157,7 +157,7 @@ local function StopSpectate()
         camera.CameraSubject = char.Humanoid
     end
     _G.Spectating = nil
-    Library:Notify("Stopped spectating", 2)
+    Library:Notify("تم إيقاف المشاهدة", 2)
 end
 
 local function StartSpectate(player)
@@ -166,9 +166,9 @@ local function StartSpectate(player)
     if targetChar and targetChar:FindFirstChildOfClass("Humanoid") then
         camera.CameraSubject = targetChar.Humanoid
         _G.Spectating = player
-        Library:Notify("Spectating @" .. player.Name, 2)
+        Library:Notify("جاري مشاهدة @" .. player.Name, 2)
     else
-        Library:Notify("Cannot spectate @" .. player.Name, 2)
+        Library:Notify("لا يمكن مشاهدة @" .. player.Name, 2)
     end
 end
 
@@ -178,7 +178,7 @@ local function CreatePlayerItems(player)
     if PlayerItems[player] then return end
 
     local specToggle = PlayersGroup:AddToggle("Spec_" .. player.UserId, {
-        Text = "Spectate: @" .. player.Name,
+        Text = "مشاهدة: @" .. player.Name,
         Default = false,
         Callback = function(state)
             if state then
@@ -193,14 +193,14 @@ local function CreatePlayerItems(player)
         end
     })
 
-    local tpBtn = PlayersGroup:AddButton("Teleport to @" .. player.Name, function()
+    local tpBtn = PlayersGroup:AddButton("انتقال إلى @" .. player.Name, function()
         local char = LocalPlayer.Character
         local targetChar = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") and targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-            Library:Notify("Teleported to @" .. player.Name, 3)
+            Library:Notify("تم الانتقال إلى @" .. player.Name, 3)
         else
-            Library:Notify("Cannot teleport", 3)
+            Library:Notify("لا يمكن الانتقال", 3)
         end
     end)
 
@@ -229,53 +229,53 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- ═══════════════════════════════════════════
--- TELEPORTS TAB (جديد)
+-- تبويب الانتقالات
 -- ═══════════════════════════════════════════
-local StartGroup = Tabs.Teleports:AddLeftGroupbox("Start")
-local IslandGroup = Tabs.Teleports:AddLeftGroupbox("Islands")
-local FishingGroup = Tabs.Teleports:AddLeftGroupbox("Fishing")
-local ShopsGroup = Tabs.Teleports:AddRightGroupbox("Shops")
-local BanksGroup = Tabs.Teleports:AddRightGroupbox("Banks")
-local OtherGroup = Tabs.Teleports:AddRightGroupbox("Other")
+local StartGroup = Tabs.Teleports:AddLeftGroupbox("البداية")
+local IslandGroup = Tabs.Teleports:AddLeftGroupbox("الجزر")
+local FishingGroup = Tabs.Teleports:AddLeftGroupbox("الصيد")
+local ShopsGroup = Tabs.Teleports:AddRightGroupbox("المتاجر")
+local BanksGroup = Tabs.Teleports:AddRightGroupbox("البنوك")
+local OtherGroup = Tabs.Teleports:AddRightGroupbox("أماكن أخرى")
 
--- Start
-StartGroup:AddButton("Start", function() TeleportTo(CFrame.new(-154.62, 5.17, 4.80)) end)
+-- البداية
+StartGroup:AddButton("البداية", function() TeleportTo(CFrame.new(-154.62, 5.17, 4.80)) end)
 
--- Islands
-IslandGroup:AddButton("Coffee", function() TeleportTo(CFrame.new(46.80, 4.86, -282.78)) end)
-IslandGroup:AddButton("Tent", function() TeleportTo(CFrame.new(-308.12, 4.62, -257.02)) end)
-IslandGroup:AddButton("Stage", function() TeleportTo(CFrame.new(-307.16, 8.82, -176.99)) end)
-IslandGroup:AddButton("Restaurant", function() TeleportTo(CFrame.new(-153.43, 8.18, 262.25)) end)
-IslandGroup:AddButton("Shop", function() TeleportTo(CFrame.new(-90.87, 5.55, 282.49)) end)
-IslandGroup:AddButton("Snow Island", function() TeleportTo(CFrame.new(-35.88, 5.34, 505.95)) end)
-IslandGroup:AddButton("Desert", function() TeleportTo(CFrame.new(-33.01, 5.18, -180.50)) end)
-IslandGroup:AddButton("Private Island", function() TeleportTo(CFrame.new(644.16, 227.76, -98.30)) end)
+-- الجزر
+IslandGroup:AddButton("الكوفي", function() TeleportTo(CFrame.new(46.80, 4.86, -282.78)) end)
+IslandGroup:AddButton("الخيمة", function() TeleportTo(CFrame.new(-308.12, 4.62, -257.02)) end)
+IslandGroup:AddButton("المسرح", function() TeleportTo(CFrame.new(-307.16, 8.82, -176.99)) end)
+IslandGroup:AddButton("المطعم", function() TeleportTo(CFrame.new(-153.43, 8.18, 262.25)) end)
+IslandGroup:AddButton("المتجر", function() TeleportTo(CFrame.new(-90.87, 5.55, 282.49)) end)
+IslandGroup:AddButton("جزيرة الثلج", function() TeleportTo(CFrame.new(-35.88, 5.34, 505.95)) end)
+IslandGroup:AddButton("الصحراء", function() TeleportTo(CFrame.new(-33.01, 5.18, -180.50)) end)
+IslandGroup:AddButton("الجزيرة الخاصة", function() TeleportTo(CFrame.new(644.16, 227.76, -98.30)) end)
 
--- Fishing
-FishingGroup:AddButton("Fishing 1", function() TeleportTo(CFrame.new(-317.16, 15.29, 382.65)) end)
-FishingGroup:AddButton("Fishing 2", function() TeleportTo(CFrame.new(-234.03, 5.07, 535.67)) end)
-FishingGroup:AddButton("Fishing 3", function() TeleportTo(CFrame.new(-268.61, 5.07, 693.13)) end)
-FishingGroup:AddButton("Fishing 4", function() TeleportTo(CFrame.new(197.76, 18.99, 644.84)) end)
-FishingGroup:AddButton("Fishing 5", function() TeleportTo(CFrame.new(-59.19, 15.25, 454.89)) end)
+-- الصيد
+FishingGroup:AddButton("الصيد 1", function() TeleportTo(CFrame.new(-317.16, 15.29, 382.65)) end)
+FishingGroup:AddButton("الصيد 2", function() TeleportTo(CFrame.new(-234.03, 5.07, 535.67)) end)
+FishingGroup:AddButton("الصيد 3", function() TeleportTo(CFrame.new(-268.61, 5.07, 693.13)) end)
+FishingGroup:AddButton("الصيد 4", function() TeleportTo(CFrame.new(197.76, 18.99, 644.84)) end)
+FishingGroup:AddButton("الصيد 5", function() TeleportTo(CFrame.new(-59.19, 15.25, 454.89)) end)
 
--- Shops
-ShopsGroup:AddButton("Car Shop", function() TeleportTo(CFrame.new(238.83, 5.17, 164.67)) end)
-ShopsGroup:AddButton("Fish Shop", function() TeleportTo(CFrame.new(-106.07, 5.43, 612.25)) end)
+-- المتاجر
+ShopsGroup:AddButton("متجر السيارات", function() TeleportTo(CFrame.new(238.83, 5.17, 164.67)) end)
+ShopsGroup:AddButton("متجر السمك", function() TeleportTo(CFrame.new(-106.07, 5.43, 612.25)) end)
 
--- Banks
-BanksGroup:AddButton("Bank 1", function() TeleportTo(CFrame.new(265.02, 5.17, 179.93)) end)
-BanksGroup:AddButton("Bank 2", function() TeleportTo(CFrame.new(-128.40, 5.17, 22.61)) end)
+-- البنوك
+BanksGroup:AddButton("البنك 1", function() TeleportTo(CFrame.new(265.02, 5.17, 179.93)) end)
+BanksGroup:AddButton("البنك 2", function() TeleportTo(CFrame.new(-128.40, 5.17, 22.61)) end)
 
--- Other
-OtherGroup:AddButton("Piano", function() TeleportTo(CFrame.new(113.23, 7.01, -383.69)) end)
-OtherGroup:AddButton("Stadium", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
-OtherGroup:AddButton("Camp", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
-OtherGroup:AddButton("Cabin", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
+-- أماكن أخرى
+OtherGroup:AddButton("البيانو", function() TeleportTo(CFrame.new(113.23, 7.01, -383.69)) end)
+OtherGroup:AddButton("الملعب", function() TeleportTo(CFrame.new(142.41, 4.17, 251.22)) end)
+OtherGroup:AddButton("المخيم", function() TeleportTo(CFrame.new(-112.13, 5.43, 635.56)) end)
+OtherGroup:AddButton("الكوخ", function() TeleportTo(CFrame.new(106.04, 1.43, 684.97)) end)
 
 -- ═══════════════════════════════════════════
--- PLAYER OPTIONS TAB
+-- تبويب إعدادات اللاعب
 -- ═══════════════════════════════════════════
-local TargetGroup = Tabs["Player Options"]:AddLeftGroupbox("Target Player")
+local TargetGroup = Tabs["Player Options"]:AddLeftGroupbox("اللاعب المستهدف")
 
 local playerNames = {}
 for _, player in ipairs(Players:GetPlayers()) do
@@ -288,7 +288,7 @@ Options.TargetPlayer = TargetGroup:AddDropdown("TargetPlayer", {
     Values = playerNames,
     Default = 1,
     Multi = false,
-    Text = "Select Player",
+    Text = "اختر اللاعب",
     Callback = function(value)
         print("Target:", value)
     end,
@@ -300,21 +300,21 @@ local function GetTargetPlayer()
     return Players:FindFirstChild(selected)
 end
 
--- Speed
-local SpeedGroup = Tabs["Player Options"]:AddRightGroupbox("Speed Settings")
+-- السرعة
+local SpeedGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات السرعة")
 
 Toggles.SpeedEnabled = SpeedGroup:AddToggle("SpeedEnabled", {
-    Text = "Enable Speed",
+    Text = "تفعيل السرعة",
     Default = false,
 })
 
 Options.SpeedValue = SpeedGroup:AddSlider("SpeedValue", {
-    Text = "Walk Speed",
+    Text = "سرعة المشي",
     Default = 16,
     Min = 16,
     Max = 500,
     Rounding = 1,
-    Suffix = " studs",
+    Suffix = " وحدة",
 })
 
 Toggles.SpeedEnabled:OnChanged(function(state)
@@ -337,21 +337,21 @@ Options.SpeedValue:OnChanged(function(value)
     end
 end)
 
--- Jump
-local JumpGroup = Tabs["Player Options"]:AddRightGroupbox("Jump Settings")
+-- القفز
+local JumpGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات القفز")
 
 Toggles.JumpEnabled = JumpGroup:AddToggle("JumpEnabled", {
-    Text = "Enable Jump Power",
+    Text = "تفعيل القفز",
     Default = false,
 })
 
 Options.JumpValue = JumpGroup:AddSlider("JumpValue", {
-    Text = "Jump Power",
+    Text = "قوة القفز",
     Default = 50,
     Min = 50,
     Max = 500,
     Rounding = 1,
-    Suffix = " studs",
+    Suffix = " وحدة",
 })
 
 Toggles.JumpEnabled:OnChanged(function(state)
@@ -376,16 +376,16 @@ Options.JumpValue:OnChanged(function(value)
     end
 end)
 
--- Gravity
-local GravityGroup = Tabs["Player Options"]:AddRightGroupbox("Gravity Settings")
+-- الجاذبية
+local GravityGroup = Tabs["Player Options"]:AddRightGroupbox("إعدادات الجاذبية")
 
 Toggles.GravityEnabled = GravityGroup:AddToggle("GravityEnabled", {
-    Text = "Enable Gravity",
+    Text = "تفعيل الجاذبية",
     Default = false,
 })
 
 Options.GravityValue = GravityGroup:AddSlider("GravityValue", {
-    Text = "Gravity",
+    Text = "الجاذبية",
     Default = 196,
     Min = 0,
     Max = 500,
@@ -412,32 +412,32 @@ Options.GravityValue:OnChanged(function(value)
     end
 end)
 
--- Flight
-local FlightGroup = Tabs["Player Options"]:AddLeftGroupbox("Flight Settings")
+-- الطيران
+local FlightGroup = Tabs["Player Options"]:AddLeftGroupbox("إعدادات الطيران")
 
 Options.FlightSpeed = FlightGroup:AddSlider("FlightSpeed", {
-    Text = "Flight Speed",
+    Text = "سرعة الطيران",
     Default = 50,
     Min = 10,
     Max = 500,
     Rounding = 1,
-    Suffix = " studs/s",
+    Suffix = " وحدة/ث",
 })
 
 Options.FlightVerticalSpeed = FlightGroup:AddSlider("FlightVerticalSpeed", {
-    Text = "Vertical Speed",
+    Text = "السرعة العمودية",
     Default = 30,
     Min = 5,
     Max = 200,
     Rounding = 1,
-    Suffix = " studs/s",
+    Suffix = " وحدة/ث",
 })
 
--- Special Features
-local SpecialGroup = Tabs["Player Options"]:AddLeftGroupbox("Special Features")
+-- ميزات خاصة
+local SpecialGroup = Tabs["Player Options"]:AddLeftGroupbox("ميزات خاصة")
 
 Toggles.InfJump = SpecialGroup:AddToggle("InfJump", {
-    Text = "Infinite Jump",
+    Text = "قفز لا نهائي",
     Default = false,
 })
 
@@ -451,7 +451,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 Toggles.Spin = SpecialGroup:AddToggle("Spin", {
-    Text = "Spin Player",
+    Text = "دوران اللاعب",
     Default = false,
 })
 
@@ -466,9 +466,9 @@ task.spawn(function()
     end
 end)
 
--- Fly Mode
+-- الطيران
 Toggles.Fly = SpecialGroup:AddToggle("Fly", {
-    Text = "Fly Mode (Mobile + PC)",
+    Text = "وضع الطيران (جوال + كمبيوتر)",
     Default = false,
 })
 
@@ -497,20 +497,20 @@ local function StopFly()
         end
     end
 
-    Library:Notify("Fly disabled", 3)
+    Library:Notify("تم إيقاف الطيران", 3)
 end
 
 local function StartFly()
     local char = LocalPlayer.Character
     if not char then
-        Library:Notify("No character found", 3)
+        Library:Notify("لا يوجد شخصية", 3)
         return
     end
 
     local root = char:FindFirstChild("HumanoidRootPart")
     local hum = GetHumanoid(LocalPlayer)
     if not root or not hum then
-        Library:Notify("Cannot start fly", 3)
+        Library:Notify("لا يمكن بدء الطيران", 3)
         return
     end
 
@@ -570,7 +570,7 @@ local function StartFly()
         flyBodyGyro.CFrame = CFrame.new(root2.Position, root2.Position + cameraLook)
     end)
 
-    Library:Notify("Fly enabled - استخدم الجويستيك للحركة", 4)
+    Library:Notify("تم تفعيل الطيران - استخدم الجويستيك للحركة", 4)
 end
 
 Toggles.Fly:OnChanged(function(state)
@@ -588,32 +588,32 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- ═══════════════════════════════════════════
--- NEWS TAB
+-- تبويب الأخبار
 -- ═══════════════════════════════════════════
-local NewsGroup = Tabs.News:AddLeftGroupbox("Latest Updates")
-NewsGroup:AddLabel("Version: 1.0.0")
-NewsGroup:AddLabel("Status: Active")
-NewsGroup:AddButton("Copy Discord Link", function()
+local NewsGroup = Tabs.News:AddLeftGroupbox("آخر التحديثات")
+NewsGroup:AddLabel("الإصدار: 1.0.0")
+NewsGroup:AddLabel("الحالة: يعمل")
+NewsGroup:AddButton("نسخ رابط الديسكورد", function()
     if setclipboard then
         setclipboard("https://discord.gg/CkqKSRYau")
-        Library:Notify("Discord link copied!", 3)
+        Library:Notify("تم نسخ رابط الديسكورد!", 3)
     end
 end)
 
-local ChangelogGroup = Tabs.News:AddRightGroupbox("Changelog")
-ChangelogGroup:AddLabel("[v1.0.0] Initial Release")
-ChangelogGroup:AddLabel("- Added Teleports (21 locations)")
-ChangelogGroup:AddLabel("- Added Player Spectate")
-ChangelogGroup:AddLabel("- Added Fly Mode")
-ChangelogGroup:AddLabel("- Added Speed/Jump/Gravity")
+local ChangelogGroup = Tabs.News:AddRightGroupbox("سجل التغييرات")
+ChangelogGroup:AddLabel("[v1.0.0] الإصدار الأول")
+ChangelogGroup:AddLabel("- إضافة الانتقالات (21 مكان)")
+ChangelogGroup:AddLabel("- إضافة مشاهدة اللاعبين")
+ChangelogGroup:AddLabel("- إضافة وضع الطيران")
+ChangelogGroup:AddLabel("- إضافة السرعة/القفز/الجاذبية")
 
-local CreditsGroup = Tabs.News:AddLeftGroupbox("Credits")
-CreditsGroup:AddLabel("Developer: LYNEX Team")
-CreditsGroup:AddLabel("UI Library: LinoriaLib")
-CreditsGroup:AddLabel("Executor: Delta")
+local CreditsGroup = Tabs.News:AddLeftGroupbox("الشكر")
+CreditsGroup:AddLabel("المطور: فريق LYNEX")
+CreditsGroup:AddLabel("مكتبة الواجهة: LinoriaLib")
+CreditsGroup:AddLabel("المنفذ: Delta")
 
 -- ═══════════════════════════════════════════
--- ThemeManager + SaveManager
+-- إعدادات الواجهة
 -- ═══════════════════════════════════════════
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
@@ -624,7 +624,7 @@ SaveManager:SetFolder("LYNEXHub")
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:BuildConfigSection(Tabs["UI Settings"])
 
-Library:Notify("Welcome @" .. LocalPlayer.Name .. " to LYNEX Hub", 5)
+Library:Notify("مرحبا @" .. LocalPlayer.Name .. " في مركز LYNEX", 5)
 
 Library:OnUnload(function()
     StopSpectate()
@@ -632,4 +632,4 @@ Library:OnUnload(function()
     print("Unloaded")
 end)
 
-print("✅ LYNEX Hub - Loaded")
+print("✅ مركز LYNEX - تم التحميل")
