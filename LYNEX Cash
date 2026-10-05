@@ -1,0 +1,328 @@
+--[[
+    💰 Cash Collector V12.5 - مع نزول تحت الأرض
+    نفس V12 الأصلي + نزول بسيط تحت الأرض قبل الجمع
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+-- ========== GUI ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "CashV12"
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 175)
+Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
+
+local c1 = Instance.new("UICorner") c1.CornerRadius = UDim.new(0, 10) c1.Parent = Frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 28)
+title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+title.Text = "💰 Cash V12.5"
+title.TextColor3 = Color3.fromRGB(0, 255, 120)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 13
+title.BorderSizePixel = 0
+title.Parent = Frame
+
+local tc = Instance.new("UICorner") tc.CornerRadius = UDim.new(0, 10) tc.Parent = title
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, 0, 0, 18)
+status.Position = UDim2.new(0, 0, 0.2, 0)
+status.BackgroundTransparency = 1
+status.Text = "متوقف"
+status.TextColor3 = Color3.fromRGB(200, 200, 200)
+status.Font = Enum.Font.Gotham
+status.TextSize = 11
+status.Parent = Frame
+
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(1, 0, 0, 16)
+info.Position = UDim2.new(0, 0, 0.31, 0)
+info.BackgroundTransparency = 1
+info.Text = "جمع: 0 | فشل: 0"
+info.TextColor3 = Color3.fromRGB(255, 220, 100)
+info.Font = Enum.Font.Gotham
+info.TextSize = 11
+info.Parent = Frame
+
+local activeLbl = Instance.new("TextLabel")
+activeLbl.Size = UDim2.new(1, 0, 0, 16)
+activeLbl.Position = UDim2.new(0, 0, 0.42, 0)
+activeLbl.BackgroundTransparency = 1
+activeLbl.Text = "نشط: 0"
+activeLbl.TextColor3 = Color3.fromRGB(150, 200, 255)
+activeLbl.Font = Enum.Font.Gotham
+activeLbl.TextSize = 11
+activeLbl.Parent = Frame
+
+local methods = Instance.new("TextLabel")
+methods.Size = UDim2.new(1, 0, 0, 16)
+methods.Position = UDim2.new(0, 0, 0.53, 0)
+methods.BackgroundTransparency = 1
+methods.Text = "P:? C:? T:?"
+methods.TextColor3 = Color3.fromRGB(100, 200, 255)
+methods.Font = Enum.Font.Gotham
+methods.TextSize = 10
+methods.Parent = Frame
+
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(0.85, 0, 0, 42)
+btn.Position = UDim2.new(0.075, 0, 0.72, 0)
+btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+btn.Text = "OFF"
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+btn.Font = Enum.Font.GothamBold
+btn.TextSize = 18
+btn.BorderSizePixel = 0
+btn.Parent = Frame
+
+local bc = Instance.new("UICorner") bc.CornerRadius = UDim.new(0, 8) bc.Parent = btn
+
+-- ========== الإعدادات ==========
+_G.CashStealer = false
+_G.MaxRetries = 60
+_G.RetryDelay = 0.05
+_G.TeleportHeight = 3
+_G.Depth = 10              -- 🆕 عمق النزول تحت الأرض
+
+local collected = 0
+local failed = 0
+local activeCount = 0
+local connection = nil
+local activeJobs = {}
+local originalCFrame = nil
+
+-- فحص الطرق
+local hasProx = pcall(function() return fireproximityprompt end)
+local hasClick = pcall(function() return fireclickdetector end)
+local hasTouch = pcall(function() return firetouchinterest end)
+
+methods.Text = "P:" .. (hasProx and "✅" or "❌") .. 
+                " C:" .. (hasClick and "✅" or "❌") .. 
+                " T:" .. (hasTouch and "✅" or "❌")
+
+print("[Cash V12.5] Prox:", hasProx, "| Click:", hasClick, "| Touch:", hasTouch)
+
+-- ========== دوال ==========
+local function getRoot()
+    local char = player.Character
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function isBlacklisted(fullName)
+    local n = fullName:lower()
+    for _, w in ipairs({"table","board","game","ludo","جلسة","طاولة","seat","chair","bench","lockedframe","barrier"}) do
+        if n:find(w) then return true end
+    end
+    return false
+end
+
+local function updateUI()
+    info.Text = "جمع: " .. collected .. " | فشل: " .. failed
+    activeLbl.Text = "نشط: " .. activeCount
+end
+
+local function pressAll(item, char)
+    if not item or not item.Parent then return end
+    
+    local prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    if prompt and hasProx then
+        pcall(function()
+            if prompt.HoldDuration > 0 then prompt.HoldDuration = 0 end
+            fireproximityprompt(prompt)
+        end)
+    end
+    
+    local clicker = item:FindFirstChildOfClass("ClickDetector")
+    if clicker and hasClick then
+        pcall(fireclickdetector, clicker, 100)
+    end
+    
+    if hasTouch and item:IsA("BasePart") and char then
+        pcall(function()
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                firetouchinterest(root, item, 0)
+                firetouchinterest(root, item, 1)
+            end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    firetouchinterest(part, item, 0)
+                    firetouchinterest(part, item, 1)
+                end
+            end
+        end)
+    end
+    
+    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
+        local remote = ReplicatedStorage:FindFirstChild(name, true)
+        if remote then
+            pcall(function()
+                if remote:IsA("RemoteEvent") then
+                    remote:FireServer(item)
+                elseif remote:IsA("RemoteFunction") then
+                    remote:InvokeServer(item)
+                end
+            end)
+        end
+    end
+end
+
+local function isItemGone(item)
+    if not item or not item.Parent then return true end
+    if item:IsA("BasePart") and item.Transparency >= 0.95 then return true end
+    return false
+end
+
+-- 🆕 نزول بسيط تحت الأرض
+local function goUnderground(pos)
+    local root = getRoot()
+    if not root then return end
+    local targetPos = Vector3.new(pos.X, pos.Y - _G.Depth, pos.Z)
+    root.CFrame = CFrame.new(targetPos)
+end
+
+-- 🥷 الدالة الرئيسية
+local function collectItem(item)
+    if not _G.CashStealer then return end
+    if activeJobs[item] then return end
+    if not item or not item.Parent then return end
+    
+    activeJobs[item] = true
+    activeCount += 1
+    updateUI()
+    
+    task.spawn(function()
+        pcall(function()
+            local root = getRoot()
+            if not root then 
+                activeJobs[item] = nil
+                activeCount -= 1
+                updateUI()
+                return 
+            end
+            
+            -- نحفظ موقعنا الأصلي
+            local savedCFrame = originalCFrame or root.CFrame
+            local savedPos = savedCFrame.Position
+            
+            -- 🕳️ 1. ننزل تحت الأرض أول
+            goUnderground(savedPos)
+            task.wait(0.03)
+            
+            -- 💥 2. نطير للفلوس ونجمع
+            local attempt = 0
+            while _G.CashStealer and attempt < _G.MaxRetries do
+                if not item or not item.Parent then break end
+                attempt += 1
+                
+                if root.Parent then
+                    root.CFrame = item.CFrame + Vector3.new(0, _G.TeleportHeight, 0)
+                else
+                    break
+                end
+                
+                local char = player.Character
+                if char then pressAll(item, char) end
+                
+                task.wait(_G.RetryDelay)
+                
+                if isItemGone(item) then break end
+            end
+            
+            -- نحسب النتيجة
+            if item and item.Parent then
+                failed += 1
+            else
+                collected += 1
+            end
+            
+            -- 🕳️ 3. نرجع تحت الأرض
+            if root.Parent then
+                goUnderground(savedPos)
+                task.wait(0.02)
+            end
+            
+            -- 🏠 4. نرجع موقعنا الأصلي
+            if root.Parent then
+                root.CFrame = savedCFrame
+            end
+            
+            updateUI()
+        end)
+        activeJobs[item] = nil
+        activeCount -= 1
+        if activeCount < 0 then activeCount = 0 end
+        updateUI()
+    end)
+end
+
+-- ========== التشغيل ==========
+local function start()
+    local root = getRoot()
+    if root then originalCFrame = root.CFrame end
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.spawn(collectItem, obj)
+        end
+    end
+    
+    connection = workspace.DescendantAdded:Connect(function(obj)
+        if not _G.CashStealer then return end
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.wait(0.03)
+            task.spawn(collectItem, obj)
+        end
+    end)
+end
+
+local function stop()
+    if connection then connection:Disconnect() connection = nil end
+    activeJobs = {}
+    activeCount = 0
+    updateUI()
+    
+    local root = getRoot()
+    if root and originalCFrame then
+        root.CFrame = originalCFrame
+    end
+end
+
+btn.MouseButton1Click:Connect(function()
+    _G.CashStealer = not _G.CashStealer
+    if _G.CashStealer then
+        btn.Text = "ON"
+        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        status.Text = "شغال ✅"
+        status.TextColor3 = Color3.fromRGB(0, 255, 100)
+        start()
+    else
+        btn.Text = "OFF"
+        btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        status.Text = "متوقف ⛔"
+        status.TextColor3 = Color3.fromRGB(200, 200, 200)
+        stop()
+    end
+end)
+
+player.CharacterAdded:Connect(function()
+    originalCFrame = nil
+    task.wait(2)
+    if _G.CashStealer then
+        local root = getRoot()
+        if root then originalCFrame = root.CFrame end
+    end
+end)
