@@ -1,0 +1,937 @@
+-- ============================================
+-- سكربت Car - كامل مع دوران وتثبيت في هواء + تعليمات
+-- ============================================
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local flySpeed = 150
+local carSpeedValue = 200
+local verticalDir = 0
+local forwardDir = 0
+
+-- ========== ScreenGui ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CarGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = playerGui
+
+-- ========== اللوحة ==========
+local EXPANDED_SIZE = UDim2.new(0, 200, 0, 250)
+local COLLAPSED_SIZE = UDim2.new(0, 200, 0, 48)
+
+local MainPanel = Instance.new("Frame")
+MainPanel.Name = "MainPanel"
+MainPanel.Parent = ScreenGui
+MainPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+MainPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainPanel.Size = EXPANDED_SIZE
+MainPanel.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+MainPanel.BackgroundTransparency = 0.05
+MainPanel.BorderSizePixel = 0
+MainPanel.Active = true
+MainPanel.ClipsDescendants = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainPanel
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(0, 170, 255)
+MainStroke.Thickness = 1.5
+MainStroke.Transparency = 0.4
+MainStroke.Parent = MainPanel
+
+-- ========== الرأس ==========
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Parent = MainPanel
+Header.Position = UDim2.new(0, 6, 0, 6)
+Header.Size = UDim2.new(1, -12, 0, 30)
+Header.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+Header.BorderSizePixel = 0
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 8)
+HeaderCorner.Parent = Header
+
+local HeaderGradient = Instance.new("UIGradient")
+HeaderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 32, 44))
+})
+HeaderGradient.Rotation = 90
+HeaderGradient.Parent = Header
+
+local DragArea = Instance.new("Frame")
+DragArea.Name = "DragArea"
+DragArea.Parent = Header
+DragArea.Size = UDim2.new(1, -40, 1, 0)
+DragArea.BackgroundTransparency = 1
+DragArea.Active = true
+DragArea.ZIndex = 2
+
+local Title = Instance.new("TextLabel")
+Title.Parent = DragArea
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, -6, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Text = "Car"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextTruncate = Enum.TextTruncate.AtEnd
+Title.ZIndex = 3
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Parent = Header
+ToggleBtn.Size = UDim2.new(0, 22, 0, 22)
+ToggleBtn.Position = UDim2.new(1, -28, 0.5, -11)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 230)
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Text = "▲"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 12
+ToggleBtn.AutoButtonColor = false
+ToggleBtn.ZIndex = 4
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleCorner.Parent = ToggleBtn
+
+-- ========== المحتوى ==========
+local Content = Instance.new("ScrollingFrame")
+Content.Name = "Content"
+Content.Parent = MainPanel
+Content.Position = UDim2.new(0, 8, 0, 42)
+Content.Size = UDim2.new(1, -16, 1, -50)
+Content.BackgroundTransparency = 1
+Content.BorderSizePixel = 0
+Content.ScrollBarThickness = 4
+Content.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
+Content.ScrollBarImageTransparency = 0.3
+Content.ScrollingDirection = Enum.ScrollingDirection.Y
+Content.CanvasSize = UDim2.new(0, 0, 0, 526)
+Content.ScrollingEnabled = true
+Content.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+
+-- ========== دالة زر ==========
+local function createFeatureButton(name, icon, text, isToggle, parent)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Parent = parent or Content
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    btn.BorderSizePixel = 0
+    btn.Text = ""
+    btn.AutoButtonColor = false
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(60, 60, 80)
+    stroke.Thickness = 1
+    stroke.Parent = btn
+
+    if icon then
+        local img = Instance.new("ImageLabel")
+        img.Parent = btn
+        img.BackgroundTransparency = 1
+        img.Size = UDim2.new(0, 26, 0, 26)
+        img.Position = UDim2.new(0.5, -13, 0, 4)
+        img.Image = icon
+        img.ImageColor3 = Color3.fromRGB(255, 255, 255)
+        img.ScaleType = Enum.ScaleType.Fit
+    end
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = btn
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, 0, 0, 16)
+    lbl.Position = UDim2.new(0, 0, 1, -19)
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 230)
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 11
+    lbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+    if isToggle then
+        local ind = Instance.new("Frame")
+        ind.Name = "ToggleIndicator"
+        ind.Parent = btn
+        ind.AnchorPoint = Vector2.new(1, 0)
+        ind.Position = UDim2.new(1, -5, 0, 5)
+        ind.Size = UDim2.new(0, 9, 0, 9)
+        ind.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+        ind.BorderSizePixel = 0
+        local ic = Instance.new("UICorner")
+        ic.CornerRadius = UDim.new(1, 0)
+        ic.Parent = ind
+    end
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(48, 48, 62)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        if not btn:GetAttribute("Active") then
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}):Play()
+        end
+    end)
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(20, 120, 255)}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        if not btn:GetAttribute("Active") then
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(48, 48, 62)}):Play()
+        end
+    end)
+
+    return btn
+end
+
+local function setToggleState(btn, active)
+    btn:SetAttribute("Active", active)
+    local ind = btn:FindFirstChild("ToggleIndicator")
+    local stroke = btn:FindFirstChildWhichIsA("UIStroke")
+    if ind then
+        TweenService:Create(ind, TweenInfo.new(0.15), {
+            BackgroundColor3 = active and Color3.fromRGB(0, 230, 130) or Color3.fromRGB(80, 80, 90)
+        }):Play()
+    end
+    if stroke then
+        TweenService:Create(stroke, TweenInfo.new(0.15), {
+            Color = active and Color3.fromRGB(0, 230, 130) or Color3.fromRGB(60, 60, 80),
+            Thickness = active and 2 or 1
+        }):Play()
+    end
+    TweenService:Create(btn, TweenInfo.new(0.15), {
+        BackgroundColor3 = active and Color3.fromRGB(28, 55, 42) or Color3.fromRGB(35, 35, 45)
+    }):Play()
+end
+
+local function createInputRow(labelText, defaultVal, yPos)
+    local row = Instance.new("Frame")
+    row.Parent = Content
+    row.Position = UDim2.new(0, 0, 0, yPos)
+    row.Size = UDim2.new(1, 0, 0, 28)
+    row.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+    row.BorderSizePixel = 0
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = row
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 8, 0, 0)
+    lbl.Size = UDim2.new(1, -75, 1, 0)
+    lbl.Text = labelText
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 230)
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local inp = Instance.new("TextBox")
+    inp.Parent = row
+    inp.Position = UDim2.new(1, -60, 0, 3)
+    inp.Size = UDim2.new(0, 54, 1, -6)
+    inp.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    inp.BorderSizePixel = 0
+    inp.Text = tostring(defaultVal)
+    inp.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inp.Font = Enum.Font.GothamBold
+    inp.TextSize = 12
+    inp.ClearTextOnFocus = false
+    inp.PlaceholderText = tostring(defaultVal)
+    inp.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+    local ic = Instance.new("UICorner") ic.CornerRadius = UDim.new(0, 5) ic.Parent = inp
+
+    return row, inp
+end
+
+-- ========== الأزرار ==========
+local FlyToggleBtn = createFeatureButton("FlyToggleBtn", "rbxassetid://6031243533", "طيران (تحكم)", true)
+FlyToggleBtn.Size = UDim2.new(1, 0, 0, 46)
+FlyToggleBtn.Position = UDim2.new(0, 0, 0, 0)
+
+local _, SpeedInput = createInputRow("سرعة الطيران:", 150, 52)
+SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local d = SpeedInput.Text:gsub("%D", "")
+    if d ~= SpeedInput.Text then SpeedInput.Text = d end
+    local n = tonumber(d)
+    if n and n > 0 then flySpeed = math.clamp(n, 10, 5000) end
+end)
+
+local CtrlRow = Instance.new("Frame")
+CtrlRow.Parent = Content
+CtrlRow.Position = UDim2.new(0, 0, 0, 86)
+CtrlRow.Size = UDim2.new(1, 0, 0, 32)
+CtrlRow.BackgroundTransparency = 1
+
+local function ctrlBtn(text, color, xPos)
+    local b = Instance.new("TextButton")
+    b.Parent = CtrlRow
+    b.Size = UDim2.new(0.25, -2, 1, 0)
+    b.Position = UDim2.new(xPos, 0, 0, 0)
+    b.BackgroundColor3 = color
+    b.BorderSizePixel = 0
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(255, 255, 255)
+    b.Font = Enum.Font.SourceSansBold
+    b.TextSize = 11
+    b.AutoButtonColor = false
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = b
+    return b
+end
+
+local UpBtn      = ctrlBtn("صعود", Color3.fromRGB(35, 55, 75), 0)
+local DownBtn    = ctrlBtn("هبوط", Color3.fromRGB(60, 45, 45), 0.25)
+local ForwardBtn = ctrlBtn("أمام", Color3.fromRGB(35, 60, 45), 0.5)
+local BackBtn    = ctrlBtn("خلف", Color3.fromRGB(55, 50, 35), 0.75)
+
+local CarSpeedBtn = createFeatureButton("CarSpeedBtn", "rbxassetid://6031075934", "سرعة سياره", true)
+CarSpeedBtn.Size = UDim2.new(1, 0, 0, 46)
+CarSpeedBtn.Position = UDim2.new(0, 0, 0, 126)
+
+local _, CarSpeedInput = createInputRow("السرعة:", 200, 178)
+CarSpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local d = CarSpeedInput.Text:gsub("%D", "")
+    if d ~= CarSpeedInput.Text then CarSpeedInput.Text = d end
+    local n = tonumber(d)
+    if n and n > 0 then carSpeedValue = math.clamp(n, 10, 10000) end
+end)
+
+local RewindBtn = createFeatureButton("RewindBtn", "rbxassetid://8400033134", "ترجيع",  false)
+local RushBtn   = createFeatureButton("RushBtn",   "rbxassetid://6031075934", "اندفاع", false)
+local ResetBtn  = createFeatureButton("ResetBtn",  "rbxassetid://7734053426", "رست",   false)
+local BrakeBtn  = createFeatureButton("BrakeBtn",  "rbxassetid://6031229834", "فرامل",  false)
+local ClimbBtn  = createFeatureButton("ClimbBtn",  "rbxassetid://6034684930", "تسلق",   true)
+local NoclipBtn = createFeatureButton("NoclipBtn", "rbxassetid://6034684930", "اختراق", true)
+local FlyOneShotBtn = createFeatureButton("FlyOneShotBtn", "rbxassetid://6031243533", "تطير سياره", false)
+local FlipBtn       = createFeatureButton("FlipBtn",       "rbxassetid://6035067834", "شقلبه في هواء", false)
+local RotLeftBtn    = createFeatureButton("RotLeftBtn",    "rbxassetid://6031091004", "دوران شمال", false)
+local RotRightBtn   = createFeatureButton("RotRightBtn",   "rbxassetid://6035047448", "دوران يمين", false)
+local HoverBtn      = createFeatureButton("HoverBtn",      "rbxassetid://6034684930", "تثبيت في هواء", true)
+
+local ROW_H = 46
+local function place2(btnL, btnR, yPos)
+    btnL.Size = UDim2.new(0.5, -3, 0, ROW_H)
+    btnL.Position = UDim2.new(0, 0, 0, yPos)
+    btnR.Size = UDim2.new(0.5, -3, 0, ROW_H)
+    btnR.Position = UDim2.new(0.5, 3, 0, yPos)
+end
+
+place2(RewindBtn, RushBtn, 212)
+place2(ResetBtn, BrakeBtn, 264)
+place2(ClimbBtn, NoclipBtn, 316)
+place2(FlyOneShotBtn, FlipBtn, 368)
+place2(RotLeftBtn, RotRightBtn, 420)
+
+HoverBtn.Size = UDim2.new(1, 0, 0, ROW_H)
+HoverBtn.Position = UDim2.new(0, 0, 0, 472)
+
+-- ========== قسم التعليمات ==========
+local INSTR_START_Y = 526
+
+-- عنوان التعليمات
+local InstrHeader = Instance.new("Frame")
+InstrHeader.Parent = Content
+InstrHeader.Position = UDim2.new(0, 0, 0, INSTR_START_Y)
+InstrHeader.Size = UDim2.new(1, 0, 0, 28)
+InstrHeader.BackgroundColor3 = Color3.fromRGB(30, 60, 90)
+InstrHeader.BorderSizePixel = 0
+local ihc = Instance.new("UICorner") ihc.CornerRadius = UDim.new(0, 8) ihc.Parent = InstrHeader
+local ihs = Instance.new("UIStroke") ihs.Color = Color3.fromRGB(0, 170, 255) ihs.Thickness = 1.5 ihs.Transparency = 0.3 ihs.Parent = InstrHeader
+
+local InstrTitle = Instance.new("TextLabel")
+InstrTitle.Parent = InstrHeader
+InstrTitle.BackgroundTransparency = 1
+InstrTitle.Size = UDim2.new(1, 0, 1, 0)
+InstrTitle.Text = "📋 تعليمات الأزرار"
+InstrTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
+InstrTitle.Font = Enum.Font.GothamBold
+InstrTitle.TextSize = 13
+
+-- دالة إنشاء صف تعليمات
+local function createInstructionRow(btnName, desc, yPos)
+    local row = Instance.new("Frame")
+    row.Parent = Content
+    row.Position = UDim2.new(0, 0, 0, yPos)
+    row.Size = UDim2.new(1, 0, 0, 34)
+    row.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+    row.BorderSizePixel = 0
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = row
+
+    local stripe = Instance.new("Frame")
+    stripe.Parent = row
+    stripe.Position = UDim2.new(0, 4, 0, 6)
+    stripe.Size = UDim2.new(0, 3, 1, -12)
+    stripe.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    stripe.BorderSizePixel = 0
+    local sc = Instance.new("UICorner") sc.CornerRadius = UDim.new(1, 0) sc.Parent = stripe
+
+    local nameLbl = Instance.new("TextLabel")
+    nameLbl.Parent = row
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.Position = UDim2.new(0, 14, 0, 2)
+    nameLbl.Size = UDim2.new(1, -20, 0, 15)
+    nameLbl.Text = btnName
+    nameLbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+    nameLbl.Font = Enum.Font.GothamBold
+    nameLbl.TextSize = 12
+    nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local descLbl = Instance.new("TextLabel")
+    descLbl.Parent = row
+    descLbl.BackgroundTransparency = 1
+    descLbl.Position = UDim2.new(0, 14, 0, 17)
+    descLbl.Size = UDim2.new(1, -20, 0, 15)
+    descLbl.Text = desc
+    descLbl.TextColor3 = Color3.fromRGB(190, 190, 200)
+    descLbl.Font = Enum.Font.SourceSans
+    descLbl.TextSize = 11
+    descLbl.TextXAlignment = Enum.TextXAlignment.Left
+    descLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+    return row
+end
+
+-- قائمة التعليمات
+local instructions = {
+    { "طيران (تحكم)",         "الطيران والتحكم بالاتجاه" },
+    { "سرعة الطيران",          "سرعة الطيران (10-5000)" },
+    { "صعود / هبوط",          "الحركة العمودية في الطيران" },
+    { "أمام / خلف",           "الحركة الأمامية والخلفية" },
+    { "سرعة سياره",            "تثبيت سرعة السيارة" },
+    { "السرعة",                "قيمة السرعة (10-10000)" },
+    { "ترجيع",                 "الرجوع لآخر موقع آمن" },
+    { "اندفاع",                "دفعة سريعة للأمام" },
+    { "رست",                   "رفع وإعادة تعيين السيارة" },
+    { "فرامل",                 "إيقاف السيارة فوراً" },
+    { "تسلق",                  "تسلق الجدران للأعلى" },
+    { "اختراق",                "اختراق الأجسام" },
+    { "تطير سياره",            "دفعة عمودية للأعلى" },
+    { "شقلبه في هواء",         "شقلبة 360 في الهواء" },
+    { "دوران شمال",            "تدوير 90 درجة يسار" },
+    { "دوران يمين",            "تدوير 90 درجة يمين" },
+    { "تثبيت في هواء",         "تثبيت الارتفاع في الهواء" },
+}
+
+for i, data in ipairs(instructions) do
+    createInstructionRow(data[1], data[2], INSTR_START_Y + 32 + (i - 1) * 36)
+end
+
+-- تحديث حجم المحتوى تلقائياً
+Content.CanvasSize = UDim2.new(0, 0, 0, INSTR_START_Y + 32 + (#instructions * 36) + 10)
+
+-- ========== السحب ==========
+local function makeDraggable(frame, dragArea)
+    local dragging = false
+    local dragStart, startPos
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            local endConn
+            endConn = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if endConn then endConn:Disconnect() end
+                end
+            end)
+        end
+    end)
+    dragArea.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+makeDraggable(MainPanel, DragArea)
+
+-- ========== الطي/الفتح ==========
+local isCollapsed = false
+local tweenInfo = TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+ToggleBtn.MouseButton1Click:Connect(function()
+    if not isCollapsed then
+        isCollapsed = true
+        Content.Visible = false
+        TweenService:Create(MainPanel, tweenInfo, {Size = COLLAPSED_SIZE}):Play()
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
+        ToggleBtn.Text = "▼"
+    else
+        isCollapsed = false
+        Content.Visible = true
+        TweenService:Create(MainPanel, tweenInfo, {Size = EXPANDED_SIZE}):Play()
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 150, 230)}):Play()
+        ToggleBtn.Text = "▲"
+    end
+end)
+
+-- ========== تحذير ==========
+local function showWarning(text)
+    local old = ScreenGui:FindFirstChild("WarningLabel")
+    if old then old:Destroy() end
+    local W = Instance.new("TextLabel")
+    W.Name = "WarningLabel"
+    W.Parent = ScreenGui
+    W.AnchorPoint = Vector2.new(0.5, 0)
+    W.Size = UDim2.new(0, 260, 0, 42)
+    W.Position = UDim2.new(0.5, 0, 0.08, 0)
+    W.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    W.BackgroundTransparency = 0.15
+    W.TextColor3 = Color3.fromRGB(255, 60, 60)
+    W.Text = text
+    W.Font = Enum.Font.SourceSansBold
+    W.TextSize = 16
+    W.BorderSizePixel = 0
+    local LC = Instance.new("UICorner") LC.CornerRadius = UDim.new(0, 10) LC.Parent = W
+    local LS = Instance.new("UIStroke") LS.Color = Color3.fromRGB(255, 60, 60) LS.Thickness = 1.5 LS.Transparency = 0.5 LS.Parent = W
+    Debris:AddItem(W, 3)
+end
+
+-- ========== جلب المركبة ==========
+local function getVehicle()
+    local character = player.Character
+    if character and character:FindFirstChild("Humanoid") then
+        local seat = character.Humanoid.SeatPart
+        local vehicle = seat and seat.Parent
+        if vehicle and vehicle:IsA("Model") then
+            local mainPart = vehicle:FindFirstChild("DriveSeat") or vehicle.PrimaryPart or vehicle:FindFirstChildWhichIsA("BasePart")
+            if mainPart then return vehicle, mainPart end
+        end
+    end
+    return nil, nil
+end
+
+-- ========== تتبع الموقع الآمن ==========
+local lastSafeCFrame = nil
+local lastVehicle = nil
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        local vehicle, mainPart = getVehicle()
+        if mainPart and mainPart.AssemblyLinearVelocity.Y < 20 then
+            lastSafeCFrame = mainPart.CFrame
+            lastVehicle = vehicle
+        end
+    end
+end)
+
+-- ========== تطير سياره ==========
+FlyOneShotBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = Vector3.new(0, flySpeed, 0)
+        bv.MaxForce = Vector3.new(0, 500000, 0)
+        bv.Parent = mainPart
+        Debris:AddItem(bv, 1)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ========== طيران تحكم ==========
+local flyActive = false
+local flyBV = nil
+local flyBG = nil
+
+local function stopFly()
+    flyActive = false
+    verticalDir = 0
+    forwardDir = 0
+    setToggleState(FlyToggleBtn, false)
+    if flyBV then flyBV:Destroy() flyBV = nil end
+    if flyBG then flyBG:Destroy() flyBG = nil end
+end
+
+FlyToggleBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+
+    if flyActive then
+        stopFly()
+    else
+        flyActive = true
+        setToggleState(FlyToggleBtn, true)
+
+        flyBG = Instance.new("BodyGyro")
+        flyBG.MaxTorque = Vector3.new(500000, 500000, 500000)
+        flyBG.P = 8000
+        flyBG.D = 500
+        flyBG.CFrame = mainPart.CFrame
+        flyBG.Parent = mainPart
+
+        flyBV = Instance.new("BodyVelocity")
+        flyBV.MaxForce = Vector3.new(500000, 500000, 500000)
+        flyBV.Velocity = Vector3.new(0, 0, 0)
+        flyBV.Parent = mainPart
+
+        task.spawn(function()
+            while flyActive and flyBV and flyBV.Parent do
+                local _, mp = getVehicle()
+                if not mp or mp ~= flyBV.Parent then stopFly() break end
+
+                local cam = workspace.CurrentCamera
+                local camLook = cam.CFrame.LookVector
+                local flatLook = Vector3.new(camLook.X, 0, camLook.Z)
+                if flatLook.Magnitude < 0.05 then flatLook = Vector3.new(0, 0, -1) else flatLook = flatLook.Unit end
+                flyBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook)
+
+                local v = verticalDir * flySpeed * 0.7
+                local f = forwardDir * flySpeed
+                flyBV.Velocity = (flatLook * f) + Vector3.new(0, v, 0)
+
+                task.wait(0.03)
+            end
+        end)
+    end
+end)
+
+-- ========== أزرار تحكم ==========
+local function bindHold(btn, onDown, onUp)
+    btn.MouseButton1Down:Connect(onDown)
+    btn.MouseButton1Up:Connect(onUp)
+    btn.MouseLeave:Connect(onUp)
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then onDown() end
+    end)
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then onUp() end
+    end)
+end
+
+bindHold(UpBtn,
+    function() if flyActive then verticalDir = 1 end end,
+    function() if verticalDir == 1 then verticalDir = 0 end end
+)
+bindHold(DownBtn,
+    function() if flyActive then verticalDir = -1 end end,
+    function() if verticalDir == -1 then verticalDir = 0 end end
+)
+bindHold(ForwardBtn,
+    function() if flyActive then forwardDir = 1 end end,
+    function() if forwardDir == 1 then forwardDir = 0 end end
+)
+bindHold(BackBtn,
+    function() if flyActive then forwardDir = -1 end end,
+    function() if forwardDir == -1 then forwardDir = 0 end end
+)
+
+-- ========== سرعة سياره ==========
+local carSpeedActive = false
+
+CarSpeedBtn.MouseButton1Click:Connect(function()
+    if carSpeedActive then
+        carSpeedActive = false
+        setToggleState(CarSpeedBtn, false)
+    else
+        local _, mainPart = getVehicle()
+        if not mainPart then showWarning("اركب سيارة أولاً!") return end
+        carSpeedActive = true
+        setToggleState(CarSpeedBtn, true)
+
+        task.spawn(function()
+            local speedHistory = {}
+            while carSpeedActive do
+                local _, mp = getVehicle()
+                if not mp then
+                    carSpeedActive = false
+                    setToggleState(CarSpeedBtn, false)
+                    break
+                end
+
+                local v = mp.AssemblyLinearVelocity
+                local h = Vector3.new(v.X, 0, v.Z)
+                local speed = h.Magnitude
+
+                table.insert(speedHistory, speed)
+                if #speedHistory > 6 then table.remove(speedHistory, 1) end
+
+                if speed > 3 and #speedHistory >= 6 then
+                    local oldSpeed = speedHistory[1]
+                    local notBraking = speed > oldSpeed * 0.8
+                    local belowTarget = speed < carSpeedValue * 0.95
+
+                    if notBraking and belowTarget then
+                        local dir = h.Unit
+                        local newH = dir * carSpeedValue
+                        mp.AssemblyLinearVelocity = Vector3.new(newH.X, v.Y, newH.Z)
+                    end
+                end
+
+                task.wait(0.05)
+            end
+        end)
+    end
+end)
+
+-- ========== ترجيع ==========
+RewindBtn.MouseButton1Click:Connect(function()
+    local vehicle, mainPart = getVehicle()
+    if mainPart then
+        if lastSafeCFrame and lastVehicle == vehicle then
+            mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            mainPart.CFrame = lastSafeCFrame
+        else
+            showWarning("لم يتم العثور على موقع سابق آمن!")
+        end
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ========== اندفاع ==========
+RushBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        local forward = mainPart.CFrame.LookVector
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = (forward * 180) + Vector3.new(0, 30, 0)
+        bv.MaxForce = Vector3.new(500000, 500000, 500000)
+        bv.Parent = mainPart
+        Debris:AddItem(bv, 0.7)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ========== رست ==========
+ResetBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        local pos = mainPart.Position
+        local look = mainPart.CFrame.LookVector
+        local yaw = math.atan2(-look.X, -look.Z)
+        mainPart.CFrame = CFrame.new(pos + Vector3.new(0, 8, 0)) * CFrame.Angles(0, yaw, 0)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ========== فرامل ==========
+BrakeBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ========== تسلق ==========
+local climbActive = false
+local climbBV = nil
+ClimbBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    climbActive = not climbActive
+    setToggleState(ClimbBtn, climbActive)
+    if climbActive then
+        climbBV = Instance.new("BodyVelocity")
+        climbBV.MaxForce = Vector3.new(500000, 500000, 500000)
+        climbBV.Velocity = Vector3.new(0, 120, 0)
+        climbBV.Parent = mainPart
+        task.spawn(function()
+            while climbActive and climbBV and climbBV.Parent do
+                local _, mp = getVehicle()
+                if not mp or mp ~= climbBV.Parent then
+                    climbActive = false
+                    setToggleState(ClimbBtn, false)
+                    if climbBV then climbBV:Destroy() climbBV = nil end
+                    break
+                end
+                local look = mp.CFrame.LookVector
+                climbBV.Velocity = (look * 70) + Vector3.new(0, 120, 0)
+                task.wait(0.05)
+            end
+        end)
+    else
+        if climbBV then climbBV:Destroy() climbBV = nil end
+    end
+end)
+
+-- ========== اختراق ==========
+local noclipActive = false
+local modifiedParts = {}
+local function restoreNoclip()
+    for part, origState in pairs(modifiedParts) do
+        if part and part.Parent then part.CanCollide = origState end
+    end
+    modifiedParts = {}
+end
+NoclipBtn.MouseButton1Click:Connect(function()
+    if noclipActive then
+        noclipActive = false
+        restoreNoclip()
+        setToggleState(NoclipBtn, false)
+    else
+        local _, mainPart = getVehicle()
+        if not mainPart then showWarning("اركب سيارة أولاً!") return end
+        noclipActive = true
+        setToggleState(NoclipBtn, true)
+        task.spawn(function()
+            while noclipActive do
+                local v, mp = getVehicle()
+                if not mp then
+                    noclipActive = false
+                    restoreNoclip()
+                    setToggleState(NoclipBtn, false)
+                    break
+                end
+                for _, part in ipairs(v:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        if modifiedParts[part] == nil then modifiedParts[part] = part.CanCollide end
+                        part.CanCollide = false
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+-- ========== شقلبه في هواء ==========
+local isFlipping = false
+
+FlipBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if isFlipping then return end
+
+    isFlipping = true
+
+    local liftHeight = 12
+    local liftDuration = 0.25
+    local flipDuration = 0.6
+
+    local liftStartPos = mainPart.Position
+    local liftStartCF = mainPart.CFrame
+    local liftRotPart = liftStartCF - liftStartCF.Position
+
+    task.spawn(function()
+        local liftT0 = tick()
+        while true do
+            if not mainPart or not mainPart.Parent then isFlipping = false return end
+            local t = (tick() - liftT0) / liftDuration
+            if t >= 1 then
+                mainPart.CFrame = CFrame.new(liftStartPos + Vector3.new(0, liftHeight, 0)) * liftRotPart
+                break
+            end
+            local eased = 1 - (1 - t) * (1 - t)
+            mainPart.CFrame = CFrame.new(liftStartPos + Vector3.new(0, liftHeight * eased, 0)) * liftRotPart
+            task.wait(0.01)
+        end
+
+        local flipStartCF = mainPart.CFrame
+        local flipT0 = tick()
+
+        while true do
+            if not mainPart or not mainPart.Parent then isFlipping = false return end
+            local t = (tick() - flipT0) / flipDuration
+            if t >= 1 then
+                mainPart.CFrame = flipStartCF
+                break
+            end
+            local angle = math.rad(360) * t
+            mainPart.CFrame = flipStartCF * CFrame.Angles(angle, 0, 0)
+            task.wait(0.01)
+        end
+
+        isFlipping = false
+    end)
+end)
+
+-- ========== دوران يمين / شمال ==========
+local isRotating = false
+
+local function rotateCar(degrees)
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if isRotating then return end
+
+    isRotating = true
+    local startCF = mainPart.CFrame
+    local startVel = mainPart.AssemblyLinearVelocity
+    local duration = 0.15
+    local t0 = tick()
+    local rotCF = CFrame.Angles(0, math.rad(degrees), 0)
+
+    task.spawn(function()
+        while true do
+            if not mainPart or not mainPart.Parent then isRotating = false return end
+            local t = (tick() - t0) / duration
+            if t >= 1 then
+                mainPart.CFrame = startCF * rotCF
+                local newVel = rotCF * startVel
+                mainPart.AssemblyLinearVelocity = newVel
+                break
+            end
+            local eased = t * t * (3 - 2 * t)
+            mainPart.CFrame = startCF * CFrame.Angles(0, math.rad(degrees * eased), 0)
+            task.wait(0.01)
+        end
+        isRotating = false
+    end)
+end
+
+RotRightBtn.MouseButton1Click:Connect(function() rotateCar(-90) end)
+RotLeftBtn.MouseButton1Click:Connect(function() rotateCar(90) end)
+
+-- ========== تثبيت في هواء (Toggle) ==========
+local hoverActive = false
+local hoverBP = nil
+
+local function stopHover()
+    hoverActive = false
+    setToggleState(HoverBtn, false)
+    if hoverBP then hoverBP:Destroy() hoverBP = nil end
+end
+
+HoverBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+
+    if hoverActive then
+        stopHover()
+    else
+        hoverActive = true
+        setToggleState(HoverBtn, true)
+
+        hoverBP = Instance.new("BodyPosition")
+        hoverBP.MaxForce = Vector3.new(0, 500000, 0)
+        hoverBP.P = 15000
+        hoverBP.D = 1500
+        hoverBP.Position = mainPart.Position
+        hoverBP.Parent = mainPart
+
+        local targetY = mainPart.Position.Y
+        task.spawn(function()
+            while hoverActive and hoverBP and hoverBP.Parent do
+                local _, mp = getVehicle()
+                if not mp or mp ~= hoverBP.Parent then
+                    stopHover()
+                    break
+                end
+                hoverBP.Position = Vector3.new(mp.Position.X, targetY, mp.Position.Z)
+                task.wait(0.05)
+            end
+        end)
+    end
+end)
