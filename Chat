@@ -1,0 +1,415 @@
+--============================================================
+--  Delta Pro UI  |  Fixed Unknown Names & Search Highlight
+--============================================================
+local Players         = game:GetService("Players")
+local TweenService    = game:GetService("TweenService")
+local UserInputService= game:GetService("UserInputService")
+local TextChatService = game:GetService("TextChatService")
+
+local LP = Players.LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+
+local old = PG:FindFirstChild("DeltaProUI")
+if old then old:Destroy() end
+
+--========================= الألوان =========================
+local Theme = {
+    bg          = Color3.fromRGB(20, 20, 28),
+    header      = Color3.fromRGB(35, 35, 50),
+    accent      = Color3.fromRGB(138, 43, 226),
+    accent2     = Color3.fromRGB(64, 224, 208),
+    text        = Color3.fromRGB(255, 255, 255),
+    sub         = Color3.fromRGB(160, 160, 180),
+    msgBg       = Color3.fromRGB(40, 40, 55),
+    online      = Color3.fromRGB(0, 255, 127),
+}
+
+local function createCorner(parent, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius)
+    c.Parent = parent
+    return c
+end
+
+local function createStroke(parent, color, thickness, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color = color
+    s.Thickness = thickness or 1
+    s.Transparency = transparency or 0
+    s.Parent = parent
+    return s
+end
+
+local function tween(obj, info, props)
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
+local function esc(s) 
+    if not s then return "" end
+    return s:gsub("&","&"):gsub("<","<"):gsub(">",">") 
+end
+
+--========================= كاش الصور =========================
+local avatarCache = {}
+local function getAvatar(userId)
+    if not userId then return nil end
+    if avatarCache[userId] then return avatarCache[userId] end
+    local ok, img = pcall(function()
+        return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+    end)
+    if ok and img then avatarCache[userId] = img end
+    return img
+end
+
+local function colorFor(name)
+    local pal = {"#8A2BE2", "#40E0D0", "#FF1493", "#FFD700", "#FF4500", "#00FF7F"}
+    local h = 0
+    for i = 1, #name do h = (h * 31 + name:byte(i)) % 1000003 end
+    return pal[(h % #pal) + 1]
+end
+
+--========================= الأبعاد =========================
+local W, H = 230, 290
+local HEADER_H = 38
+local MAX_MSG_AVATAR = 18
+
+--========================= الجذر =========================
+local gui = Instance.new("ScreenGui")
+gui.Name = "DeltaProUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.DisplayOrder = 9999
+gui.Parent = PG
+
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = gui
+local vp = workspace.CurrentCamera.ViewportSize
+local baseScale = math.clamp(vp.X / 700, 0.75, 1)
+uiScale.Scale = baseScale
+
+--=========== اللوحة الرئيسية ============
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.Size = UDim2.fromOffset(W, H)
+main.BackgroundColor3 = Theme.bg
+main.BackgroundTransparency = 0.1
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = gui
+createCorner(main, 12)
+createStroke(main, Theme.header, 1.5, 0.5)
+
+--=========== الهيدر ============
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, HEADER_H)
+header.BackgroundColor3 = Theme.header
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = main
+createCorner(header, 12)
+
+local accentBar = Instance.new("Frame")
+accentBar.AnchorPoint = Vector2.new(0.5, 0)
+accentBar.Position = UDim2.new(0.5, 0, 0, 0)
+accentBar.Size = UDim2.new(1, -20, 0, 2)
+accentBar.BackgroundColor3 = Theme.accent
+accentBar.BorderSizePixel = 0
+accentBar.Parent = header
+createCorner(accentBar, 2)
+
+local titleLbl = Instance.new("TextLabel")
+titleLbl.AnchorPoint = Vector2.new(0.5, 0.5)
+titleLbl.Position = UDim2.new(0.5, 0, 0.5, 0)
+titleLbl.Size = UDim2.new(1, -70, 1, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Font = Enum.Font.GothamBold
+titleLbl.TextSize = 12
+titleLbl.TextColor3 = Theme.text
+titleLbl.Text = "Chat"
+titleLbl.Parent = header
+
+--=========== زر التصغير ============
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Name = "MinimizeBtn"
+minimizeBtn.AnchorPoint = Vector2.new(1, 0.5)
+minimizeBtn.Position = UDim2.new(1, -8, 0.5, 0)
+minimizeBtn.Size = UDim2.fromOffset(24, 24)
+minimizeBtn.BackgroundColor3 = Theme.bg
+minimizeBtn.BackgroundTransparency = 0.4
+minimizeBtn.BorderSizePixel = 0
+minimizeBtn.AutoButtonColor = false
+minimizeBtn.Text = "▼"
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 12
+minimizeBtn.TextColor3 = Theme.text
+minimizeBtn.Parent = header
+createCorner(minimizeBtn, 5)
+createStroke(minimizeBtn, Theme.accent, 1, 0.5)
+
+--=========== حقل البحث ============
+local searchFrame = Instance.new("Frame")
+searchFrame.Position = UDim2.new(0, 8, 0, HEADER_H + 6)
+searchFrame.Size = UDim2.new(1, -16, 0, 24)
+searchFrame.BackgroundColor3 = Theme.msgBg
+searchFrame.BackgroundTransparency = 0.2
+searchFrame.BorderSizePixel = 0
+searchFrame.Parent = main
+createCorner(searchFrame, 6)
+
+local searchBox = Instance.new("TextBox")
+searchBox.Position = UDim2.new(0, 8, 0, 0)
+searchBox.Size = UDim2.new(1, -16, 1, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.PlaceholderText = "Search..."
+searchBox.PlaceholderColor3 = Theme.sub
+searchBox.Text = ""
+searchBox.ClearTextOnFocus = false
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextSize = 10
+searchBox.TextColor3 = Theme.text
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.Parent = searchFrame
+
+--=========== منطقة الرسائل ============
+local scrollTop = HEADER_H + 36
+local scroll = Instance.new("ScrollingFrame")
+scroll.Position = UDim2.new(0, 5, 0, scrollTop)
+scroll.Size = UDim2.new(1, -10, 0, H - scrollTop - 5)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 2
+scroll.ScrollBarImageColor3 = Theme.accent
+scroll.ScrollBarImageTransparency = 0.4
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.Parent = main
+
+local list = Instance.new("UIListLayout")
+list.Padding = UDim.new(0, 4)
+list.SortOrder = Enum.SortOrder.LayoutOrder
+list.Parent = scroll
+
+--=========== منطق الرسائل ============
+local entries = {}
+
+local function currentQuery()
+    return (searchBox.Text:gsub("^%s+", ""):gsub("%s+$", "")):lower()
+end
+
+local function highlight(str, q)
+    if q == "" then return esc(str) end
+    local matches = {}
+    local init = 1
+    while true do
+        local s, e = string.find(string.lower(str), string.lower(q), init, true)
+        if not s then break end
+        table.insert(matches, {s, e})
+        init = e + 1
+    end
+    if #matches == 0 then return esc(str) end
+    
+    local out = {}
+    local lastIndex = 1
+    for _, match in ipairs(matches) do
+        local s, e = match[1], match[2]
+        table.insert(out, esc(string.sub(str, lastIndex, s - 1)))
+        table.insert(out, '<font color="#' .. Theme.accent2:ToHex() .. '"><b>' .. esc(string.sub(str, s, e)) .. '</b></font>')
+        lastIndex = e + 1
+    end
+    table.insert(out, esc(string.sub(str, lastIndex)))
+    return table.concat(out)
+end
+
+local function renderText(e, q)
+    -- إصلاح الاسم الفارغ
+    local safeName = (e.name and e.name ~= "") and e.name or "System"
+    local nm = '<font color="' .. (e.color or "#FFFFFF") .. '"><b>' .. esc(safeName) .. '</b></font>'
+    local tm = '  <font color="#6B6B80" size="9">[' .. e.time .. ']</font>'
+    
+    local body = e.system and ('<i><font color="#9A9AB0">' .. esc(e.message) .. '</font></i>') or highlight(e.message, q)
+    return nm .. tm .. "\n" .. body
+end
+
+local function scrollToBottom()
+    task.defer(function()
+        if scroll and scroll.Parent then
+            scroll.CanvasPosition = Vector2.new(0, scroll.AbsoluteCanvasSize.Y)
+        end
+    end)
+end
+
+local function addMessage(displayName, message, isSystem, userId)
+    if not message or message == "" then return end
+    local q = currentQuery()
+    
+    -- التأكد من أن الاسم ليس فارغاً
+    if not displayName or displayName == "" then 
+        displayName = isSystem and "System" or "Player" 
+    end
+
+    local e = {
+        name = displayName, message = message, time = os.date("%H:%M"),
+        color = isSystem and "#8A8A9A" or colorFor(displayName), system = isSystem,
+    }
+
+    local msgFrame = Instance.new("Frame")
+    msgFrame.Size = UDim2.new(1, 0, 0, 0)
+    msgFrame.AutomaticSize = Enum.AutomaticSize.Y
+    msgFrame.BackgroundColor3 = Theme.msgBg
+    msgFrame.BackgroundTransparency = 0.2
+    msgFrame.BorderSizePixel = 0
+    msgFrame.Parent = scroll
+    createCorner(msgFrame, 6)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Position = UDim2.new(0, 4, 0, 4)
+    lbl.Size = UDim2.new(1, -(MAX_MSG_AVATAR + 10), 0, 0)
+    lbl.AutomaticSize = Enum.AutomaticSize.Y
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 10
+    lbl.TextColor3 = Theme.text
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    lbl.TextWrapped = true
+    lbl.RichText = true
+    lbl.Text = renderText(e, q)
+    lbl.Parent = msgFrame
+
+    local av = Instance.new("ImageLabel")
+    av.AnchorPoint = Vector2.new(1, 0)
+    av.Position = UDim2.new(1, -4, 0, 4)
+    av.Size = UDim2.fromOffset(MAX_MSG_AVATAR, MAX_MSG_AVATAR)
+    av.BackgroundColor3 = Theme.header
+    av.BorderSizePixel = 0
+    av.Parent = msgFrame
+    createCorner(av, 999)
+    createStroke(av, Theme.accent, 1, 0.5)
+
+    local onlineDot = Instance.new("Frame")
+    onlineDot.AnchorPoint = Vector2.new(1, 1)
+    onlineDot.Position = UDim2.new(1, 1, 1, 1)
+    onlineDot.Size = UDim2.fromOffset(6, 6)
+    onlineDot.BackgroundColor3 = isSystem and Theme.sub or Theme.online
+    onlineDot.BorderSizePixel = 0
+    onlineDot.Parent = av
+    createCorner(onlineDot, 999)
+    createStroke(onlineDot, Theme.msgBg, 1, 0)
+
+    if userId and not isSystem then
+        task.spawn(function()
+            local img = getAvatar(userId)
+            if img and av.Parent then av.Image = img end
+        end)
+    end
+
+    e.frame, e.label = msgFrame, lbl
+    entries[#entries + 1] = e
+
+    local hay = (e.name .. " " .. e.message):lower()
+    msgFrame.Visible = (q == "" or hay:find(q, 1, true) ~= nil)
+
+    if #entries > 250 then
+        local oldE = table.remove(entries, 1)
+        if oldE and oldE.frame then oldE.frame:Destroy() end
+    end
+
+    scrollToBottom()
+end
+
+local function applyFilter()
+    local q = currentQuery()
+    for _, e in ipairs(entries) do
+        local hay = (e.name .. " " .. e.message):lower()
+        e.frame.Visible = (q == "" or hay:find(q, 1, true) ~= nil)
+        e.label.Text = renderText(e, q)
+    end
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(applyFilter)
+
+--=========== التقاط الشات (تم الإصلاح هنا) ============
+if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+    TextChatService.MessageReceived:Connect(function(msg)
+        local src = msg.TextSource
+        if not src then
+            -- رسالة من النظام (ليس لاعب)
+            addMessage("System", msg.Text, true, nil)
+        else
+            -- رسالة من لاعب
+            local nm = src.DisplayName
+            if not nm or nm == "" then nm = src.Name end
+            if not nm or nm == "" then nm = "Player_" .. tostring(src.UserId) end
+            addMessage(nm, msg.Text, false, src.UserId)
+        end
+    end)
+else
+    -- الشات القديم
+    local function hook(p)
+        p.Chatted:Connect(function(m) 
+            local nm = p.DisplayName or p.Name or "Player"
+            addMessage(nm, m, false, p.UserId) 
+        end)
+    end
+    for _, p in ipairs(Players:GetPlayers()) do hook(p) end
+    Players.PlayerAdded:Connect(hook)
+end
+
+--=========== منطق التصغير ============
+local isMinimized = false
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    tween(minimizeBtn, TweenInfo.new(0.3), {Rotation = isMinimized and 180 or 0})
+    tween(main, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Size = isMinimized and UDim2.fromOffset(W, HEADER_H) or UDim2.fromOffset(W, H)
+    })
+    searchFrame.Visible = not isMinimized
+    scroll.Visible = not isMinimized
+end)
+
+--=========== السحب مع التقييد (Clamping) ============
+local dragging, dragStart, startPos
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not dragging then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        local d = input.Position - dragStart
+        local newX = startPos.X.Offset + d.X
+        local newY = startPos.Y.Offset + d.Y
+        
+        local currentVP = workspace.CurrentCamera.ViewportSize
+        local currentSize = main.AbsoluteSize / uiScale.Scale
+        
+        local minX = -currentVP.X/2 + currentSize.X/2
+        local maxX = currentVP.X/2 - currentSize.X/2
+        local minY = -currentVP.Y/2 + currentSize.Y/2
+        local maxY = currentVP.Y/2 - currentSize.Y/2
+
+        newX = math.clamp(newX, minX, maxX)
+        newY = math.clamp(newY, minY, maxY)
+
+        main.Position = UDim2.new(0.5, newX, 0.5, newY)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+addMessage("System", "Compact UI Loaded ✅", true)
