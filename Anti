@@ -1,0 +1,381 @@
+--[[
+    سكربت مضادات تجمع العرب (النسخة النهائية المكتملة)
+    - يفتح على الأزرار أولاً
+--]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
+local Player = Players.LocalPlayer
+
+local isAntiCuffEnabled = false 
+local isAntiPunchEnabled = false 
+local isAntiThrowEnabled = false 
+local isAntiSitEnabled = false
+local isAntiJumpEnabled = false
+local isAntiMoveEnabled = false
+local isAntiAFKEnabled = false 
+
+local isResetting = false
+local savedResetCFrame = nil
+local isMinimized = false
+local isInfoVisible = true 
+
+local lastHitTime = 0
+local lastThrowTime = 0
+local lastCFrame = nil
+local frozenCFrame = nil
+
+-- 1. إعداد الواجهة
+local guiParent = gethui and gethui() or Player:WaitForChild("PlayerGui")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ArabHangout_Hub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = guiParent
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 180, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -90, 0.2, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(80, 80, 100)
+UIStroke.Thickness = 1.5
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 28)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "مضادات تجمع العرب 🛡️"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 11
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 22, 0, 20)
+MinBtn.Position = UDim2.new(1, -26, 0, 4)
+MinBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+MinBtn.Text = "—"
+MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 12
+MinBtn.Parent = TitleBar
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, 0, 1, -35)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 30)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 440) 
+ScrollFrame.Parent = MainFrame
+
+local function createButton(text, yPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 30)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+    btn.Text = text .. ": معطل ❌"
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.Parent = ScrollFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(btn.Size.X.Scale * 0.95, btn.Size.X.Offset, btn.Size.Y.Scale * 0.95, btn.Size.Y.Offset)}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.9, 0, 0, 30)}):Play()
+    end)
+    
+    return btn
+end
+
+local CuffBtn = createButton("مضاد الكلبشة", 5)
+local PunchBtn = createButton("مضاد الضرب", 40)
+local ThrowBtn = createButton("مضاد الرمي", 75)
+local SitBtn = createButton("مضاد الجلوس", 110)
+local JumpBtn = createButton("مضاد القفز", 145)
+local MoveBtn = createButton("مضاد الحركة", 180)
+local AFKBtn = createButton("مضاد AFK", 215)
+
+local InfoBtn = Instance.new("TextButton")
+InfoBtn.Size = UDim2.new(0.9, 0, 0, 30)
+InfoBtn.Position = UDim2.new(0.05, 0, 0, 250)
+InfoBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200) 
+InfoBtn.Text = "إخفاء التعليمات ❌"
+InfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+InfoBtn.Font = Enum.Font.GothamBold
+InfoBtn.TextSize = 12
+InfoBtn.Parent = ScrollFrame
+Instance.new("UICorner", InfoBtn).CornerRadius = UDim.new(0, 6)
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(0.9, 0, 0, 140) 
+InfoText.Position = UDim2.new(0.05, 0, 0, 285)
+InfoText.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+InfoText.BackgroundTransparency = 0.2
+InfoText.TextColor3 = Color3.fromRGB(220, 220, 220)
+InfoText.Font = Enum.Font.Gotham
+InfoText.TextSize = 10
+InfoText.TextWrapped = true
+InfoText.TextXAlignment = Enum.TextXAlignment.Right
+InfoText.TextYAlignment = Enum.TextYAlignment.Top
+InfoText.Text = [[
+شرح الأزرار:
+• مضاد الكلبشة: يفكك بالرست (موت فوري) ويرجعك مكانك.
+• مضاد الضرب: يمنع نزول دمك ويثبتك عند الضرب.
+• مضاد الرمي: يمنع طيرانك ويثبتك في الهواء/الأرض.
+• مضاد الجلوس: يمنعك من الجلوس على أي كرسي.
+• مضاد القفز: يجعل قفزك صفر ويخفي الزر.
+• مضاد الحركة: تجميد كامل (لا تستطيع الحركة).
+• مضاد AFK: يمنع طردك بسبب الخمول.
+
+⚠️ تحذير هام جداً:
+لا تشغل (مضاد الكلبشة) و (مضاد الرمي) مع بعض!
+
+السبب بكل بساطة:
+مضاد الرمي يجعل شخصيتك "تتجمد" لثانية عشان يمنعك من الطيران. 
+مضاد الكلبشة (الذكي) يرى أنك متجمد وما تتحرك، فيظن خطأً أن شخصاً أمسكك وكلبشك، فيقوم بقتلك فوراً (رست) عشان يفك الكلبشة الوهمية!
+(شغل واحد فقط منهما حسب الحاجة).
+]]
+InfoText.Visible = true
+InfoText.Parent = ScrollFrame
+Instance.new("UICorner", InfoText).CornerRadius = UDim.new(0, 6)
+
+-- تم إزالة التمرير التلقائي لأسفل، لتبقى الواجهة على الأزرار في البداية
+ScrollFrame.CanvasPosition = Vector2.new(0, 0)
+
+MinBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        ScrollFrame.Visible = false
+        MinBtn.Text = "+"
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 180, 0, 28)}):Play()
+    else
+        MinBtn.Text = "—"
+        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 180, 0, 160)}):Play()
+        task.wait(0.1)
+        ScrollFrame.Visible = true
+    end
+end)
+
+InfoBtn.MouseButton1Click:Connect(function()
+    isInfoVisible = not isInfoVisible
+    InfoText.Visible = isInfoVisible
+    if isInfoVisible then
+        InfoBtn.Text = "إخفاء التعليمات ❌"
+    else
+        InfoBtn.Text = "تعليمات 📖"
+    end
+end)
+
+local function monitorCharacter(char)
+    local hum = char:WaitForChild("Humanoid")
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    
+    local originalHealth = hum.Health
+    hum.HealthChanged:Connect(function(newHealth)
+        if newHealth < originalHealth then
+            lastHitTime = tick()
+            if isAntiPunchEnabled and not isResetting then
+                hum.Health = originalHealth 
+            end
+        else
+            originalHealth = newHealth
+        end
+    end)
+    
+    hrp.ChildAdded:Connect(function(desc)
+        if desc:IsA("BodyVelocity") or desc:IsA("LinearVelocity") or desc.Name == "KnockbackVelocity" then
+            desc:Destroy()
+            lastThrowTime = tick() 
+        end
+    end)
+end
+
+if Player.Character then monitorCharacter(Player.Character) end
+Player.CharacterAdded:Connect(monitorCharacter)
+
+local function executeSmartReset()
+    if not isAntiCuffEnabled or isResetting then return end
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    isResetting = true 
+    savedResetCFrame = char.HumanoidRootPart.CFrame
+    
+    local resetEvent = ReplicatedStorage:FindFirstChild("CharacterResetRequest", true)
+    if resetEvent then resetEvent:FireServer() end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then hum.Health = 0 end
+end
+
+Player.CharacterAdded:Connect(function(newChar)
+    if savedResetCFrame and isResetting then
+        local hrp = newChar:WaitForChild("HumanoidRootPart", 5)
+        if hrp then
+            task.wait(0.1)
+            hrp.CFrame = savedResetCFrame
+            hrp.Anchored = false
+            savedResetCFrame = nil
+            task.wait(0.5)
+            isResetting = false 
+        end
+    end
+end)
+
+Player.Idled:Connect(function()
+    if isAntiAFKEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = Player.Character
+    if not char then return end
+    local hum = char:FindFirstChild("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and hrp then
+        if isAntiMoveEnabled then
+            if not frozenCFrame then frozenCFrame = hrp.CFrame end
+            hrp.CFrame = frozenCFrame
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        else
+            frozenCFrame = nil
+        end
+
+        if isAntiSitEnabled then
+            if hum.Sit then hum.Sit = false end
+        end
+
+        if isAntiJumpEnabled then
+            hum.JumpPower = 0
+            if Player:FindFirstChild("PlayerGui") then
+                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
+                if jumpBtn and jumpBtn.Visible then jumpBtn.Visible = false end
+            end
+        else
+            if hum.JumpPower < 50 and not hum.Sit then hum.JumpPower = 50 end
+            if Player:FindFirstChild("PlayerGui") then
+                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
+                if jumpBtn and not jumpBtn.Visible then jumpBtn.Visible = true end
+            end
+        end
+
+        if (tick() - lastHitTime) > 0.5 and (tick() - lastThrowTime) > 0.5 then
+            if not isAntiMoveEnabled then
+                lastCFrame = hrp.CFrame
+            end
+        end
+
+        local isHitProtected = isAntiPunchEnabled and (tick() - lastHitTime) < 0.4
+        local isThrowProtected = isAntiThrowEnabled and (tick() - lastThrowTime) < 0.4
+
+        if isHitProtected or isThrowProtected then
+            hrp.CFrame = lastCFrame 
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        end
+
+        local isRecentlyThrown = isAntiThrowEnabled and (tick() - lastThrowTime) < 1.0
+
+        if isAntiCuffEnabled and not isResetting and not isRecentlyThrown and not isAntiMoveEnabled then
+            local isSittingOnSeat = hum.Sit and hum.SeatPart ~= nil and (hum.SeatPart:IsA("Seat") or hum.SeatPart:IsA("VehicleSeat"))
+            local isCuffed = false
+            
+            for _, v in pairs(hrp:GetChildren()) do
+                if v:IsA("Weld") or v:IsA("WeldConstraint") or v:IsA("RopeConstraint") then
+                    local p0 = v.Part0 or v.Attachment0
+                    if p0 and p0.Parent ~= char and p0:FindFirstChildOfClass("Humanoid") then
+                        isCuffed = true
+                    end
+                end
+            end
+            
+            for _, tool in pairs(char:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("cuff") or tool.Name:lower():find("كلبش")) then
+                    isCuffed = true
+                end
+            end
+            
+            if not isSittingOnSeat and not isAntiSitEnabled then
+                if hrp.Anchored or hum.WalkSpeed <= 2 or hum.PlatformStand then
+                    isCuffed = true
+                end
+            end
+            
+            if isCuffed then
+                executeSmartReset()
+                return
+            end
+        end
+    end
+end)
+
+CuffBtn.MouseButton1Click:Connect(function()
+    isAntiCuffEnabled = not isAntiCuffEnabled
+    CuffBtn.BackgroundColor3 = isAntiCuffEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    CuffBtn.Text = "مضاد الكلبشة: " .. (isAntiCuffEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+PunchBtn.MouseButton1Click:Connect(function()
+    isAntiPunchEnabled = not isAntiPunchEnabled
+    PunchBtn.BackgroundColor3 = isAntiPunchEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    PunchBtn.Text = "مضاد الضرب: " .. (isAntiPunchEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+ThrowBtn.MouseButton1Click:Connect(function()
+    isAntiThrowEnabled = not isAntiThrowEnabled
+    ThrowBtn.BackgroundColor3 = isAntiThrowEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    ThrowBtn.Text = "مضاد الرمي: " .. (isAntiThrowEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+SitBtn.MouseButton1Click:Connect(function()
+    isAntiSitEnabled = not isAntiSitEnabled
+    SitBtn.BackgroundColor3 = isAntiSitEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    SitBtn.Text = "مضاد الجلوس: " .. (isAntiSitEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+JumpBtn.MouseButton1Click:Connect(function()
+    isAntiJumpEnabled = not isAntiJumpEnabled
+    JumpBtn.BackgroundColor3 = isAntiJumpEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    JumpBtn.Text = "مضاد القفز: " .. (isAntiJumpEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+MoveBtn.MouseButton1Click:Connect(function()
+    isAntiMoveEnabled = not isAntiMoveEnabled
+    MoveBtn.BackgroundColor3 = isAntiMoveEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    MoveBtn.Text = "مضاد الحركة: " .. (isAntiMoveEnabled and "مُفعل ✅" or "معطل ❌")
+end)
+
+AFKBtn.MouseButton1Click:Connect(function()
+    isAntiAFKEnabled = not isAntiAFKEnabled
+    AFKBtn.BackgroundColor3 = isAntiAFKEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
+    AFKBtn.Text = "مضاد AFK: " .. (isAntiAFKEnabled and "مُفعل ✅" or "معطل ❌")
+end)
