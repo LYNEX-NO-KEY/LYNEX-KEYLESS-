@@ -1,223 +1,554 @@
 --[[
-    سكربت مضادات تجمع العرب (النسخة النهائية - تمييز HD Admin Fly)
-    - لما الدم ينقص → أنت تتجمد 2 ثانية + اللي ضربك ياخد هالة زرقاء 5 ثواني
-    - حماية إضافية: السرعة الأفقية العالية (مطرقة) — بدون تأثير على القفز
-    - تمييز تلقائي لـ HD Admin Fly (HDAdminFlyForce / HDAdminFlyGyro)
-    - الدم ينقص عادي
+    سكربت مضادات تجمع العرب (نسخة الواجهة المُحسّنة v3.1 - إصلاح الأطراف العلوية)
+    - حجم متوسط متناسق (235×350)
+    - تصميم داكن عصري وأطراف نظيفة (تم إصلاح الزوايا العلوية)
+    - زر تصغير/فتح يعمل بشكل صحيح
+    - كل الوظائف محفوظة كما هي
 ]]
 
-local Players = game:GetService("Players")
+-- ==================== الخدمات ====================
+local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local VirtualUser = game:GetService("VirtualUser")
+local RunService        = game:GetService("RunService")
+local TweenService      = game:GetService("TweenService")
+local VirtualUser       = game:GetService("VirtualUser")
+local UserInputService  = game:GetService("UserInputService")
 local Player = Players.LocalPlayer
 
-local isAntiCuffEnabled = false 
-local isAntiPunchEnabled = false 
-local isAntiThrowEnabled = false 
-local isAntiSitEnabled = false
-local isAntiJumpEnabled = false
-local isAntiMoveEnabled = false
-local isAntiAFKEnabled = false 
+-- ==================== الحالة ====================
+local isAntiCuffEnabled  = false
+local isAntiPunchEnabled = false
+local isAntiThrowEnabled = false
+local isAntiSitEnabled   = false
+local isAntiJumpEnabled  = false
+local isAntiMoveEnabled  = false
+local isAntiAFKEnabled   = false
 
-local isResetting = false
+local isResetting      = false
 local savedResetCFrame = nil
-local isMinimized = false
-local isInfoVisible = true 
+local isMinimized      = false
+local isInfoVisible    = false
 
-local lastHitTime = 0
+local lastHitTime   = 0
 local lastThrowTime = 0
-local lastCFrame = nil
-local frozenCFrame = nil
+local lastCFrame    = nil
+local frozenCFrame  = nil
 
--- متغيرات التجميد والهالة
-local isFrozenByHit = false
-local freezeEndTime = 0
+local isFrozenByHit  = false
+local freezeEndTime  = 0
 local lastFreezeTime = 0
-local FREEZE_DURATION = 2
-local FREEZE_COOLDOWN = 3
+local FREEZE_DURATION    = 2
+local FREEZE_COOLDOWN    = 3
 local HIGHLIGHT_DURATION = 5
-local frozenHitCFrame = nil
-local VELOCITY_THRESHOLD = 60
-local isFlying = false
+local frozenHitCFrame    = nil
+local isFlying           = false
 
--- 1. إعداد الواجهة
-local guiParent = gethui and gethui() or Player:WaitForChild("PlayerGui")
+local antiJumpApplied      = false
+local jumpSettingsSaved    = false
+local originalJumpPower    = 0
+local originalJumpHeight   = 7.2
+local originalUseJumpPower = true
+
+-- ==================== الثيم ====================
+local THEME = {
+    bg         = Color3.fromRGB(18, 20, 28),
+    bgTop      = Color3.fromRGB(26, 29, 40),
+    titleBg    = Color3.fromRGB(22, 24, 33),
+    textMain   = Color3.fromRGB(240, 242, 250),
+    textMuted  = Color3.fromRGB(140, 148, 170),
+    accent     = Color3.fromRGB(139, 92, 246),
+    accentSoft = Color3.fromRGB(110, 80, 200),
+    success    = Color3.fromRGB(52, 211, 153),
+    successBg  = Color3.fromRGB(22, 45, 38),
+    danger     = Color3.fromRGB(248, 113, 113),
+    dangerBg   = Color3.fromRGB(45, 24, 28),
+    border     = Color3.fromRGB(42, 46, 60),
+    borderLite = Color3.fromRGB(56, 62, 80),
+    infoBg     = Color3.fromRGB(24, 26, 36),
+}
+
+local MAIN_W, MAIN_H = 235, 350
+local TITLE_H = 36
+
+-- ==================== GUI ====================
+local guiParent = (gethui and gethui()) or Player:WaitForChild("PlayerGui")
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ArabHangout_Hub"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 100
 ScreenGui.Parent = guiParent
 
+-- الإطار الرئيسي
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 180, 0, 160)
-MainFrame.Position = UDim2.new(0.5, -90, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, MAIN_W, 0, MAIN_H)
+MainFrame.Position = UDim2.new(0.5, -math.floor(MAIN_W/2), 0.15, 0)
+MainFrame.BackgroundColor3 = THEME.bg
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Color = Color3.fromRGB(80, 80, 100)
-UIStroke.Thickness = 1.5
+local bgGrad = Instance.new("UIGradient", MainFrame)
+bgGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, THEME.bgTop),
+    ColorSequenceKeypoint.new(1, THEME.bg),
+})
+bgGrad.Rotation = 90
 
+local mainStroke = Instance.new("UIStroke", MainFrame)
+mainStroke.Color = THEME.border
+mainStroke.Thickness = 1
+
+-- تكييف تلقائي للشاشات الصغيرة
+local uiScale = Instance.new("UIScale", MainFrame)
+local function updateScale()
+    local cam = workspace.CurrentCamera
+    if not cam then return end
+    local vp = cam.ViewportSize
+    if vp.X < 320 or vp.Y < 500 then
+        uiScale.Scale = 0.8
+    elseif vp.X < 450 or vp.Y < 650 then
+        uiScale.Scale = 0.9
+    else
+        uiScale.Scale = 1
+    end
+end
+updateScale()
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+end
+
+-- ==================== شريط العنوان (تم إصلاح الزوايا) ====================
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 28)
-TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, TITLE_H)
+TitleBar.BackgroundColor3 = THEME.titleBg
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainFrame
-Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
+-- إضافة UICorner لشريط العنوان لضبط الزوايا العلوية
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+-- إضافة مربع تغطية للزوايا السفلية لشريط العنوان (ليظل مستقيماً ومتناسقاً مع المحتوى)
+local BottomSquare = Instance.new("Frame")
+BottomSquare.Name = "BottomSquare"
+BottomSquare.Size = UDim2.new(1, 0, 0, 12)
+BottomSquare.Position = UDim2.new(0, 0, 1, -12)
+BottomSquare.BackgroundColor3 = THEME.titleBg
+BottomSquare.BorderSizePixel = 0
+BottomSquare.Parent = TitleBar
+
+local TitleIcon = Instance.new("TextLabel")
+TitleIcon.Size = UDim2.new(0, 22, 1, 0)
+TitleIcon.Position = UDim2.new(0, 10, 0, 0)
+TitleIcon.BackgroundTransparency = 1
+TitleIcon.Text = "🛡️"
+TitleIcon.Font = Enum.Font.GothamBold
+TitleIcon.TextSize = 14
+TitleIcon.ZIndex = 2
+TitleIcon.Parent = TitleBar
 
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -50, 1, 0)
-TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.Size = UDim2.new(1, -90, 1, 0)
+TitleLabel.Position = UDim2.new(0, 34, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "مضادات تجمع العرب 🛡️"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Text = "مضادات تجمع العرب"
+TitleLabel.TextColor3 = THEME.textMain
 TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextSize = 11
+TitleLabel.TextSize = 13
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 2
 TitleLabel.Parent = TitleBar
 
+local AccentLine = Instance.new("Frame")
+AccentLine.Size = UDim2.new(1, -20, 0, 1)
+AccentLine.Position = UDim2.new(0, 10, 1, -1)
+AccentLine.BackgroundColor3 = THEME.accent
+AccentLine.BackgroundTransparency = 0.4
+AccentLine.BorderSizePixel = 0
+AccentLine.ZIndex = 3
+AccentLine.Parent = TitleBar
+
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 22, 0, 20)
-MinBtn.Position = UDim2.new(1, -26, 0, 4)
-MinBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+MinBtn.Name = "MinBtn"
+MinBtn.Size = UDim2.new(0, 24, 0, 24)
+MinBtn.Position = UDim2.new(1, -30, 0.5, -12)
+MinBtn.BackgroundColor3 = Color3.fromRGB(40, 44, 58)
 MinBtn.Text = "—"
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinBtn.TextColor3 = THEME.textMain
 MinBtn.Font = Enum.Font.GothamBold
-MinBtn.TextSize = 12
+MinBtn.TextSize = 14
+MinBtn.AutoButtonColor = false
+MinBtn.ZIndex = 3
 MinBtn.Parent = TitleBar
-Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+
+local minStroke = Instance.new("UIStroke", MinBtn)
+minStroke.Color = THEME.borderLite
+minStroke.Thickness = 1
+
+MinBtn.MouseEnter:Connect(function()
+    TweenService:Create(MinBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(55, 60, 78)}):Play()
+end)
+MinBtn.MouseLeave:Connect(function()
+    TweenService:Create(MinBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(40, 44, 58)}):Play()
+end)
+
+-- ==================== حاوية المحتوى ====================
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Name = "ContentContainer"
+ContentContainer.Size = UDim2.new(1, 0, 1, -TITLE_H)
+ContentContainer.Position = UDim2.new(0, 0, 0, TITLE_H)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ClipsDescendants = true
+ContentContainer.Parent = MainFrame
 
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, 0, 1, -35)
-ScrollFrame.Position = UDim2.new(0, 0, 0, 30)
+ScrollFrame.Name = "ScrollFrame"
+ScrollFrame.Size = UDim2.new(1, -8, 1, -6)
+ScrollFrame.Position = UDim2.new(0, 4, 0, 3)
 ScrollFrame.BackgroundTransparency = 1
 ScrollFrame.BorderSizePixel = 0
 ScrollFrame.ScrollBarThickness = 4
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 440) 
-ScrollFrame.Parent = MainFrame
+ScrollFrame.ScrollBarImageColor3 = THEME.accentSoft
+ScrollFrame.ScrollBarImageTransparency = 0.3
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+ScrollFrame.Parent = ContentContainer
 
-local function createButton(text, yPos)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 30)
-    btn.Position = UDim2.new(0.05, 0, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-    btn.Text = text .. ": معطل ❌"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.Parent = ScrollFrame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    
-    btn.MouseButton1Down:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(btn.Size.X.Scale * 0.95, btn.Size.X.Offset, btn.Size.Y.Scale * 0.95, btn.Size.Y.Offset)}):Play()
-    end)
-    btn.MouseButton1Up:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.9, 0, 0, 30)}):Play()
-    end)
-    
-    return btn
+local scrollLayout = Instance.new("UIListLayout", ScrollFrame)
+scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+scrollLayout.Padding = UDim.new(0, 5)
+scrollLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local scrollPadding = Instance.new("UIPadding", ScrollFrame)
+scrollPadding.PaddingTop = UDim.new(0, 3)
+scrollPadding.PaddingBottom = UDim.new(0, 6)
+
+-- ==================== دوال مساعدة للواجهة ====================
+local function createSectionLabel(text, order)
+    local wrap = Instance.new("Frame")
+    wrap.Size = UDim2.new(1, -16, 0, 20)
+    wrap.BackgroundTransparency = 1
+    wrap.LayoutOrder = order
+    wrap.Parent = ScrollFrame
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = THEME.textMuted
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Right
+    lbl.Parent = wrap
+    return wrap
 end
 
-local CuffBtn = createButton("مضاد الكلبشة", 5)
-local PunchBtn = createButton("مضاد الضرب", 40)
-local ThrowBtn = createButton("مضاد الرمي", 75)
-local SitBtn = createButton("مضاد الجلوس", 110)
-local JumpBtn = createButton("مضاد القفز", 145)
-local MoveBtn = createButton("مضاد الحركة", 180)
-local AFKBtn = createButton("مضاد AFK", 215)
+local function createToggleButton(icon, title, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -16, 0, 32)
+    btn.BackgroundColor3 = THEME.dangerBg
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = order
+    btn.Parent = ScrollFrame
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
 
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = THEME.danger
+    stroke.Thickness = 1
+    stroke.Transparency = 0.6
+
+    local iconFrame = Instance.new("Frame")
+    iconFrame.Size = UDim2.new(0, 24, 0, 24)
+    iconFrame.Position = UDim2.new(0, 4, 0.5, -12)
+    iconFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    iconFrame.BackgroundTransparency = 0.93
+    iconFrame.BorderSizePixel = 0
+    iconFrame.Parent = btn
+    Instance.new("UICorner", iconFrame).CornerRadius = UDim.new(0, 6)
+
+    local iconLbl = Instance.new("TextLabel")
+    iconLbl.Size = UDim2.new(1, 0, 1, 0)
+    iconLbl.BackgroundTransparency = 1
+    iconLbl.Text = icon
+    iconLbl.Font = Enum.Font.GothamBold
+    iconLbl.TextSize = 12
+    iconLbl.Parent = iconFrame
+
+    local titleLbl = Instance.new("TextLabel")
+    titleLbl.Size = UDim2.new(1, -110, 1, 0)
+    titleLbl.Position = UDim2.new(0, 34, 0, 0)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.Text = title
+    titleLbl.TextColor3 = THEME.textMain
+    titleLbl.Font = Enum.Font.GothamMedium
+    titleLbl.TextSize = 12
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    titleLbl.Parent = btn
+
+    local statusLbl = Instance.new("TextLabel")
+    statusLbl.Size = UDim2.new(0, 62, 1, 0)
+    statusLbl.Position = UDim2.new(1, -66, 0, 0)
+    statusLbl.BackgroundTransparency = 1
+    statusLbl.Text = "✕ معطل"
+    statusLbl.TextColor3 = THEME.danger
+    statusLbl.Font = Enum.Font.GothamBold
+    statusLbl.TextSize = 10
+    statusLbl.TextXAlignment = Enum.TextXAlignment.Right
+    statusLbl.Parent = btn
+
+    local baseSize  = UDim2.new(1, -16, 0, 32)
+    local pressSize = UDim2.new(1, -22, 0, 30)
+
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.06), {Size = pressSize}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = baseSize}):Play()
+    end)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(stroke, TweenInfo.new(0.12), {Transparency = 0.2}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(stroke, TweenInfo.new(0.12), {Transparency = 0.6}):Play()
+    end)
+
+    return {
+        button = btn,
+        stroke = stroke,
+        status = statusLbl,
+    }
+end
+
+local function updateToggleVisual(data, isOn)
+    local bg  = isOn and THEME.successBg or THEME.dangerBg
+    local col = isOn and THEME.success   or THEME.danger
+    TweenService:Create(data.button, TweenInfo.new(0.18), {BackgroundColor3 = bg}):Play()
+    TweenService:Create(data.stroke, TweenInfo.new(0.18), {Color = col}):Play()
+    TweenService:Create(data.status, TweenInfo.new(0.18), {TextColor3 = col}):Play()
+    data.status.Text = isOn and "✓ مفعل" or "✕ معطل"
+end
+
+-- ==================== بناء الأزرار ====================
+createSectionLabel("🛡️ الحماية الأساسية", 1)
+
+local CuffData  = createToggleButton("🔗", "مضاد الكلبشة", 2)
+local PunchData = createToggleButton("🥊", "مضاد الضرب",   3)
+local ThrowData = createToggleButton("🎯", "مضاد الرمي",   4)
+local SitData   = createToggleButton("🪑", "مضاد الجلوس",  5)
+local JumpData  = createToggleButton("⬆️", "مضاد القفز",   6)
+local MoveData  = createToggleButton("🛑", "مضاد الحركة",  7)
+local AFKData   = createToggleButton("💤", "مضاد AFK",     8)
+
+createSectionLabel("⚙️ خيارات إضافية", 9)
+
+-- زر التعليمات
 local InfoBtn = Instance.new("TextButton")
-InfoBtn.Size = UDim2.new(0.9, 0, 0, 30)
-InfoBtn.Position = UDim2.new(0.05, 0, 0, 250)
-InfoBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 200) 
-InfoBtn.Text = "إخفاء التعليمات ❌"
-InfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-InfoBtn.Font = Enum.Font.GothamBold
-InfoBtn.TextSize = 12
+InfoBtn.Name = "InfoBtn"
+InfoBtn.Size = UDim2.new(1, -16, 0, 32)
+InfoBtn.BackgroundColor3 = Color3.fromRGB(32, 28, 48)
+InfoBtn.Text = ""
+InfoBtn.AutoButtonColor = false
+InfoBtn.LayoutOrder = 10
 InfoBtn.Parent = ScrollFrame
-Instance.new("UICorner", InfoBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", InfoBtn).CornerRadius = UDim.new(0, 8)
 
+local infoStroke = Instance.new("UIStroke", InfoBtn)
+infoStroke.Color = THEME.accent
+infoStroke.Thickness = 1
+infoStroke.Transparency = 0.55
+
+local infoIconFrame = Instance.new("Frame")
+infoIconFrame.Size = UDim2.new(0, 24, 0, 24)
+infoIconFrame.Position = UDim2.new(0, 4, 0.5, -12)
+infoIconFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+infoIconFrame.BackgroundTransparency = 0.93
+infoIconFrame.BorderSizePixel = 0
+infoIconFrame.Parent = InfoBtn
+Instance.new("UICorner", infoIconFrame).CornerRadius = UDim.new(0, 6)
+
+local infoIconLbl = Instance.new("TextLabel")
+infoIconLbl.Size = UDim2.new(1, 0, 1, 0)
+infoIconLbl.BackgroundTransparency = 1
+infoIconLbl.Text = "📖"
+infoIconLbl.Font = Enum.Font.GothamBold
+infoIconLbl.TextSize = 12
+infoIconLbl.Parent = infoIconFrame
+
+local infoTitleLbl = Instance.new("TextLabel")
+infoTitleLbl.Size = UDim2.new(1, -40, 1, 0)
+infoTitleLbl.Position = UDim2.new(0, 34, 0, 0)
+infoTitleLbl.BackgroundTransparency = 1
+infoTitleLbl.Text = "عرض التعليمات"
+infoTitleLbl.TextColor3 = THEME.textMain
+infoTitleLbl.Font = Enum.Font.GothamMedium
+infoTitleLbl.TextSize = 12
+infoTitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+infoTitleLbl.Parent = InfoBtn
+
+InfoBtn.MouseButton1Down:Connect(function()
+    TweenService:Create(InfoBtn, TweenInfo.new(0.06), {Size = UDim2.new(1, -22, 0, 30)}):Play()
+end)
+InfoBtn.MouseButton1Up:Connect(function()
+    TweenService:Create(InfoBtn, TweenInfo.new(0.1), {Size = UDim2.new(1, -16, 0, 32)}):Play()
+end)
+InfoBtn.MouseEnter:Connect(function()
+    TweenService:Create(infoStroke, TweenInfo.new(0.12), {Transparency = 0.15}):Play()
+end)
+InfoBtn.MouseLeave:Connect(function()
+    TweenService:Create(infoStroke, TweenInfo.new(0.12), {Transparency = 0.55}):Play()
+end)
+
+-- نص التعليمات
 local InfoText = Instance.new("TextLabel")
-InfoText.Size = UDim2.new(0.9, 0, 0, 140) 
-InfoText.Position = UDim2.new(0.05, 0, 0, 285)
-InfoText.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-InfoText.BackgroundTransparency = 0.2
-InfoText.TextColor3 = Color3.fromRGB(220, 220, 220)
+InfoText.Name = "InfoText"
+InfoText.Size = UDim2.new(1, -16, 0, 0)
+InfoText.AutomaticSize = Enum.AutomaticSize.Y
+InfoText.BackgroundColor3 = THEME.infoBg
+InfoText.BorderSizePixel = 0
+InfoText.TextColor3 = THEME.textMuted
 InfoText.Font = Enum.Font.Gotham
 InfoText.TextSize = 10
 InfoText.TextWrapped = true
 InfoText.TextXAlignment = Enum.TextXAlignment.Right
 InfoText.TextYAlignment = Enum.TextYAlignment.Top
-InfoText.Text = [[
-شرح الأزرار:
-• مضاد الكلبشة: يفكك بالرست ويرجعك مكانك.
-• مضاد الضرب: الدم ينقص عادي، لكن لما تنضرب تتجمد مكانك ثانيتين (حماية قوية ضد المطرقة)، واللي ضربك ياخد هالة زرقاء 5 ثواني.
-• مضاد الرمي: يمنع طيرانك ويثبتك.
-• مضاد الجلوس: يمنعك من الجلوس.
-• مضاد القفز: يجعل قفزك صفر ويخفي الزر.
-• مضاد الحركة: تجميد كامل (لا تستطيع الحركة).
-• مضاد AFK: يمنع طردك بسبب الخمول.
-
-✈️ تمييز تلقائي لـ HD Admin Fly:
-لما تكون تطير بـ HD Admin Fly، السكربت ما يتدخل فيك — تقدر تطير بحرية.
-
-⚠️ تحذير هام جداً:
-لا تشغل (مضاد الكلبشة) و (مضاد الرمي) مع بعض!
-
-السبب بكل بساطة:
-مضاد الرمي يجعل شخصيتك "تتجمد" لثمنية عشان يمنعك من الطيران. 
-مضاد الكلبشة (الذكي) يرى أنك متجمد وما تتحرك، فيظن خطأً أن شخصاً أمسكك وكلبشك، فيقوم بقتلك فوراً (رست) عشان يفك الكلبشة الوهمية!
-(شغل واحد فقط منهما حسب الحاجة).
-]]
-InfoText.Visible = true
+InfoText.RichText = true
+InfoText.LayoutOrder = 11
 InfoText.Parent = ScrollFrame
-Instance.new("UICorner", InfoText).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", InfoText).CornerRadius = UDim.new(0, 8)
 
-ScrollFrame.CanvasPosition = Vector2.new(0, 0)
+local infoStroke2 = Instance.new("UIStroke", InfoText)
+infoStroke2.Color = THEME.border
+infoStroke2.Thickness = 1
+infoStroke2.Transparency = 0.4
 
+local infoPadding = Instance.new("UIPadding", InfoText)
+infoPadding.PaddingTop = UDim.new(0, 10)
+infoPadding.PaddingBottom = UDim.new(0, 10)
+infoPadding.PaddingLeft = UDim.new(0, 10)
+infoPadding.PaddingRight = UDim.new(0, 10)
+
+InfoText.Text = [[
+<font color="#A78BFA" size="13"><b>🛡️ شرح الأزرار</b></font>
+
+<font color="#34D399"><b>🔗 مضاد الكلبشة</b></font>
+يفكك بالرست ويرجعك لمكانك.
+
+<font color="#34D399"><b>🥊 مضاد الضرب</b></font>
+تتجمد ثانيتين عند تلقي ضرر حقيقي، والخصم يأخذ هالة زرقاء 5 ثواني. لا يتدخل مع المركبات.
+
+<font color="#34D399"><b>🎯 مضاد الرمي</b></font>
+يمنع طيرانك ويثبتك مكانك.
+
+<font color="#34D399"><b>🪑 مضاد الجلوس</b></font>
+يمنعك من الجلوس.
+
+<font color="#34D399"><b>⬆️ مضاد القفز</b></font>
+يمنع القفز على PC والموبايل.
+
+<font color="#34D399"><b>🛑 مضاد الحركة</b></font>
+تجميد كامل، لا حركة.
+
+<font color="#34D399"><b>💤 مضاد AFK</b></font>
+يمنع طردك بسبب الخمول.
+
+<font color="#60A5FA"><b>✈️ HD Admin Fly</b></font>
+تمييز تلقائي — لا يتدخل السكربت أثناء الطيران.
+
+<font color="#F59E0B"><b>⚠️ تحذير</b></font>
+لا تشغّل (مضاد الكلبشة) مع (مضاد الرمي) معاً.
+]]
+InfoText.Visible = isInfoVisible
+
+-- ==================== زر التصغير ====================
 MinBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
+    local tweenInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     if isMinimized then
-        ScrollFrame.Visible = false
         MinBtn.Text = "+"
-        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 180, 0, 28)}):Play()
+        TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, MAIN_W, 0, TITLE_H)}):Play()
     else
         MinBtn.Text = "—"
-        TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 180, 0, 160)}):Play()
-        task.wait(0.1)
-        ScrollFrame.Visible = true
+        TweenService:Create(MainFrame, tweenInfo, {Size = UDim2.new(0, MAIN_W, 0, MAIN_H)}):Play()
     end
 end)
 
+-- ==================== زر التعليمات ====================
 InfoBtn.MouseButton1Click:Connect(function()
     isInfoVisible = not isInfoVisible
     InfoText.Visible = isInfoVisible
-    if isInfoVisible then
-        InfoBtn.Text = "إخفاء التعليمات ❌"
-    else
-        InfoBtn.Text = "تعليمات 📖"
+    infoTitleLbl.Text = isInfoVisible and "إخفاء التعليمات" or "عرض التعليمات"
+end)
+
+-- ==================== السحب مع الالتصاق بالشاشة ====================
+local dragging = false
+local dragStart, startAbsPos, startRelPos
+
+local function pointInRect(p, rectPos, rectSize)
+    return p.X >= rectPos.X and p.X <= rectPos.X + rectSize.X
+        and p.Y >= rectPos.Y and p.Y <= rectPos.Y + rectSize.Y
+end
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    if pointInRect(input.Position, MinBtn.AbsolutePosition, MinBtn.AbsoluteSize) then return end
+    
+    dragging    = true
+    dragStart   = input.Position
+    startAbsPos = MainFrame.AbsolutePosition
+    startRelPos = MainFrame.Position
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not dragging then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    local delta = input.Position - dragStart
+    local newAbsX = startAbsPos.X + delta.X
+    local newAbsY = startAbsPos.Y + delta.Y
+    
+    local cam = workspace.CurrentCamera
+    local vp  = cam and cam.ViewportSize or Vector2.new(1280, 720)
+    local fSize = MainFrame.AbsoluteSize
+    
+    newAbsX = math.clamp(newAbsX, -(fSize.X - 60), vp.X - 60)
+    newAbsY = math.clamp(newAbsY, 0, vp.Y - TITLE_H - 4)
+    
+    local relDeltaX = newAbsX - startAbsPos.X
+    local relDeltaY = newAbsY - startAbsPos.Y
+    
+    MainFrame.Position = UDim2.new(
+        startRelPos.X.Scale, startRelPos.X.Offset + relDeltaX,
+        startRelPos.Y.Scale, startRelPos.Y.Offset + relDeltaY
+    )
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
     end
 end)
 
--- 2. دالة تفعيل التجميد
+-- ==================== دالة التجميد ====================
 local function activateFreeze(hrp)
     local now = tick()
     if now - lastFreezeTime >= FREEZE_COOLDOWN then
         lastFreezeTime = now
-        isFrozenByHit = true
-        freezeEndTime = now + FREEZE_DURATION
+        isFrozenByHit  = true
+        freezeEndTime  = now + FREEZE_DURATION
         if hrp then
             frozenHitCFrame = hrp.CFrame
-            hrp.Anchored = true
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.Anchored    = true
+            hrp.AssemblyLinearVelocity  = Vector3.new(0, 0, 0)
             hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end
         return true
@@ -225,10 +556,13 @@ local function activateFreeze(hrp)
     return false
 end
 
--- 3. مراقبة الشخصية
+-- ==================== مراقبة الشخصية ====================
 local function monitorCharacter(char)
     local hum = char:WaitForChild("Humanoid")
     local hrp = char:WaitForChild("HumanoidRootPart")
+    
+    antiJumpApplied   = false
+    jumpSettingsSaved = false
     
     local lastHealth = hum.Health
     hum.HealthChanged:Connect(function(newHealth)
@@ -238,15 +572,17 @@ local function monitorCharacter(char)
         if healthDrop > 0 and newHealth > 0 then
             lastHitTime = tick()
             
-            -- ✅ ما يتجمّد لو Fly
             if isAntiPunchEnabled and not isResetting and not isFlying then
-                activateFreeze(hrp)
+                if not hum.Sit then
+                    activateFreeze(hrp)
+                end
                 
                 local closestPlayer = nil
                 local shortestDistance = 25
                 
                 for _, otherPlayer in pairs(Players:GetPlayers()) do
-                    if otherPlayer ~= Player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    if otherPlayer ~= Player and otherPlayer.Character
+                        and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local dist = (otherPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
                         if dist < shortestDistance then
                             shortestDistance = dist
@@ -257,7 +593,6 @@ local function monitorCharacter(char)
                 
                 if closestPlayer and closestPlayer.Character then
                     local enemyChar = closestPlayer.Character
-                    
                     local oldHL = enemyChar:FindFirstChild("AttackerHighlight")
                     if oldHL then oldHL:Destroy() end
                     
@@ -280,13 +615,11 @@ local function monitorCharacter(char)
     end)
     
     hrp.ChildAdded:Connect(function(desc)
-        -- ✅ نتجاهل HDAdminFly
         local n = desc.Name:lower()
         if n:find("hdadminfly") or n:find("fly") then return end
-        
         if desc:IsA("BodyVelocity") or desc:IsA("LinearVelocity") or desc.Name == "KnockbackVelocity" then
             desc:Destroy()
-            lastThrowTime = tick() 
+            lastThrowTime = tick()
         end
     end)
 end
@@ -294,13 +627,13 @@ end
 if Player.Character then monitorCharacter(Player.Character) end
 Player.CharacterAdded:Connect(monitorCharacter)
 
--- 4. دالة الرست
+-- ==================== الرست الذكي ====================
 local function executeSmartReset()
     if not isAntiCuffEnabled or isResetting then return end
     local char = Player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
-    isResetting = true 
+    isResetting = true
     savedResetCFrame = char.HumanoidRootPart.CFrame
     
     local resetEvent = ReplicatedStorage:FindFirstChild("CharacterResetRequest", true)
@@ -319,7 +652,7 @@ Player.CharacterAdded:Connect(function(newChar)
             hrp.Anchored = false
             savedResetCFrame = nil
             task.wait(0.5)
-            isResetting = false 
+            isResetting = false
         end
     end
 end)
@@ -331,186 +664,180 @@ Player.Idled:Connect(function()
     end
 end)
 
--- 5. الحلقة الأساسية
+-- ==================== الحلقة الأساسية ====================
 RunService.RenderStepped:Connect(function()
     local char = Player.Character
     if not char then return end
     local hum = char:FindFirstChild("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not (hum and hrp) then return end
     
-    if hum and hrp then
-        -- ✅ كشف HD Admin Fly
-        isFlying = (hrp:FindFirstChild("HDAdminFlyForce") ~= nil) or (hrp:FindFirstChild("HDAdminFlyGyro") ~= nil)
-        
-        -- 🔥 حماية السرعة الأفقية (مطرقة) — نتجاهل القفز والـ Fly
-        if isAntiPunchEnabled and not isFrozenByHit and not isFlying then
-            local vel = hrp.AssemblyLinearVelocity
-            local horizontalSpeed = math.sqrt(vel.X * vel.X + vel.Z * vel.Z)
-            local isJumping = math.abs(vel.Y) > 30
-            if horizontalSpeed > VELOCITY_THRESHOLD and not isJumping then
-                activateFreeze(hrp)
-            end
-        end
-        
-        -- التجميد (حماية مضاعفة) — بس لو مش Fly
-        if isFrozenByHit and not isFlying then
-            if tick() >= freezeEndTime then
-                isFrozenByHit = false
-                hrp.Anchored = false
-                if hum.WalkSpeed == 0 then hum.WalkSpeed = 16 end
-                if hum.JumpPower == 0 and not isAntiJumpEnabled then hum.JumpPower = 50 end
-                frozenHitCFrame = nil
-            else
-                if not frozenHitCFrame then
-                    frozenHitCFrame = hrp.CFrame
-                end
-                
-                hrp.Anchored = true
-                hrp.CFrame = frozenHitCFrame
-                
-                hum.WalkSpeed = 0
-                hum.JumpPower = 0
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                hrp.Velocity = Vector3.new(0, 0, 0)
-                hrp.RotVelocity = Vector3.new(0, 0, 0)
-                
-                -- ✅ نحذف BodyMover بس لو مش HDAdminFly
-                for _, v in pairs(hrp:GetChildren()) do
-                    if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
-                        v:Destroy()
-                    elseif v:IsA("BodyForce") or v:IsA("BodyAngularVelocity") or v:IsA("AngularVelocity") 
-                        or v:IsA("BodyPosition") or v:IsA("AlignPosition")
-                        or v:IsA("BodyGyro") or v:IsA("AlignOrientation") then
-                        local n = v.Name:lower()
-                        if not (n:find("hdadminfly") or n:find("fly")) then
-                            v:Destroy()
-                        end
-                    end
-                end
-            end
-        end
-        
-        if isAntiMoveEnabled then
-            if not frozenCFrame then frozenCFrame = hrp.CFrame end
-            hrp.CFrame = frozenCFrame
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    isFlying = (hrp:FindFirstChild("HDAdminFlyForce") ~= nil)
+            or (hrp:FindFirstChild("HDAdminFlyGyro")  ~= nil)
+    local isSeated = hum.Sit == true
+    
+    if isFrozenByHit and not isFlying and not isSeated then
+        if tick() >= freezeEndTime then
+            isFrozenByHit = false
+            hrp.Anchored = false
+            if hum.WalkSpeed == 0 then hum.WalkSpeed = 16 end
+            if hum.JumpPower == 0 and not isAntiJumpEnabled then hum.JumpPower = 50 end
+            frozenHitCFrame = nil
         else
-            frozenCFrame = nil
-        end
-
-        if isAntiSitEnabled then
-            if hum.Sit then hum.Sit = false end
-        end
-
-        if isAntiJumpEnabled then
+            if not frozenHitCFrame then frozenHitCFrame = hrp.CFrame end
+            hrp.Anchored = true
+            hrp.CFrame   = frozenHitCFrame
+            
+            hum.WalkSpeed = 0
             hum.JumpPower = 0
-            if Player:FindFirstChild("PlayerGui") then
-                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
-                if jumpBtn and jumpBtn.Visible then jumpBtn.Visible = false end
-            end
-        else
-            if hum.JumpPower < 50 and not hum.Sit and not isFrozenByHit then hum.JumpPower = 50 end
-            if Player:FindFirstChild("PlayerGui") then
-                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
-                if jumpBtn and not jumpBtn.Visible then jumpBtn.Visible = true end
-            end
-        end
-
-        if (tick() - lastHitTime) > 0.5 and (tick() - lastThrowTime) > 0.5 then
-            if not isAntiMoveEnabled then
-                lastCFrame = hrp.CFrame
-            end
-        end
-
-        -- ✅ مضاد الرمي يتوقف لو Fly
-        local isThrowProtected = isAntiThrowEnabled and not isFlying and (tick() - lastThrowTime) < 0.4
-        local isHitProtected = isAntiPunchEnabled and not isFlying and (tick() - lastHitTime) < 0.4
-
-        if isThrowProtected then
-            hrp.CFrame = lastCFrame 
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity  = Vector3.new(0, 0, 0)
             hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-        elseif isHitProtected then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-        end
-
-        local isRecentlyThrown = isAntiThrowEnabled and not isFlying and (tick() - lastThrowTime) < 1.0
-
-        if isAntiCuffEnabled and not isResetting and not isRecentlyThrown and not isAntiMoveEnabled then
-            local isSittingOnSeat = hum.Sit and hum.SeatPart ~= nil and (hum.SeatPart:IsA("Seat") or hum.SeatPart:IsA("VehicleSeat"))
-            local isCuffed = false
+            hrp.Velocity    = Vector3.new(0, 0, 0)
+            hrp.RotVelocity = Vector3.new(0, 0, 0)
             
             for _, v in pairs(hrp:GetChildren()) do
-                if v:IsA("Weld") or v:IsA("WeldConstraint") or v:IsA("RopeConstraint") then
-                    local p0 = v.Part0 or v.Attachment0
-                    if p0 and p0.Parent ~= char and p0:FindFirstChildOfClass("Humanoid") then
-                        isCuffed = true
+                if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
+                    v:Destroy()
+                elseif v:IsA("BodyForce") or v:IsA("BodyAngularVelocity") or v:IsA("AngularVelocity")
+                    or v:IsA("BodyPosition") or v:IsA("AlignPosition")
+                    or v:IsA("BodyGyro") or v:IsA("AlignOrientation") then
+                    local n = v.Name:lower()
+                    if not (n:find("hdadminfly") or n:find("fly")) then
+                        v:Destroy()
                     end
                 end
             end
-            
-            for _, tool in pairs(char:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("cuff") or tool.Name:lower():find("كلبش")) then
+        end
+    end
+    
+    if isAntiMoveEnabled then
+        if not frozenCFrame then frozenCFrame = hrp.CFrame end
+        hrp.CFrame = frozenCFrame
+        hrp.AssemblyLinearVelocity  = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    else
+        frozenCFrame = nil
+    end
+    
+    if isAntiSitEnabled and hum.Sit then
+        hum.Sit = false
+    end
+    
+    -- مضاد القفز
+    if isAntiJumpEnabled then
+        if not antiJumpApplied then
+            if not jumpSettingsSaved then
+                originalJumpPower    = hum.JumpPower
+                originalJumpHeight   = hum.JumpHeight
+                originalUseJumpPower = hum.UseJumpPower
+                jumpSettingsSaved    = true
+            end
+            hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+            if Player:FindFirstChild("PlayerGui") then
+                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
+                if jumpBtn then jumpBtn.Visible = false end
+            end
+            antiJumpApplied = true
+        end
+    else
+        if antiJumpApplied then
+            hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+            if jumpSettingsSaved then
+                hum.JumpPower    = originalJumpPower
+                hum.JumpHeight   = originalJumpHeight
+                hum.UseJumpPower = originalUseJumpPower
+                jumpSettingsSaved = false
+            end
+            if Player:FindFirstChild("PlayerGui") then
+                local jumpBtn = Player.PlayerGui:FindFirstChild("JumpButton", true)
+                if jumpBtn then jumpBtn.Visible = true end
+            end
+            antiJumpApplied = false
+        end
+    end
+    
+    if (tick() - lastHitTime) > 0.5 and (tick() - lastThrowTime) > 0.5 then
+        if not isAntiMoveEnabled then
+            lastCFrame = hrp.CFrame
+        end
+    end
+    
+    local isThrowProtected = isAntiThrowEnabled and not isFlying and not isSeated
+                            and (tick() - lastThrowTime) < 0.4
+    local isHitProtected   = isAntiPunchEnabled and not isFlying and not isSeated
+                            and (tick() - lastHitTime) < 0.4
+    
+    if isThrowProtected then
+        hrp.CFrame = lastCFrame
+        hrp.AssemblyLinearVelocity  = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    elseif isHitProtected then
+        hrp.AssemblyLinearVelocity  = Vector3.new(0, 0, 0)
+        hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    end
+    
+    local isRecentlyThrown = isAntiThrowEnabled and not isFlying and not isSeated
+                            and (tick() - lastThrowTime) < 1.0
+    
+    if isAntiCuffEnabled and not isResetting and not isRecentlyThrown and not isAntiMoveEnabled then
+        local isSittingOnSeat = hum.Sit and hum.SeatPart ~= nil
+                                and (hum.SeatPart:IsA("Seat") or hum.SeatPart:IsA("VehicleSeat"))
+        local isCuffed = false
+        
+        for _, v in pairs(hrp:GetChildren()) do
+            if v:IsA("Weld") or v:IsA("WeldConstraint") or v:IsA("RopeConstraint") then
+                local p0 = v.Part0 or v.Attachment0
+                if p0 and p0.Parent ~= char and p0:FindFirstChildOfClass("Humanoid") then
                     isCuffed = true
                 end
             end
-            
-            if not isSittingOnSeat and not isAntiSitEnabled then
-                if hrp.Anchored or hum.WalkSpeed <= 2 or hum.PlatformStand then
-                    isCuffed = true
-                end
+        end
+        
+        for _, tool in pairs(char:GetChildren()) do
+            if tool:IsA("Tool") and (tool.Name:lower():find("cuff") or tool.Name:lower():find("كلبش")) then
+                isCuffed = true
             end
-            
-            if isCuffed then
-                executeSmartReset()
-                return
+        end
+        
+        if not isSittingOnSeat and not isAntiSitEnabled then
+            if hrp.Anchored or hum.WalkSpeed <= 2 or hum.PlatformStand then
+                isCuffed = true
             end
+        end
+        
+        if isCuffed then
+            executeSmartReset()
+            return
         end
     end
 end)
 
--- 6. ربط الأزرار
-CuffBtn.MouseButton1Click:Connect(function()
+-- ==================== ربط الأزرار ====================
+CuffData.button.MouseButton1Click:Connect(function()
     isAntiCuffEnabled = not isAntiCuffEnabled
-    CuffBtn.BackgroundColor3 = isAntiCuffEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    CuffBtn.Text = "مضاد الكلبشة: " .. (isAntiCuffEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(CuffData, isAntiCuffEnabled)
 end)
-
-PunchBtn.MouseButton1Click:Connect(function()
+PunchData.button.MouseButton1Click:Connect(function()
     isAntiPunchEnabled = not isAntiPunchEnabled
-    PunchBtn.BackgroundColor3 = isAntiPunchEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    PunchBtn.Text = "مضاد الضرب: " .. (isAntiPunchEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(PunchData, isAntiPunchEnabled)
 end)
-
-ThrowBtn.MouseButton1Click:Connect(function()
+ThrowData.button.MouseButton1Click:Connect(function()
     isAntiThrowEnabled = not isAntiThrowEnabled
-    ThrowBtn.BackgroundColor3 = isAntiThrowEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    ThrowBtn.Text = "مضاد الرمي: " .. (isAntiThrowEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(ThrowData, isAntiThrowEnabled)
 end)
-
-SitBtn.MouseButton1Click:Connect(function()
+SitData.button.MouseButton1Click:Connect(function()
     isAntiSitEnabled = not isAntiSitEnabled
-    SitBtn.BackgroundColor3 = isAntiSitEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    SitBtn.Text = "مضاد الجلوس: " .. (isAntiSitEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(SitData, isAntiSitEnabled)
 end)
-
-JumpBtn.MouseButton1Click:Connect(function()
+JumpData.button.MouseButton1Click:Connect(function()
     isAntiJumpEnabled = not isAntiJumpEnabled
-    JumpBtn.BackgroundColor3 = isAntiJumpEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    JumpBtn.Text = "مضاد القفز: " .. (isAntiJumpEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(JumpData, isAntiJumpEnabled)
 end)
-
-MoveBtn.MouseButton1Click:Connect(function()
+MoveData.button.MouseButton1Click:Connect(function()
     isAntiMoveEnabled = not isAntiMoveEnabled
-    MoveBtn.BackgroundColor3 = isAntiMoveEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    MoveBtn.Text = "مضاد الحركة: " .. (isAntiMoveEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(MoveData, isAntiMoveEnabled)
 end)
-
-AFKBtn.MouseButton1Click:Connect(function()
+AFKData.button.MouseButton1Click:Connect(function()
     isAntiAFKEnabled = not isAntiAFKEnabled
-    AFKBtn.BackgroundColor3 = isAntiAFKEnabled and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(231, 76, 60)
-    AFKBtn.Text = "مضاد AFK: " .. (isAntiAFKEnabled and "مُفعل ✅" or "معطل ❌")
+    updateToggleVisual(AFKData, isAntiAFKEnabled)
 end)
