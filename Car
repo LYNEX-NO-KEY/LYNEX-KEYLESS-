@@ -1,5 +1,5 @@
 -- ============================================
--- سكربت Car - شقلبات غريبة (نسخة نظيفة)
+-- Car Script — REDESIGNED UI (Super Compact + Instructions Tab)
 -- ============================================
 
 local Players = game:GetService("Players")
@@ -14,62 +14,118 @@ local carSpeedValue = 200
 local verticalDir = 0
 local forwardDir = 0
 
+-- ============ Design Tokens ============
+local C = {
+    bg1 = Color3.fromRGB(20, 18, 30),
+    bg2 = Color3.fromRGB(28, 26, 40),
+    panel = Color3.fromRGB(15, 13, 22),
+    card = Color3.fromRGB(34, 32, 48),
+    cardHover = Color3.fromRGB(46, 44, 64),
+    cardActiveBg = Color3.fromRGB(28, 62, 48),
+    stroke = Color3.fromRGB(58, 54, 80),
+    strokeActive = Color3.fromRGB(0, 220, 130),
+    accent = Color3.fromRGB(130, 90, 255),
+    accent2 = Color3.fromRGB(0, 190, 255),
+    success = Color3.fromRGB(0, 220, 130),
+    text = Color3.fromRGB(240, 238, 250),
+    textDim = Color3.fromRGB(150, 145, 170),
+    toggleOff = Color3.fromRGB(58, 54, 78),
+    iconBg = Color3.fromRGB(52, 42, 82),
+}
+
+-- ============ ScreenGui ============
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CarGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = playerGui
 
-local EXPANDED_SIZE = UDim2.new(0, 200, 0, 250)
-local COLLAPSED_SIZE = UDim2.new(0, 200, 0, 48)
+-- الحجم صغير
+local W, H = 280, 360
+local EXPANDED_SIZE = UDim2.new(0, W, 0, H)
+local COLLAPSED_SIZE = UDim2.new(0, W, 0, 40)
 
+-- ============ Main Panel ============
 local MainPanel = Instance.new("Frame")
 MainPanel.Name = "MainPanel"
 MainPanel.Parent = ScreenGui
-MainPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-MainPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainPanel.AnchorPoint = Vector2.new(0.5, 0)
+MainPanel.Position = UDim2.new(0.5, 0, 0.25, 0) 
 MainPanel.Size = EXPANDED_SIZE
-MainPanel.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-MainPanel.BackgroundTransparency = 0.05
+MainPanel.BackgroundColor3 = C.panel
 MainPanel.BorderSizePixel = 0
-MainPanel.Active = true
 MainPanel.ClipsDescendants = true
+MainPanel.Active = true
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainPanel
 
+local MainGrad = Instance.new("UIGradient")
+MainGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.bg1),
+    ColorSequenceKeypoint.new(1, C.panel),
+})
+MainGrad.Rotation = 135
+MainGrad.Parent = MainPanel
+
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0, 170, 255)
-MainStroke.Thickness = 1.5
-MainStroke.Transparency = 0.4
+MainStroke.Color = C.stroke
+MainStroke.Thickness = 1.2
+MainStroke.Transparency = 0.15
 MainStroke.Parent = MainPanel
 
+-- ============ Header ============
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Parent = MainPanel
-Header.Position = UDim2.new(0, 6, 0, 6)
-Header.Size = UDim2.new(1, -12, 0, 30)
-Header.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+Header.Position = UDim2.new(0, 0, 0, 0)
+Header.Size = UDim2.new(1, 0, 0, 40)
+Header.BackgroundColor3 = C.bg2
 Header.BorderSizePixel = 0
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 8)
+HeaderCorner.CornerRadius = UDim.new(0, 12)
 HeaderCorner.Parent = Header
 
-local HeaderGradient = Instance.new("UIGradient")
-HeaderGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 70)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(32, 32, 44))
+local HeaderFix = Instance.new("Frame")
+HeaderFix.Parent = Header
+HeaderFix.Position = UDim2.new(0, 0, 1, -12)
+HeaderFix.Size = UDim2.new(1, 0, 0, 12)
+HeaderFix.BackgroundColor3 = C.bg2
+HeaderFix.BorderSizePixel = 0
+HeaderFix.ZIndex = 1
+
+local HeaderGrad = Instance.new("UIGradient")
+HeaderGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(48, 38, 82)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(28, 26, 42)),
 })
-HeaderGradient.Rotation = 90
-HeaderGradient.Parent = Header
+HeaderGrad.Rotation = 45
+HeaderGrad.Parent = Header
+
+local HeaderAccent = Instance.new("Frame")
+HeaderAccent.Parent = Header
+HeaderAccent.Position = UDim2.new(0, 10, 1, -3)
+HeaderAccent.Size = UDim2.new(0, 25, 0, 2)
+HeaderAccent.BackgroundColor3 = C.accent
+HeaderAccent.BorderSizePixel = 0
+HeaderAccent.ZIndex = 2
+
+local HA_C = Instance.new("UICorner")
+HA_C.CornerRadius = UDim.new(1, 0)
+HA_C.Parent = HeaderAccent
+
+local HA_G = Instance.new("UIGradient")
+HA_G.Color = ColorSequence.new(C.accent, C.accent2)
+HA_G.Parent = HeaderAccent
 
 local DragArea = Instance.new("Frame")
 DragArea.Name = "DragArea"
 DragArea.Parent = Header
-DragArea.Size = UDim2.new(1, -40, 1, 0)
+DragArea.Size = UDim2.new(1, -60, 1, 0)
 DragArea.BackgroundTransparency = 1
 DragArea.Active = true
 DragArea.ZIndex = 2
@@ -77,397 +133,753 @@ DragArea.ZIndex = 2
 local Title = Instance.new("TextLabel")
 Title.Parent = DragArea
 Title.BackgroundTransparency = 1
-Title.Size = UDim2.new(1, -6, 1, 0)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Text = "Car"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Size = UDim2.new(1, 0, 0, 16)
+Title.Position = UDim2.new(0, 10, 0, 4)
+Title.Text = "CAR CONTROLS"
+Title.TextColor3 = C.text
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 15
+Title.TextSize = 12
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 3
+
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Parent = DragArea
+Subtitle.BackgroundTransparency = 1
+Subtitle.Size = UDim2.new(1, 0, 0, 12)
+Subtitle.Position = UDim2.new(0, 10, 0, 19)
+Subtitle.Text = "الإصدار المُحسَّن"
+Subtitle.TextColor3 = C.textDim
+Subtitle.Font = Enum.Font.GothamMedium
+Subtitle.TextSize = 8
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.ZIndex = 3
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
 ToggleBtn.Parent = Header
-ToggleBtn.Size = UDim2.new(0, 22, 0, 22)
-ToggleBtn.Position = UDim2.new(1, -28, 0.5, -11)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 230)
+ToggleBtn.Size = UDim2.new(0, 24, 0, 24)
+ToggleBtn.Position = UDim2.new(1, -32, 0.5, -12)
+ToggleBtn.BackgroundColor3 = C.card
 ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Text = "▲"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Text = "−"
+ToggleBtn.TextColor3 = C.text
 ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 12
+ToggleBtn.TextSize = 15
 ToggleBtn.AutoButtonColor = false
-ToggleBtn.ZIndex = 4
+ToggleBtn.ZIndex = 5
 
 local ToggleCorner = Instance.new("UICorner")
 ToggleCorner.CornerRadius = UDim.new(1, 0)
 ToggleCorner.Parent = ToggleBtn
 
-local Content = Instance.new("ScrollingFrame")
-Content.Name = "Content"
-Content.Parent = MainPanel
-Content.Position = UDim2.new(0, 8, 0, 42)
-Content.Size = UDim2.new(1, -16, 1, -50)
-Content.BackgroundTransparency = 1
-Content.BorderSizePixel = 0
-Content.ScrollBarThickness = 4
-Content.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
-Content.ScrollBarImageTransparency = 0.3
-Content.ScrollingDirection = Enum.ScrollingDirection.Y
-Content.CanvasSize = UDim2.new(0, 0, 0, 526)
-Content.ScrollingEnabled = true
-Content.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = C.stroke
+ToggleStroke.Thickness = 1
+ToggleStroke.Parent = ToggleBtn
 
-local function createFeatureButton(name, icon, text, isToggle, parent)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Parent = parent or Content
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-    btn.BorderSizePixel = 0
-    btn.Text = ""
-    btn.AutoButtonColor = false
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = btn
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60, 60, 80)
-    stroke.Thickness = 1
-    stroke.Parent = btn
-    if icon then
-        local img = Instance.new("ImageLabel")
-        img.Parent = btn
-        img.BackgroundTransparency = 1
-        img.Size = UDim2.new(0, 26, 0, 26)
-        img.Position = UDim2.new(0.5, -13, 0, 4)
-        img.Image = icon
-        img.ImageColor3 = Color3.fromRGB(255, 255, 255)
-        img.ScaleType = Enum.ScaleType.Fit
-    end
-    local lbl = Instance.new("TextLabel")
-    lbl.Parent = btn
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.new(1, 0, 0, 16)
-    lbl.Position = UDim2.new(0, 0, 1, -19)
-    lbl.Text = text
-    lbl.TextColor3 = Color3.fromRGB(220, 220, 230)
-    lbl.Font = Enum.Font.SourceSansBold
-    lbl.TextSize = 11
-    lbl.TextTruncate = Enum.TextTruncate.AtEnd
-    if isToggle then
-        local ind = Instance.new("Frame")
-        ind.Name = "ToggleIndicator"
-        ind.Parent = btn
-        ind.AnchorPoint = Vector2.new(1, 0)
-        ind.Position = UDim2.new(1, -5, 0, 5)
-        ind.Size = UDim2.new(0, 9, 0, 9)
-        ind.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
-        ind.BorderSizePixel = 0
-        local ic = Instance.new("UICorner")
-        ic.CornerRadius = UDim.new(1, 0)
-        ic.Parent = ind
-    end
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(48, 48, 62)}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        if not btn:GetAttribute("Active") then
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}):Play()
-        end
-    end)
-    btn.MouseButton1Down:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.08), {BackgroundColor3 = Color3.fromRGB(20, 120, 255)}):Play()
-    end)
-    btn.MouseButton1Up:Connect(function()
-        if not btn:GetAttribute("Active") then
-            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(48, 48, 62)}):Play()
-        end
-    end)
-    return btn
+ToggleBtn.MouseEnter:Connect(function()
+    TweenService:Create(ToggleBtn, TweenInfo.new(0.15), {BackgroundColor3 = C.cardHover}):Play()
+end)
+ToggleBtn.MouseLeave:Connect(function()
+    TweenService:Create(ToggleBtn, TweenInfo.new(0.15), {BackgroundColor3 = C.card}):Play()
+end)
+
+-- ============ Tab Bar (5 Tabs) ============
+local TabBar = Instance.new("Frame")
+TabBar.Name = "TabBar"
+TabBar.Parent = MainPanel
+TabBar.Position = UDim2.new(0, 8, 0, 44)
+TabBar.Size = UDim2.new(1, -16, 0, 30)
+TabBar.BackgroundColor3 = C.bg2
+TabBar.BorderSizePixel = 0
+
+local TabBarCorner = Instance.new("UICorner")
+TabBarCorner.CornerRadius = UDim.new(0, 8)
+TabBarCorner.Parent = TabBar
+
+local TabBarStroke = Instance.new("UIStroke")
+TabBarStroke.Color = C.stroke
+TabBarStroke.Thickness = 1
+TabBarStroke.Transparency = 0.4
+TabBarStroke.Parent = TabBar
+
+local TAB_PAD = 2
+local tabInnerW = W - 16 - TAB_PAD * 2
+local NUM_TABS = 5
+local tabW = tabInnerW / NUM_TABS
+
+local TabIndicator = Instance.new("Frame")
+TabIndicator.Name = "Indicator"
+TabIndicator.Parent = TabBar
+TabIndicator.Position = UDim2.new(0, TAB_PAD, 0, TAB_PAD)
+TabIndicator.Size = UDim2.new(0, tabW, 1, -TAB_PAD * 2)
+TabIndicator.BackgroundColor3 = C.accent
+TabIndicator.BorderSizePixel = 0
+TabIndicator.ZIndex = 1
+
+local TI_C = Instance.new("UICorner")
+TI_C.CornerRadius = UDim.new(0, 6)
+TI_C.Parent = TabIndicator
+
+local TI_G = Instance.new("UIGradient")
+TI_G.Color = ColorSequence.new(C.accent, C.accent2)
+TI_G.Rotation = 90
+TI_G.Parent = TabIndicator
+
+local TabNames = {"طيران", "سرعة", "تحكم", "شقلبات", "تعليمات"}
+local TabButtons = {}
+
+for i = 1, NUM_TABS do
+    local tb = Instance.new("TextButton")
+    tb.Name = "Tab" .. i
+    tb.Parent = TabBar
+    tb.Size = UDim2.new(0, tabW, 1, -TAB_PAD * 2)
+    tb.Position = UDim2.new(0, TAB_PAD + (i - 1) * tabW, 0, TAB_PAD)
+    tb.BackgroundTransparency = 1
+    tb.Text = TabNames[i]
+    tb.TextColor3 = i == 1 and C.text or C.textDim
+    tb.Font = i == 1 and Enum.Font.GothamBold or Enum.Font.GothamMedium
+    tb.TextSize = 9
+    tb.AutoButtonColor = false
+    tb.ZIndex = 2
+    TabButtons[i] = tb
 end
 
-local function setToggleState(btn, active)
-    btn:SetAttribute("Active", active)
-    local ind = btn:FindFirstChild("ToggleIndicator")
-    local stroke = btn:FindFirstChildWhichIsA("UIStroke")
-    if ind then
-        TweenService:Create(ind, TweenInfo.new(0.15), {
-            BackgroundColor3 = active and Color3.fromRGB(0, 230, 130) or Color3.fromRGB(80, 80, 90)
+-- ============ Content Container ============
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Name = "ContentContainer"
+ContentContainer.Parent = MainPanel
+ContentContainer.Position = UDim2.new(0, 0, 0, 78)
+ContentContainer.Size = UDim2.new(1, 0, 1, -78)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ClipsDescendants = true
+
+local TabContents = {}
+for i = 1, NUM_TABS do
+    local sf = Instance.new("ScrollingFrame")
+    sf.Name = "Tab" .. i .. "Content"
+    sf.Parent = ContentContainer
+    sf.Size = UDim2.new(1, 0, 1, 0)
+    sf.Position = UDim2.new(0, 0, 0, 0)
+    sf.BackgroundTransparency = 1
+    sf.BorderSizePixel = 0
+    sf.ScrollBarThickness = 2
+    sf.ScrollBarImageColor3 = C.accent2
+    sf.ScrollingDirection = Enum.ScrollingDirection.Y
+    sf.CanvasSize = UDim2.new(0, 0, 0, 0)
+    sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    sf.ScrollBarImageTransparency = 0.4
+    sf.Visible = (i == 1)
+    sf.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 4)
+    pad.PaddingBottom = UDim.new(0, 8)
+    pad.PaddingLeft = UDim.new(0, 8)
+    pad.PaddingRight = UDim.new(0, 8)
+    pad.Parent = sf
+
+    TabContents[i] = sf
+end
+
+-- ============ Helper: createCard ============
+local function createCard(parent, opts)
+    opts = opts or {}
+    local card = Instance.new("TextButton")
+    card.Name = opts.name or "Card"
+    card.Parent = parent
+    card.BackgroundColor3 = C.card
+    card.BorderSizePixel = 0
+    card.Text = ""
+    card.AutoButtonColor = false
+    card.Size = opts.size or UDim2.new(1, 0, 0, 32)
+    card.Position = opts.position or UDim2.new(0, 0, 0, 0)
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = card
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = C.stroke
+    stroke.Thickness = 1
+    stroke.Transparency = 0.25
+    stroke.Parent = card
+
+    if opts.icon then
+        local iconBg = Instance.new("Frame")
+        iconBg.Name = "IconBg"
+        iconBg.Parent = card
+        iconBg.Size = UDim2.new(0, 22, 0, 22)
+        iconBg.Position = UDim2.new(0, 6, 0.5, -11)
+        iconBg.BackgroundColor3 = C.iconBg
+        iconBg.BorderSizePixel = 0
+
+        local ibC = Instance.new("UICorner")
+        ibC.CornerRadius = UDim.new(0, 5)
+        ibC.Parent = iconBg
+
+        local ibGrad = Instance.new("UIGradient")
+        ibGrad.Color = ColorSequence.new(C.iconBg, Color3.fromRGB(40, 32, 68))
+        ibGrad.Rotation = 135
+        ibGrad.Parent = iconBg
+
+        local img = Instance.new("ImageLabel")
+        img.Parent = iconBg
+        img.BackgroundTransparency = 1
+        img.Size = UDim2.new(0, 14, 0, 14)
+        img.Position = UDim2.new(0.5, -7, 0.5, -7)
+        img.Image = opts.icon
+        img.ImageColor3 = Color3.fromRGB(215, 195, 255)
+        img.ScaleType = Enum.ScaleType.Fit
+    end
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Parent = card
+    label.BackgroundTransparency = 1
+    if opts.icon then
+        label.Position = UDim2.new(0, 32, 0, 0)
+        label.Size = UDim2.new(1, -45, 1, 0)
+    else
+        label.Position = UDim2.new(0, 8, 0, 0)
+        label.Size = UDim2.new(1, -16, 1, 0)
+    end
+    label.Text = opts.text or ""
+    label.TextColor3 = C.text
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 10
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+
+    if opts.isToggle then
+        label.Size = UDim2.new(1, (opts.icon and -65 or -35), 1, 0)
+
+        local sw = Instance.new("Frame")
+        sw.Name = "Switch"
+        sw.Parent = card
+        sw.Size = UDim2.new(0, 24, 0, 14)
+        sw.Position = UDim2.new(1, -30, 0.5, -7)
+        sw.BackgroundColor3 = C.toggleOff
+        sw.BorderSizePixel = 0
+
+        local swC = Instance.new("UICorner")
+        swC.CornerRadius = UDim.new(1, 0)
+        swC.Parent = sw
+
+        local knob = Instance.new("Frame")
+        knob.Name = "Knob"
+        knob.Parent = sw
+        knob.Size = UDim2.new(0, 10, 0, 10)
+        knob.Position = UDim2.new(0, 2, 0.5, -5)
+        knob.BackgroundColor3 = Color3.fromRGB(220, 218, 235)
+        knob.BorderSizePixel = 0
+
+        local kC = Instance.new("UICorner")
+        kC.CornerRadius = UDim.new(1, 0)
+        kC.Parent = knob
+    end
+
+    card.MouseEnter:Connect(function()
+        if not card:GetAttribute("Active") then
+            TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = C.cardHover}):Play()
+        end
+    end)
+    card.MouseLeave:Connect(function()
+        if not card:GetAttribute("Active") then
+            TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = C.card}):Play()
+        end
+    end)
+    card.MouseButton1Down:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.08), {BackgroundColor3 = C.cardHover}):Play()
+    end)
+
+    return card
+end
+
+-- ============ Helper: setToggleState ============
+local function setToggleState(card, active)
+    card:SetAttribute("Active", active)
+    local sw = card:FindFirstChild("Switch")
+    local stroke = card:FindFirstChildWhichIsA("UIStroke")
+    local label = card:FindFirstChild("Label")
+
+    if sw then
+        local knob = sw:FindFirstChild("Knob")
+        TweenService:Create(sw, TweenInfo.new(0.2), {
+            BackgroundColor3 = active and C.success or C.toggleOff
         }):Play()
+        if knob then
+            TweenService:Create(knob, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                Position = active and UDim2.new(1, -12, 0.5, -5) or UDim2.new(0, 2, 0.5, -5)
+            }):Play()
+        end
     end
     if stroke then
         TweenService:Create(stroke, TweenInfo.new(0.15), {
-            Color = active and Color3.fromRGB(0, 230, 130) or Color3.fromRGB(60, 60, 80),
-            Thickness = active and 2 or 1
+            Color = active and C.strokeActive or C.stroke,
+            Transparency = active and 0 or 0.25
         }):Play()
     end
-    TweenService:Create(btn, TweenInfo.new(0.15), {
-        BackgroundColor3 = active and Color3.fromRGB(28, 55, 42) or Color3.fromRGB(35, 35, 45)
+    if label then
+        TweenService:Create(label, TweenInfo.new(0.15), {
+            TextColor3 = active and C.success or C.text
+        }):Play()
+    end
+    TweenService:Create(card, TweenInfo.new(0.2), {
+        BackgroundColor3 = active and C.cardActiveBg or C.card
     }):Play()
 end
 
-local function createInputRow(labelText, defaultVal, yPos)
+-- ============ Helper: input row ============
+local function createInputRow(parent, labelText, defaultVal, yPos)
     local row = Instance.new("Frame")
-    row.Parent = Content
+    row.Parent = parent
     row.Position = UDim2.new(0, 0, 0, yPos)
-    row.Size = UDim2.new(1, 0, 0, 28)
-    row.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+    row.Size = UDim2.new(1, 0, 0, 32)
+    row.BackgroundColor3 = C.card
     row.BorderSizePixel = 0
-    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = row
+
+    local rC = Instance.new("UICorner")
+    rC.CornerRadius = UDim.new(0, 6)
+    rC.Parent = row
+
+    local rStroke = Instance.new("UIStroke")
+    rStroke.Color = C.stroke
+    rStroke.Thickness = 1
+    rStroke.Transparency = 0.25
+    rStroke.Parent = row
+
     local lbl = Instance.new("TextLabel")
     lbl.Parent = row
     lbl.BackgroundTransparency = 1
     lbl.Position = UDim2.new(0, 8, 0, 0)
-    lbl.Size = UDim2.new(1, -75, 1, 0)
+    lbl.Size = UDim2.new(1, -60, 1, 0)
     lbl.Text = labelText
-    lbl.TextColor3 = Color3.fromRGB(220, 220, 230)
-    lbl.Font = Enum.Font.SourceSansBold
-    lbl.TextSize = 12
+    lbl.TextColor3 = C.text
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 10
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextTruncate = Enum.TextTruncate.AtEnd
+
     local inp = Instance.new("TextBox")
     inp.Parent = row
-    inp.Position = UDim2.new(1, -60, 0, 3)
-    inp.Size = UDim2.new(0, 54, 1, -6)
-    inp.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    inp.Position = UDim2.new(1, -52, 0, 4)
+    inp.Size = UDim2.new(0, 44, 1, -8)
+    inp.BackgroundColor3 = Color3.fromRGB(18, 16, 26)
     inp.BorderSizePixel = 0
     inp.Text = tostring(defaultVal)
-    inp.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inp.TextColor3 = C.accent2
     inp.Font = Enum.Font.GothamBold
-    inp.TextSize = 12
+    inp.TextSize = 10
     inp.ClearTextOnFocus = false
     inp.PlaceholderText = tostring(defaultVal)
-    inp.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
-    local ic = Instance.new("UICorner") ic.CornerRadius = UDim.new(0, 5) ic.Parent = inp
+    inp.PlaceholderColor3 = C.textDim
+
+    local iC = Instance.new("UICorner")
+    iC.CornerRadius = UDim.new(0, 5)
+    iC.Parent = inp
+
+    local iStroke = Instance.new("UIStroke")
+    iStroke.Color = C.stroke
+    iStroke.Thickness = 1
+    iStroke.Parent = inp
+
+    inp.Focused:Connect(function()
+        TweenService:Create(iStroke, TweenInfo.new(0.15), {Color = C.accent2}):Play()
+    end)
+    inp.FocusLost:Connect(function()
+        TweenService:Create(iStroke, TweenInfo.new(0.15), {Color = C.stroke}):Play()
+    end)
+
     return row, inp
 end
 
-local FlyToggleBtn = createFeatureButton("FlyToggleBtn", "rbxassetid://6031243533", "طيران (تحكم)", true)
-FlyToggleBtn.Size = UDim2.new(1, 0, 0, 46)
-FlyToggleBtn.Position = UDim2.new(0, 0, 0, 0)
-
-local _, SpeedInput = createInputRow("سرعة الطيران:", 150, 52)
-SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
-    local d = SpeedInput.Text:gsub("%D", "")
-    if d ~= SpeedInput.Text then SpeedInput.Text = d end
-    local n = tonumber(d)
-    if n and n > 0 then flySpeed = math.clamp(n, 10, 5000) end
-end)
-
-local CtrlRow = Instance.new("Frame")
-CtrlRow.Parent = Content
-CtrlRow.Position = UDim2.new(0, 0, 0, 86)
-CtrlRow.Size = UDim2.new(1, 0, 0, 32)
-CtrlRow.BackgroundTransparency = 1
-
-local function ctrlBtn(text, color, xPos)
-    local b = Instance.new("TextButton")
-    b.Parent = CtrlRow
-    b.Size = UDim2.new(0.25, -2, 1, 0)
-    b.Position = UDim2.new(xPos, 0, 0, 0)
-    b.BackgroundColor3 = color
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 11
-    b.AutoButtonColor = false
-    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = b
-    return b
-end
-
-local UpBtn      = ctrlBtn("صعود", Color3.fromRGB(35, 55, 75), 0)
-local DownBtn    = ctrlBtn("هبوط", Color3.fromRGB(60, 45, 45), 0.25)
-local ForwardBtn = ctrlBtn("أمام", Color3.fromRGB(35, 60, 45), 0.5)
-local BackBtn    = ctrlBtn("خلف", Color3.fromRGB(55, 50, 35), 0.75)
-
-local CarSpeedBtn = createFeatureButton("CarSpeedBtn", "rbxassetid://6031075934", "سرعة سياره", true)
-CarSpeedBtn.Size = UDim2.new(1, 0, 0, 46)
-CarSpeedBtn.Position = UDim2.new(0, 0, 0, 126)
-
-local _, CarSpeedInput = createInputRow("السرعة:", 200, 178)
-CarSpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
-    local d = CarSpeedInput.Text:gsub("%D", "")
-    if d ~= CarSpeedInput.Text then CarSpeedInput.Text = d end
-    local n = tonumber(d)
-    if n and n > 0 then carSpeedValue = math.clamp(n, 10, 10000) end
-end)
-
-local RewindBtn = createFeatureButton("RewindBtn", "rbxassetid://8400033134", "ترجيع",  false)
-local RushBtn   = createFeatureButton("RushBtn",   "rbxassetid://6031075934", "اندفاع", false)
-local ResetBtn  = createFeatureButton("ResetBtn",  "rbxassetid://7734053426", "رست",   false)
-local BrakeBtn  = createFeatureButton("BrakeBtn",  "rbxassetid://6031229834", "فرامل",  false)
-local ClimbBtn  = createFeatureButton("ClimbBtn",  "rbxassetid://6034684930", "تسلق",   true)
-local NoclipBtn = createFeatureButton("NoclipBtn", "rbxassetid://6034684930", "اختراق", true)
-local FlyOneShotBtn = createFeatureButton("FlyOneShotBtn", "rbxassetid://6031243533", "تطير سياره", false)
-local FlipBtn       = createFeatureButton("FlipBtn",       "rbxassetid://6035067834", "شقلبه في هواء", false)
-local RotLeftBtn    = createFeatureButton("RotLeftBtn",    "rbxassetid://6031091004", "دوران شمال", false)
-local RotRightBtn   = createFeatureButton("RotRightBtn",   "rbxassetid://6035047448", "دوران يمين", false)
-local HoverBtn      = createFeatureButton("HoverBtn",      "rbxassetid://6034684930", "تثبيت في هواء", true)
-
--- الشقلبات
-local BackFlipBtn    = createFeatureButton("BackFlipBtn",    "rbxassetid://6035067834", "شقلبة خلفية",   false)
-local BarrelRollBtn  = createFeatureButton("BarrelRollBtn",  "rbxassetid://6031091004", "برميل رول",    false)
-local SpinBtn        = createFeatureButton("SpinBtn",        "rbxassetid://6035047448", "لفة أفقية",    false)
-local WheelieBtn     = createFeatureButton("WheelieBtn",     "rbxassetid://6034684930", "ويللي",        true)
-local DriftBtn       = createFeatureButton("DriftBtn",       "rbxassetid://6031229834", "دريفت",        true)
-local DoubleFlipBtn  = createFeatureButton("DoubleFlipBtn",  "rbxassetid://6035067834", "شقلبة مزدوجة", false)
-local LoopBtn        = createFeatureButton("LoopBtn",        "rbxassetid://6035047448", "لوب كامل",    false)
-local SlamDunkBtn    = createFeatureButton("SlamDunkBtn",    "rbxassetid://7734053426", "سلام دانك",   false)
-local FlipSpinBtn    = createFeatureButton("FlipSpinBtn",    "rbxassetid://6031091004", "شقلبة + لفة", false)
-local SuperJumpBtn   = createFeatureButton("SuperJumpBtn",   "rbxassetid://6031243533", "قفزة عالية",  false)
-local CrazySpinBtn   = createFeatureButton("CrazySpinBtn",   "rbxassetid://6035047448", "دوران مجنون", false)
-
--- ===== الشقلبات الغريبة الجديدة =====
-local SideFlipBtn      = createFeatureButton("SideFlipBtn",      "rbxassetid://6031091004", "شقلبة جانبية",   false)
-local DiagonalFlipBtn  = createFeatureButton("DiagonalFlipBtn",  "rbxassetid://6035047448", "شقلبة قطرية",    false)
-local CorkscrewBtn     = createFeatureButton("CorkscrewBtn",     "rbxassetid://6031091004", "لولبي",          false)
-local TripleFlipBtn    = createFeatureButton("TripleFlipBtn",    "rbxassetid://6035067834", "شقلبة ثلاثية",   false)
-local DoubleBackBtn    = createFeatureButton("DoubleBackBtn",    "rbxassetid://6035067834", "خلفية مزدوجة",   false)
-local ChaosFlipBtn     = createFeatureButton("ChaosFlipBtn",     "rbxassetid://6035047448", "شقلبة عشوائية",  false)
-local WhipFlipBtn      = createFeatureButton("WhipFlipBtn",      "rbxassetid://6031243533", "شقلبة سريعة",    false)
-local HelicopterBtn    = createFeatureButton("HelicopterBtn",    "rbxassetid://6035047448", "هليكوبتر",       false)
-
-local ROW_H = 46
-local function place2(btnL, btnR, yPos)
-    btnL.Size = UDim2.new(0.5, -3, 0, ROW_H)
-    btnL.Position = UDim2.new(0, 0, 0, yPos)
-    btnR.Size = UDim2.new(0.5, -3, 0, ROW_H)
-    btnR.Position = UDim2.new(0.5, 3, 0, yPos)
-end
-
-place2(RewindBtn, RushBtn, 212)
-place2(ResetBtn, BrakeBtn, 264)
-place2(ClimbBtn, NoclipBtn, 316)
-place2(FlyOneShotBtn, FlipBtn, 368)
-place2(RotLeftBtn, RotRightBtn, 420)
-
-HoverBtn.Size = UDim2.new(1, 0, 0, ROW_H)
-HoverBtn.Position = UDim2.new(0, 0, 0, 472)
-
-place2(BackFlipBtn, BarrelRollBtn, 524)
-place2(SpinBtn, WheelieBtn, 576)
-
-DriftBtn.Size = UDim2.new(1, 0, 0, ROW_H)
-DriftBtn.Position = UDim2.new(0, 0, 0, 628)
-
-place2(DoubleFlipBtn, LoopBtn, 680)
-place2(SlamDunkBtn, FlipSpinBtn, 732)
-
-SuperJumpBtn.Size = UDim2.new(1, 0, 0, ROW_H)
-SuperJumpBtn.Position = UDim2.new(0, 0, 0, 784)
-
-CrazySpinBtn.Size = UDim2.new(1, 0, 0, ROW_H)
-CrazySpinBtn.Position = UDim2.new(0, 0, 0, 836)
-
-place2(SideFlipBtn, DiagonalFlipBtn, 888)
-place2(CorkscrewBtn, TripleFlipBtn, 940)
-place2(DoubleBackBtn, ChaosFlipBtn, 992)
-place2(WhipFlipBtn, HelicopterBtn, 1044)
-
-local INSTR_START_Y = 1098
-
-local InstrHeader = Instance.new("Frame")
-InstrHeader.Parent = Content
-InstrHeader.Position = UDim2.new(0, 0, 0, INSTR_START_Y)
-InstrHeader.Size = UDim2.new(1, 0, 0, 28)
-InstrHeader.BackgroundColor3 = Color3.fromRGB(30, 60, 90)
-InstrHeader.BorderSizePixel = 0
-local ihc = Instance.new("UICorner") ihc.CornerRadius = UDim.new(0, 8) ihc.Parent = InstrHeader
-local ihs = Instance.new("UIStroke") ihs.Color = Color3.fromRGB(0, 170, 255) ihs.Thickness = 1.5 ihs.Transparency = 0.3 ihs.Parent = InstrHeader
-
-local InstrTitle = Instance.new("TextLabel")
-InstrTitle.Parent = InstrHeader
-InstrTitle.BackgroundTransparency = 1
-InstrTitle.Size = UDim2.new(1, 0, 1, 0)
-InstrTitle.Text = "📋 تعليمات الأزرار"
-InstrTitle.TextColor3 = Color3.fromRGB(0, 200, 255)
-InstrTitle.Font = Enum.Font.GothamBold
-InstrTitle.TextSize = 13
-
-local function createInstructionRow(btnName, desc, yPos)
+-- ============ Helper: control row ============
+local function createCtrlRow(parent, yPos)
     local row = Instance.new("Frame")
-    row.Parent = Content
+    row.Parent = parent
     row.Position = UDim2.new(0, 0, 0, yPos)
-    row.Size = UDim2.new(1, 0, 0, 34)
-    row.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
+    row.Size = UDim2.new(1, 0, 0, 32)
+    row.BackgroundTransparency = 1
+
+    local function ctrlBtn(text, color, xPos)
+        local b = Instance.new("TextButton")
+        b.Parent = row
+        b.Size = UDim2.new(0.25, -2, 1, 0)
+        b.Position = UDim2.new(xPos, 2, 0, 0)
+        b.BackgroundColor3 = color
+        b.BorderSizePixel = 0
+        b.Text = text
+        b.TextColor3 = C.text
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 9
+        b.AutoButtonColor = false
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 5)
+        c.Parent = b
+
+        local s = Instance.new("UIStroke")
+        s.Color = C.stroke
+        s.Thickness = 1
+        s.Transparency = 0.25
+        s.Parent = b
+
+        b.MouseEnter:Connect(function()
+            TweenService:Create(b, TweenInfo.new(0.15), {
+                BackgroundColor3 = color:Lerp(Color3.fromRGB(255,255,255), 0.12)
+            }):Play()
+        end)
+        b.MouseLeave:Connect(function()
+            TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = color}):Play()
+        end)
+        return b
+    end
+
+    return row, ctrlBtn
+end
+
+-- ============ Populate Tab 1: طيران ============
+local tab1 = TabContents[1]
+
+local FlyToggleBtn = createCard(tab1, {
+    name = "FlyToggleBtn",
+    icon = "rbxassetid://6031243533",
+    text = "طيران (تحكم)",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 0),
+})
+
+local _, SpeedInput = createInputRow(tab1, "سرعة الطيران", 150, 36)
+
+local CtrlRow, ctrlBtn = createCtrlRow(tab1, 72)
+local UpBtn      = ctrlBtn("صعود",  Color3.fromRGB(45, 70, 100), 0)
+local DownBtn    = ctrlBtn("هبوط",  Color3.fromRGB(75, 55, 55),  0.25)
+local ForwardBtn = ctrlBtn("أمام",  Color3.fromRGB(45, 75, 55),  0.5)
+local BackBtn    = ctrlBtn("خلف",   Color3.fromRGB(70, 62, 45),  0.75)
+
+local FlyOneShotBtn = createCard(tab1, {
+    name = "FlyOneShotBtn",
+    icon = "rbxassetid://6031243533",
+    text = "تطير سياره",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 108),
+})
+
+local HoverBtn = createCard(tab1, {
+    name = "HoverBtn",
+    icon = "rbxassetid://6034684930",
+    text = "تثبيت في هواء",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 144),
+})
+
+local ClimbBtn = createCard(tab1, {
+    name = "ClimbBtn",
+    icon = "rbxassetid://6034684930",
+    text = "تسلق",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 180),
+})
+
+-- ============ Populate Tab 2: سرعة ============
+local tab2 = TabContents[2]
+
+local CarSpeedBtn = createCard(tab2, {
+    name = "CarSpeedBtn",
+    icon = "rbxassetid://6031075934",
+    text = "سرعة سياره",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 0),
+})
+
+local _, CarSpeedInput = createInputRow(tab2, "السرعة", 200, 36)
+
+local RushBtn = createCard(tab2, {
+    name = "RushBtn",
+    icon = "rbxassetid://6031075934",
+    text = "اندفاع",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 72),
+})
+
+local DriftBtn = createCard(tab2, {
+    name = "DriftBtn",
+    icon = "rbxassetid://6031229834",
+    text = "دريفت",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 108),
+})
+
+local BrakeBtn = createCard(tab2, {
+    name = "BrakeBtn",
+    icon = "rbxassetid://6031229834",
+    text = "فرامل",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 144),
+})
+
+local RewindBtn = createCard(tab2, {
+    name = "RewindBtn",
+    icon = "rbxassetid://8400033134",
+    text = "ترجيع",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 180),
+})
+
+local ResetBtn = createCard(tab2, {
+    name = "ResetBtn",
+    icon = "rbxassetid://7734053426",
+    text = "رست",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 216),
+})
+
+local NoclipBtn = createCard(tab2, {
+    name = "NoclipBtn",
+    icon = "rbxassetid://6034684930",
+    text = "اختراق",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 252),
+})
+
+-- ============ Populate Tab 3: تحكم ============
+local tab3 = TabContents[3]
+
+local WheelieBtn = createCard(tab3, {
+    name = "WheelieBtn",
+    icon = "rbxassetid://6034684930",
+    text = "ويللي",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 0),
+})
+
+local RotLeftBtn = createCard(tab3, {
+    name = "RotLeftBtn",
+    icon = "rbxassetid://6031091004",
+    text = "دوران شمال",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 36),
+})
+
+local RotRightBtn = createCard(tab3, {
+    name = "RotRightBtn",
+    icon = "rbxassetid://6035047448",
+    text = "دوران يمين",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 72),
+})
+
+local SuperJumpBtn = createCard(tab3, {
+    name = "SuperJumpBtn",
+    icon = "rbxassetid://6031243533",
+    text = "قفزة عالية",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 108),
+})
+
+local SlamDunkBtn = createCard(tab3, {
+    name = "SlamDunkBtn",
+    icon = "rbxassetid://7734053426",
+    text = "سلام دانك",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 144),
+})
+
+local LoopBtn = createCard(tab3, {
+    name = "LoopBtn",
+    icon = "rbxassetid://6035047448",
+    text = "لوب كامل",
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 180),
+})
+
+-- ============ Populate Tab 4: شقلبات ============
+local tab4 = TabContents[4]
+
+local flipsData = {
+    { name = "FlipBtn",        text = "شقلبة أمامية",  icon = "rbxassetid://6035067834" },
+    { name = "BackFlipBtn",    text = "شقلبة خلفية",   icon = "rbxassetid://6035067834" },
+    { name = "DoubleFlipBtn",  text = "شقلبة مزدوجة",  icon = "rbxassetid://6035067834" },
+    { name = "TripleFlipBtn",  text = "شقلبة ثلاثية",  icon = "rbxassetid://6035067834" },
+    { name = "DoubleBackBtn",  text = "خلفية مزدوجة",  icon = "rbxassetid://6035067834" },
+    { name = "BarrelRollBtn",  text = "برميل رول",     icon = "rbxassetid://6031091004" },
+    { name = "SpinBtn",        text = "لفة أفقية",     icon = "rbxassetid://6035047448" },
+    { name = "CrazySpinBtn",   text = "دوران مجنون",   icon = "rbxassetid://6035047448" },
+    { name = "SideFlipBtn",    text = "شقلبة جانبية",  icon = "rbxassetid://6031091004" },
+    { name = "DiagonalFlipBtn",text = "شقلبة قطرية",   icon = "rbxassetid://6035047448" },
+    { name = "CorkscrewBtn",   text = "لولبي",         icon = "rbxassetid://6031091004" },
+    { name = "WhipFlipBtn",    text = "شقلبة سريعة",   icon = "rbxassetid://6031243533" },
+    { name = "HelicopterBtn",  text = "هليكوبتر",      icon = "rbxassetid://6035047448" },
+    { name = "ChaosFlipBtn",   text = "شقلبة عشوائية", icon = "rbxassetid://6035047448" },
+    { name = "FlipSpinBtn",    text = "شقلبة + لفة",   icon = "rbxassetid://6031091004" },
+}
+
+local FlipBtns = {}
+for i, data in ipairs(flipsData) do
+    local row = math.floor((i - 1) / 2)
+    local col = (i - 1) % 2
+    local xPos = col == 0 and 0 or 0.5
+    local xOffset = col == 0 and 0 or 2
+    local yPos = row * 36
+
+    local size, pos
+    if i == #flipsData and col == 0 then
+        size = UDim2.new(0.5, -2, 0, 32)
+        pos = UDim2.new(0, 0, 0, yPos)
+    else
+        size = UDim2.new(0.5, -2, 0, 32)
+        pos = UDim2.new(xPos, xOffset, 0, yPos)
+    end
+
+    local card = createCard(tab4, {
+        name = data.name,
+        text = data.text,
+        icon = data.icon,
+        size = size,
+        position = pos,
+    })
+    FlipBtns[data.name] = card
+end
+
+local FlipBtn        = FlipBtns.FlipBtn
+local BackFlipBtn    = FlipBtns.BackFlipBtn
+local DoubleFlipBtn  = FlipBtns.DoubleFlipBtn
+local TripleFlipBtn  = FlipBtns.TripleFlipBtn
+local DoubleBackBtn  = FlipBtns.DoubleBackBtn
+local BarrelRollBtn  = FlipBtns.BarrelRollBtn
+local SpinBtn        = FlipBtns.SpinBtn
+local CrazySpinBtn   = FlipBtns.CrazySpinBtn
+local SideFlipBtn    = FlipBtns.SideFlipBtn
+local DiagonalFlipBtn= FlipBtns.DiagonalFlipBtn
+local CorkscrewBtn   = FlipBtns.CorkscrewBtn
+local WhipFlipBtn    = FlipBtns.WhipFlipBtn
+local HelicopterBtn  = FlipBtns.HelicopterBtn
+local ChaosFlipBtn   = FlipBtns.ChaosFlipBtn
+local FlipSpinBtn    = FlipBtns.FlipSpinBtn
+
+-- ============ Populate Tab 5: تعليمات ============
+local tab5 = TabContents[5]
+
+local instructionsData = {
+    { "طيران (تحكم)", "الطيران والتحكم بالاتجاه" },
+    { "سرعة الطيران", "سرعة الطيران (10-5000)" },
+    { "صعود / هبوط", "الحركة العمودية في الطيران" },
+    { "أمام / خلف", "الحركة الأمامية والخلفية" },
+    { "سرعة سياره", "تثبيت سرعة السيارة" },
+    { "السرعة", "قيمة السرعة (10-10000)" },
+    { "ترجيع", "الرجوع لآخر موقع آمن" },
+    { "اندفاع", "دفعة سريعة للأمام" },
+    { "رست", "رفع وإعادة تعيين السيارة" },
+    { "فرامل", "إيقاف السيارة فوراً" },
+    { "تسلق", "تسلق الجدران للأعلى" },
+    { "اختراق", "اختراق الأجسام" },
+    { "تطير سياره", "دفعة عمودية للأعلى" },
+    { "شقلبه في هواء", "شقلبة 360 أمامية" },
+    { "دوران شمال", "تدوير 90 درجة يسار" },
+    { "دوران يمين", "تدوير 90 درجة يمين" },
+    { "تثبيت في هواء", "تثبيت الارتفاع في الهواء" },
+    { "شقلبة خلفية", "شقلبة 360 للخلف" },
+    { "برميل رول", "دوران جانبي 360" },
+    { "لفة أفقية", "لفة 360 أفقية" },
+    { "ويللي", "رفع مقدمة السيارة (تبديل)" },
+    { "دريفت", "انزلاق مع دوران" },
+    { "شقلبة مزدوجة", "دورتين أماميتين" },
+    { "لوب كامل", "حلقة كاملة في الهواء" },
+    { "سلام دانك", "ارتفاع عالي ثم نزول" },
+    { "شقلبة + لفة", "شقلبة مع لفّة أفقية" },
+    { "قفزة عالية", "قفزة عمودية عالية" },
+    { "دوران مجنون", "دوران على 3 محاور" },
+    { "شقلبة جانبية", "دوران 360 على محور Z" },
+    { "شقلبة قطرية", "دوران قطري X+Y معاً" },
+    { "لولبي", "Corkscrew - دوران X+Y مستمر" },
+    { "شقلبة ثلاثية", "3 دورات أمامية (1080°)" },
+    { "خلفية مزدوجة", "دورتين خلفيتين (720°)" },
+    { "شقلبة عشوائية", "محاور عشوائية متغيرة" },
+    { "شقلبة سريعة", "Whip - شقلبة خارقة السرعة" },
+    { "هليكوبتر", "دوران أفقي متعدد + شقلبة" },
+}
+
+for i, data in ipairs(instructionsData) do
+    local row = Instance.new("Frame")
+    row.Parent = tab5
+    row.Position = UDim2.new(0, 0, 0, (i - 1) * 34)
+    row.Size = UDim2.new(1, 0, 0, 30)
+    row.BackgroundColor3 = C.card
     row.BorderSizePixel = 0
-    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = row
+
+    local rC = Instance.new("UICorner")
+    rC.CornerRadius = UDim.new(0, 6)
+    rC.Parent = row
+    
+    -- Stripe
     local stripe = Instance.new("Frame")
     stripe.Parent = row
-    stripe.Position = UDim2.new(0, 4, 0, 6)
-    stripe.Size = UDim2.new(0, 3, 1, -12)
-    stripe.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    stripe.Position = UDim2.new(0, 3, 0, 6)
+    stripe.Size = UDim2.new(0, 2, 1, -12)
+    stripe.BackgroundColor3 = C.accent
     stripe.BorderSizePixel = 0
     local sc = Instance.new("UICorner") sc.CornerRadius = UDim.new(1, 0) sc.Parent = stripe
+
     local nameLbl = Instance.new("TextLabel")
     nameLbl.Parent = row
     nameLbl.BackgroundTransparency = 1
-    nameLbl.Position = UDim2.new(0, 14, 0, 2)
-    nameLbl.Size = UDim2.new(1, -20, 0, 15)
-    nameLbl.Text = btnName
-    nameLbl.TextColor3 = Color3.fromRGB(0, 200, 255)
+    nameLbl.Position = UDim2.new(0, 10, 0, 1)
+    nameLbl.Size = UDim2.new(1, -15, 0, 14)
+    nameLbl.Text = data[1]
+    nameLbl.TextColor3 = C.accent2
     nameLbl.Font = Enum.Font.GothamBold
-    nameLbl.TextSize = 12
+    nameLbl.TextSize = 10
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+
     local descLbl = Instance.new("TextLabel")
     descLbl.Parent = row
     descLbl.BackgroundTransparency = 1
-    descLbl.Position = UDim2.new(0, 14, 0, 17)
-    descLbl.Size = UDim2.new(1, -20, 0, 15)
-    descLbl.Text = desc
-    descLbl.TextColor3 = Color3.fromRGB(190, 190, 200)
-    descLbl.Font = Enum.Font.SourceSans
-    descLbl.TextSize = 11
+    descLbl.Position = UDim2.new(0, 10, 0, 15)
+    descLbl.Size = UDim2.new(1, -15, 0, 14)
+    descLbl.Text = data[2]
+    descLbl.TextColor3 = C.textDim
+    descLbl.Font = Enum.Font.GothamMedium
+    descLbl.TextSize = 9
     descLbl.TextXAlignment = Enum.TextXAlignment.Left
     descLbl.TextTruncate = Enum.TextTruncate.AtEnd
-    return row
 end
 
-local instructions = {
-    { "طيران (تحكم)",         "الطيران والتحكم بالاتجاه" },
-    { "سرعة الطيران",          "سرعة الطيران (10-5000)" },
-    { "صعود / هبوط",          "الحركة العمودية في الطيران" },
-    { "أمام / خلف",           "الحركة الأمامية والخلفية" },
-    { "سرعة سياره",            "تثبيت سرعة السيارة" },
-    { "السرعة",                "قيمة السرعة (10-10000)" },
-    { "ترجيع",                 "الرجوع لآخر موقع آمن" },
-    { "اندفاع",                "دفعة سريعة للأمام" },
-    { "رست",                   "رفع وإعادة تعيين السيارة" },
-    { "فرامل",                 "إيقاف السيارة فوراً" },
-    { "تسلق",                  "تسلق الجدران للأعلى" },
-    { "اختراق",                "اختراق الأجسام" },
-    { "تطير سياره",            "دفعة عمودية للأعلى" },
-    { "شقلبه في هواء",         "شقلبة 360 أمامية" },
-    { "دوران شمال",            "تدوير 90 درجة يسار" },
-    { "دوران يمين",            "تدوير 90 درجة يمين" },
-    { "تثبيت في هواء",         "تثبيت الارتفاع في الهواء" },
-    { "شقلبة خلفية",           "شقلبة 360 للخلف" },
-    { "برميل رول",             "دوران جانبي 360" },
-    { "لفة أفقية",             "لفة 360 أفقية" },
-    { "ويللي",                 "رفع مقدمة السيارة (تبديل)" },
-    { "دريفت",                 "انزلاق مع دوران" },
-    { "شقلبة مزدوجة",          "دورتين أماميتين" },
-    { "لوب كامل",              "حلقة كاملة في الهواء" },
-    { "سلام دانك",             "ارتفاع عالي ثم نزول" },
-    { "شقلبة + لفة",           "شقلبة مع لفّة أفقية" },
-    { "قفزة عالية",            "قفزة عمودية عالية" },
-    { "دوران مجنون",           "دوران على 3 محاور" },
-    { "شقلبة جانبية",          "دوران 360 على محور Z" },
-    { "شقلبة قطرية",           "دوران قطري X+Y معاً" },
-    { "لولبي",                 "Corkscrew - دوران X+Y مستمر" },
-    { "شقلبة ثلاثية",          "3 دورات أمامية (1080°)" },
-    { "خلفية مزدوجة",          "دورتين خلفيتين (720°)" },
-    { "شقلبة عشوائية",         "محاور عشوائية متغيرة" },
-    { "شقلبة سريعة",           "Whip - شقلبة خارقة السرعة" },
-    { "هليكوبتر",              "دوران أفقي متعدد + شقلبة" },
-}
 
-for i, data in ipairs(instructions) do
-    createInstructionRow(data[1], data[2], INSTR_START_Y + 32 + (i - 1) * 36)
+-- ============ Tab Switching ============
+local currentTab = 1
+local function switchTab(index)
+    if currentTab == index then return end
+    currentTab = index
+
+    TweenService:Create(TabIndicator, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, TAB_PAD + (index - 1) * tabW, 0, TAB_PAD)
+    }):Play()
+
+    for i, tb in ipairs(TabButtons) do
+        TweenService:Create(tb, TweenInfo.new(0.2), {
+            TextColor3 = i == index and C.text or C.textDim
+        }):Play()
+        tb.Font = i == index and Enum.Font.GothamBold or Enum.Font.GothamMedium
+    end
+
+    for i, sf in ipairs(TabContents) do
+        sf.Visible = (i == index)
+    end
 end
 
-Content.CanvasSize = UDim2.new(0, 0, 0, INSTR_START_Y + 32 + (#instructions * 36) + 10)
+for i, tb in ipairs(TabButtons) do
+    tb.MouseButton1Click:Connect(function() switchTab(i) end)
+end
 
+-- ============ Drag ============
 local function makeDraggable(frame, dragArea)
     local dragging = false
     local dragStart, startPos
@@ -488,50 +900,77 @@ local function makeDraggable(frame, dragArea)
     dragArea.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
         end
     end)
 end
 makeDraggable(MainPanel, DragArea)
 
+-- ============ Collapse / Expand ============
 local isCollapsed = false
-local tweenInfo = TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local tweenInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 ToggleBtn.MouseButton1Click:Connect(function()
     if not isCollapsed then
         isCollapsed = true
-        Content.Visible = false
+        TabBar.Visible = false
+        ContentContainer.Visible = false
         TweenService:Create(MainPanel, tweenInfo, {Size = COLLAPSED_SIZE}):Play()
-        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 200, 120)}):Play()
-        ToggleBtn.Text = "▼"
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.accent}):Play()
+        ToggleBtn.Text = "+"
     else
         isCollapsed = false
-        Content.Visible = true
+        TabBar.Visible = true
+        ContentContainer.Visible = true
         TweenService:Create(MainPanel, tweenInfo, {Size = EXPANDED_SIZE}):Play()
-        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 150, 230)}):Play()
-        ToggleBtn.Text = "▲"
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = C.card}):Play()
+        ToggleBtn.Text = "−"
     end
 end)
 
+-- ============ Warning ============
 local function showWarning(text)
     local old = ScreenGui:FindFirstChild("WarningLabel")
     if old then old:Destroy() end
-    local W = Instance.new("TextLabel")
-    W.Name = "WarningLabel"
-    W.Parent = ScreenGui
-    W.AnchorPoint = Vector2.new(0.5, 0)
-    W.Size = UDim2.new(0, 260, 0, 42)
-    W.Position = UDim2.new(0.5, 0, 0.08, 0)
-    W.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    W.BackgroundTransparency = 0.15
-    W.TextColor3 = Color3.fromRGB(255, 60, 60)
-    W.Text = text
-    W.Font = Enum.Font.SourceSansBold
-    W.TextSize = 16
-    W.BorderSizePixel = 0
-    local LC = Instance.new("UICorner") LC.CornerRadius = UDim.new(0, 10) LC.Parent = W
-    local LS = Instance.new("UIStroke") LS.Color = Color3.fromRGB(255, 60, 60) LS.Thickness = 1.5 LS.Transparency = 0.5 LS.Parent = W
-    Debris:AddItem(W, 3)
+
+    local Wn = Instance.new("Frame")
+    Wn.Name = "WarningLabel"
+    Wn.Parent = ScreenGui
+    Wn.AnchorPoint = Vector2.new(0.5, 0)
+    Wn.Size = UDim2.new(0, 220, 0, 36)
+    Wn.Position = UDim2.new(0.5, 0, 0.08, 0)
+    Wn.BackgroundColor3 = Color3.fromRGB(28, 18, 24)
+    Wn.BackgroundTransparency = 0.05
+    Wn.BorderSizePixel = 0
+
+    local wC = Instance.new("UICorner")
+    wC.CornerRadius = UDim.new(0, 10)
+    wC.Parent = Wn
+
+    local wS = Instance.new("UIStroke")
+    wS.Color = Color3.fromRGB(255, 80, 90)
+    wS.Thickness = 1.5
+    wS.Transparency = 0.3
+    wS.Parent = Wn
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = Wn
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, -20, 1, 0)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.Text = "⚠  " .. text
+    lbl.TextColor3 = Color3.fromRGB(255, 100, 110)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 11
+
+    Debris:AddItem(Wn, 3)
 end
+
+-- ==========================================
+-- ============ FUNCTIONAL CODE ============
+-- ==========================================
 
 local function getVehicle()
     local character = player.Character
@@ -559,11 +998,8 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- دالة شقلبة موحدة - تقبل أي دوران
--- ==========================================
+-- ===== doCustomFlip =====
 local isAirMoveActive = false
-
 local function doCustomFlip(duration, liftHeight, rotationFn)
     local _, mainPart = getVehicle()
     if not mainPart then showWarning("اركب سيارة أولاً!") return end
@@ -576,7 +1012,6 @@ local function doCustomFlip(duration, liftHeight, rotationFn)
     local liftDuration = 0.25
 
     task.spawn(function()
-        -- رفع
         local t0 = tick()
         while true do
             if not mainPart or not mainPart.Parent then isAirMoveActive = false return end
@@ -590,7 +1025,6 @@ local function doCustomFlip(duration, liftHeight, rotationFn)
             task.wait(0.01)
         end
 
-        -- دوران
         local liftCF = mainPart.CFrame
         local t1 = tick()
         while true do
@@ -608,116 +1042,22 @@ local function doCustomFlip(duration, liftHeight, rotationFn)
     end)
 end
 
--- ========== الشقلبات القديمة (شغالة) ==========
-FlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.6, 12, function(t) return CFrame.Angles(math.rad(360) * t, 0, 0) end)
-end)
-BackFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.6, 12, function(t) return CFrame.Angles(-math.rad(360) * t, 0, 0) end)
-end)
-DoubleFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.0, 18, function(t) return CFrame.Angles(math.rad(720) * t, 0, 0) end)
-end)
-FlipSpinBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.8, 15, function(t) return CFrame.Angles(math.rad(360) * t, math.rad(360) * t, 0) end)
-end)
-BarrelRollBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.7, 15, function(t) return CFrame.Angles(0, 0, math.rad(360) * t) end)
-end)
-SpinBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.7, 0, function(t) return CFrame.Angles(0, math.rad(360) * t, 0) end)
-end)
-CrazySpinBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.2, 12, function(t)
-        local a = math.rad(360) * t
-        return CFrame.Angles(a, a, a)
-    end)
+-- ============ Input handlers ============
+SpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local d = SpeedInput.Text:gsub("%D", "")
+    if d ~= SpeedInput.Text then SpeedInput.Text = d end
+    local n = tonumber(d)
+    if n and n > 0 then flySpeed = math.clamp(n, 10, 5000) end
 end)
 
--- ========== 🌟 الشقلبات الغريبة الجديدة ==========
-
--- 1. شقلبة جانبية - دوران حول Z (مثل المروحية بالجنب)
-SideFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.8, 15, function(t)
-        return CFrame.Angles(math.rad(360) * t, 0, math.rad(180) * t)
-    end)
+CarSpeedInput:GetPropertyChangedSignal("Text"):Connect(function()
+    local d = CarSpeedInput.Text:gsub("%D", "")
+    if d ~= CarSpeedInput.Text then CarSpeedInput.Text = d end
+    local n = tonumber(d)
+    if n and n > 0 then carSpeedValue = math.clamp(n, 10, 10000) end
 end)
 
--- 2. شقلبة قطرية - X+Y معاً
-DiagonalFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.8, 18, function(t)
-        return CFrame.Angles(math.rad(360) * t, math.rad(360) * t, 0)
-    end)
-end)
-
--- 3. لولبي (Corkscrew) - X مستمر + Y مستمر بسرعات مختلفة
-CorkscrewBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.0, 20, function(t)
-        return CFrame.Angles(math.rad(720) * t, math.rad(360) * t, 0)
-    end)
-end)
-
--- 4. شقلبة ثلاثية - 3 دورات أمامية
-TripleFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.4, 25, function(t)
-        return CFrame.Angles(math.rad(1080) * t, 0, 0)
-    end)
-end)
-
--- 5. خلفية مزدوجة - 2 دورات خلفية
-DoubleBackBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.0, 20, function(t)
-        return CFrame.Angles(-math.rad(720) * t, 0, 0)
-    end)
-end)
-
--- 6. شقلبة عشوائية - محاور متغيرة
-ChaosFlipBtn.MouseButton1Click:Connect(function()
-    local seed = tick()
-    local ax = math.random() * 2 - 1
-    local ay = math.random() * 2 - 1
-    local az = math.random() * 2 - 1
-    -- نطبع نفس الأرقام كل شقلبة
-    doCustomFlip(1.0, 20, function(t)
-        local mag = math.sqrt(ax*ax + ay*ay + az*az)
-        if mag < 0.1 then mag = 1 end
-        return CFrame.Angles(
-            math.rad(360) * t * (ax/mag),
-            math.rad(360) * t * (ay/mag),
-            math.rad(360) * t * (az/mag)
-        )
-    end)
-end)
-
--- 7. شقلبة سريعة (Whip) - أمامية لكن 0.25 ثانية فقط
-WhipFlipBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(0.25, 25, function(t)
-        return CFrame.Angles(math.rad(360) * t, 0, 0)
-    end)
-end)
-
--- 8. هليكوبتر - دوران أفقي 720 + شقلبة أمامية 360
-HelicopterBtn.MouseButton1Click:Connect(function()
-    doCustomFlip(1.2, 20, function(t)
-        return CFrame.Angles(math.rad(360) * t, math.rad(720) * t, 0)
-    end)
-end)
-
--- ========== تطير سياره ==========
-FlyOneShotBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if mainPart then
-        local bv = Instance.new("BodyVelocity")
-        bv.Velocity = Vector3.new(0, flySpeed, 0)
-        bv.MaxForce = Vector3.new(0, 500000, 0)
-        bv.Parent = mainPart
-        Debris:AddItem(bv, 1)
-    else
-        showWarning("اركب سيارة أولاً!")
-    end
-end)
-
--- ========== طيران تحكم ==========
+-- ============ Flight ============
 local flyActive = false
 local flyBV = nil
 local flyBG = nil
@@ -729,6 +1069,7 @@ local function stopFly()
     if flyBV then flyBV:Destroy() flyBV = nil end
     if flyBG then flyBG:Destroy() flyBG = nil end
 end
+
 FlyToggleBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if not mainPart then showWarning("اركب سيارة أولاً!") return end
@@ -776,12 +1117,27 @@ local function bindHold(btn, onDown, onUp)
         if input.UserInputType == Enum.UserInputType.Touch then onUp() end
     end)
 end
-bindHold(UpBtn, function() if flyActive then verticalDir = 1 end end, function() if verticalDir == 1 then verticalDir = 0 end end)
-bindHold(DownBtn, function() if flyActive then verticalDir = -1 end end, function() if verticalDir == -1 then verticalDir = 0 end end)
-bindHold(ForwardBtn, function() if flyActive then forwardDir = 1 end end, function() if forwardDir == 1 then forwardDir = 0 end end)
-bindHold(BackBtn, function() if flyActive then forwardDir = -1 end end, function() if forwardDir == -1 then forwardDir = 0 end end)
 
--- ========== سرعة سياره ==========
+bindHold(UpBtn,      function() if flyActive then verticalDir = 1 end end,  function() if verticalDir == 1 then verticalDir = 0 end end)
+bindHold(DownBtn,    function() if flyActive then verticalDir = -1 end end, function() if verticalDir == -1 then verticalDir = 0 end end)
+bindHold(ForwardBtn, function() if flyActive then forwardDir = 1 end end,  function() if forwardDir == 1 then forwardDir = 0 end end)
+bindHold(BackBtn,    function() if flyActive then forwardDir = -1 end end, function() if forwardDir == -1 then forwardDir = 0 end end)
+
+-- ============ Fly one shot ============
+FlyOneShotBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = Vector3.new(0, flySpeed, 0)
+        bv.MaxForce = Vector3.new(0, 500000, 0)
+        bv.Parent = mainPart
+        Debris:AddItem(bv, 1)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+-- ============ Car Speed ============
 local carSpeedActive = false
 CarSpeedBtn.MouseButton1Click:Connect(function()
     if carSpeedActive then
@@ -822,7 +1178,31 @@ CarSpeedBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== ترجيع ==========
+-- ============ Rush / Brake / Rewind / Reset ============
+RushBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        local forward = mainPart.CFrame.LookVector
+        local bv = Instance.new("BodyVelocity")
+        bv.Velocity = (forward * 180) + Vector3.new(0, 30, 0)
+        bv.MaxForce = Vector3.new(500000, 500000, 500000)
+        bv.Parent = mainPart
+        Debris:AddItem(bv, 0.7)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
+BrakeBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if mainPart then
+        mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    else
+        showWarning("اركب سيارة أولاً!")
+    end
+end)
+
 RewindBtn.MouseButton1Click:Connect(function()
     local vehicle, mainPart = getVehicle()
     if mainPart then
@@ -838,22 +1218,6 @@ RewindBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== اندفاع ==========
-RushBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if mainPart then
-        local forward = mainPart.CFrame.LookVector
-        local bv = Instance.new("BodyVelocity")
-        bv.Velocity = (forward * 180) + Vector3.new(0, 30, 0)
-        bv.MaxForce = Vector3.new(500000, 500000, 500000)
-        bv.Parent = mainPart
-        Debris:AddItem(bv, 0.7)
-    else
-        showWarning("اركب سيارة أولاً!")
-    end
-end)
-
--- ========== رست ==========
 ResetBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if mainPart then
@@ -868,50 +1232,46 @@ ResetBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== فرامل ==========
-BrakeBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if mainPart then
-        mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    else
-        showWarning("اركب سيارة أولاً!")
+-- ============ Drift ============
+local driftActive = false
+local driftBAV = nil
+DriftBtn.MouseButton1Click:Connect(function()
+    if driftActive then
+        driftActive = false
+        setToggleState(DriftBtn, false)
+        if driftBAV then driftBAV:Destroy() driftBAV = nil end
+        return
     end
-end)
-
--- ========== تسلق ==========
-local climbActive = false
-local climbBV = nil
-ClimbBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    climbActive = not climbActive
-    setToggleState(ClimbBtn, climbActive)
-    if climbActive then
-        climbBV = Instance.new("BodyVelocity")
-        climbBV.MaxForce = Vector3.new(500000, 500000, 500000)
-        climbBV.Velocity = Vector3.new(0, 120, 0)
-        climbBV.Parent = mainPart
-        task.spawn(function()
-            while climbActive and climbBV and climbBV.Parent do
-                local _, mp = getVehicle()
-                if not mp or mp ~= climbBV.Parent then
-                    climbActive = false
-                    setToggleState(ClimbBtn, false)
-                    if climbBV then climbBV:Destroy() climbBV = nil end
-                    break
-                end
-                local look = mp.CFrame.LookVector
-                climbBV.Velocity = (look * 70) + Vector3.new(0, 120, 0)
-                task.wait(0.05)
+    driftActive = true
+    setToggleState(DriftBtn, true)
+    driftBAV = Instance.new("BodyAngularVelocity")
+    driftBAV.MaxTorque = Vector3.new(0, 80000, 0)
+    driftBAV.AngularVelocity = Vector3.new(0, 0, 0)
+    driftBAV.Parent = mainPart
+    task.spawn(function()
+        while driftActive and driftBAV and driftBAV.Parent do
+            local _, mp = getVehicle()
+            if not mp or mp ~= driftBAV.Parent then
+                driftActive = false
+                setToggleState(DriftBtn, false)
+                if driftBAV then driftBAV:Destroy() driftBAV = nil end
+                break
             end
-        end)
-    else
-        if climbBV then climbBV:Destroy() climbBV = nil end
-    end
+            local v = mp.AssemblyLinearVelocity
+            local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+            if speed > 8 then
+                driftBAV.AngularVelocity = Vector3.new(0, 3, 0)
+            else
+                driftBAV.AngularVelocity = Vector3.new(0, 0, 0)
+            end
+            task.wait(0.05)
+        end
+    end)
 end)
 
--- ========== اختراق ==========
+-- ============ Noclip ============
 local noclipActive = false
 local modifiedParts = {}
 local function restoreNoclip()
@@ -951,7 +1311,157 @@ NoclipBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== لوب كامل ==========
+-- ============ Climb ============
+local climbActive = false
+local climbBV = nil
+ClimbBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    climbActive = not climbActive
+    setToggleState(ClimbBtn, climbActive)
+    if climbActive then
+        climbBV = Instance.new("BodyVelocity")
+        climbBV.MaxForce = Vector3.new(500000, 500000, 500000)
+        climbBV.Velocity = Vector3.new(0, 120, 0)
+        climbBV.Parent = mainPart
+        task.spawn(function()
+            while climbActive and climbBV and climbBV.Parent do
+                local _, mp = getVehicle()
+                if not mp or mp ~= climbBV.Parent then
+                    climbActive = false
+                    setToggleState(ClimbBtn, false)
+                    if climbBV then climbBV:Destroy() climbBV = nil end
+                    break
+                end
+                local look = mp.CFrame.LookVector
+                climbBV.Velocity = (look * 70) + Vector3.new(0, 120, 0)
+                task.wait(0.05)
+            end
+        end)
+    else
+        if climbBV then climbBV:Destroy() climbBV = nil end
+    end
+end)
+
+-- ============ Hover ============
+local hoverActive = false
+local hoverBP = nil
+local function stopHover()
+    hoverActive = false
+    setToggleState(HoverBtn, false)
+    if hoverBP then hoverBP:Destroy() hoverBP = nil end
+end
+HoverBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if hoverActive then
+        stopHover()
+    else
+        hoverActive = true
+        setToggleState(HoverBtn, true)
+        hoverBP = Instance.new("BodyPosition")
+        hoverBP.MaxForce = Vector3.new(0, 500000, 0)
+        hoverBP.P = 15000
+        hoverBP.D = 1500
+        hoverBP.Position = mainPart.Position
+        hoverBP.Parent = mainPart
+        local targetY = mainPart.Position.Y
+        task.spawn(function()
+            while hoverActive and hoverBP and hoverBP.Parent do
+                local _, mp = getVehicle()
+                if not mp or mp ~= hoverBP.Parent then stopHover() break end
+                hoverBP.Position = Vector3.new(mp.Position.X, targetY, mp.Position.Z)
+                task.wait(0.05)
+            end
+        end)
+    end
+end)
+
+-- ============ Rotate ============
+local isRotating = false
+local function rotateCar(degrees)
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if isRotating then return end
+    isRotating = true
+    local startCF = mainPart.CFrame
+    local startVel = mainPart.AssemblyLinearVelocity
+    local duration = 0.15
+    local t0 = tick()
+    local rotCF = CFrame.Angles(0, math.rad(degrees), 0)
+    task.spawn(function()
+        while true do
+            if not mainPart or not mainPart.Parent then isRotating = false return end
+            local t = (tick() - t0) / duration
+            if t >= 1 then
+                mainPart.CFrame = startCF * rotCF
+                mainPart.AssemblyLinearVelocity = rotCF * startVel
+                break
+            end
+            local eased = t * t * (3 - 2 * t)
+            mainPart.CFrame = startCF * CFrame.Angles(0, math.rad(degrees * eased), 0)
+            task.wait(0.01)
+        end
+        isRotating = false
+    end)
+end
+RotRightBtn.MouseButton1Click:Connect(function() rotateCar(-90) end)
+RotLeftBtn.MouseButton1Click:Connect(function() rotateCar(90) end)
+
+-- ============ Super Jump ============
+SuperJumpBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if isAirMoveActive then return end
+    isAirMoveActive = true
+    local bv = Instance.new("BodyVelocity")
+    bv.Velocity = Vector3.new(0, 350, 0)
+    bv.MaxForce = Vector3.new(0, 500000, 0)
+    bv.Parent = mainPart
+    Debris:AddItem(bv, 0.6)
+    task.delay(0.6, function() isAirMoveActive = false end)
+end)
+
+-- ============ Wheelie ============
+local wheelieActive = false
+local wheelieBG = nil
+WheelieBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if wheelieActive then
+        wheelieActive = false
+        setToggleState(WheelieBtn, false)
+        if wheelieBG then wheelieBG:Destroy() wheelieBG = nil end
+        return
+    end
+    wheelieActive = true
+    setToggleState(WheelieBtn, true)
+    local tiltAngle = math.rad(35)
+    wheelieBG = Instance.new("BodyGyro")
+    wheelieBG.MaxTorque = Vector3.new(500000, 500000, 500000)
+    wheelieBG.P = 5000
+    wheelieBG.D = 500
+    wheelieBG.Parent = mainPart
+    task.spawn(function()
+        while wheelieActive and wheelieBG and wheelieBG.Parent do
+            local _, mp = getVehicle()
+            if not mp or mp ~= wheelieBG.Parent then
+                wheelieActive = false
+                setToggleState(WheelieBtn, false)
+                if wheelieBG then wheelieBG:Destroy() wheelieBG = nil end
+                break
+            end
+            local look = mp.CFrame.LookVector
+            local flatLook = Vector3.new(look.X, 0, look.Z)
+            if flatLook.Magnitude < 0.05 then flatLook = Vector3.new(0, 0, -1) end
+            flatLook = flatLook.Unit
+            wheelieBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook) * CFrame.Angles(-tiltAngle, 0, 0)
+            task.wait(0.03)
+        end
+    end)
+end)
+
+-- ============ Loop ============
 LoopBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if not mainPart then showWarning("اركب سيارة أولاً!") return end
@@ -992,7 +1502,7 @@ LoopBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ========== سلام دانك ==========
+-- ============ Slam Dunk ============
 SlamDunkBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if not mainPart then showWarning("اركب سيارة أولاً!") return end
@@ -1022,159 +1532,77 @@ SlamDunkBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ========== قفزة عالية ==========
-SuperJumpBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    if isAirMoveActive then return end
-    isAirMoveActive = true
-    local bv = Instance.new("BodyVelocity")
-    bv.Velocity = Vector3.new(0, 350, 0)
-    bv.MaxForce = Vector3.new(0, 500000, 0)
-    bv.Parent = mainPart
-    Debris:AddItem(bv, 0.6)
-    task.delay(0.6, function() isAirMoveActive = false end)
+-- ============ Flips ============
+FlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.6, 12, function(t) return CFrame.Angles(math.rad(360) * t, 0, 0) end)
 end)
-
--- ========== ويللي ==========
-local wheelieActive = false
-local wheelieBG = nil
-WheelieBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    if wheelieActive then
-        wheelieActive = false
-        setToggleState(WheelieBtn, false)
-        if wheelieBG then wheelieBG:Destroy() wheelieBG = nil end
-        return
-    end
-    wheelieActive = true
-    setToggleState(WheelieBtn, true)
-    local tiltAngle = math.rad(35)
-    wheelieBG = Instance.new("BodyGyro")
-    wheelieBG.MaxTorque = Vector3.new(500000, 500000, 500000)
-    wheelieBG.P = 5000
-    wheelieBG.D = 500
-    wheelieBG.Parent = mainPart
-    task.spawn(function()
-        while wheelieActive and wheelieBG and wheelieBG.Parent do
-            local _, mp = getVehicle()
-            if not mp or mp ~= wheelieBG.Parent then
-                wheelieActive = false
-                setToggleState(WheelieBtn, false)
-                if wheelieBG then wheelieBG:Destroy() wheelieBG = nil end
-                break
-            end
-            local look = mp.CFrame.LookVector
-            local flatLook = Vector3.new(look.X, 0, look.Z)
-            if flatLook.Magnitude < 0.05 then flatLook = Vector3.new(0, 0, -1) end
-            flatLook = flatLook.Unit
-            wheelieBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook) * CFrame.Angles(-tiltAngle, 0, 0)
-            task.wait(0.03)
-        end
+BackFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.6, 12, function(t) return CFrame.Angles(-math.rad(360) * t, 0, 0) end)
+end)
+DoubleFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.0, 18, function(t) return CFrame.Angles(math.rad(720) * t, 0, 0) end)
+end)
+FlipSpinBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.8, 15, function(t) return CFrame.Angles(math.rad(360) * t, math.rad(360) * t, 0) end)
+end)
+BarrelRollBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.7, 15, function(t) return CFrame.Angles(0, 0, math.rad(360) * t) end)
+end)
+SpinBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.7, 0, function(t) return CFrame.Angles(0, math.rad(360) * t, 0) end)
+end)
+CrazySpinBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.2, 12, function(t)
+        local a = math.rad(360) * t
+        return CFrame.Angles(a, a, a)
     end)
 end)
-
--- ========== دريفت ==========
-local driftActive = false
-local driftBAV = nil
-DriftBtn.MouseButton1Click:Connect(function()
-    if driftActive then
-        driftActive = false
-        setToggleState(DriftBtn, false)
-        if driftBAV then driftBAV:Destroy() driftBAV = nil end
-        return
-    end
-    local _, mainPart = getVehicle()
-    if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    driftActive = true
-    setToggleState(DriftBtn, true)
-    driftBAV = Instance.new("BodyAngularVelocity")
-    driftBAV.MaxTorque = Vector3.new(0, 80000, 0)
-    driftBAV.AngularVelocity = Vector3.new(0, 0, 0)
-    driftBAV.Parent = mainPart
-    task.spawn(function()
-        while driftActive and driftBAV and driftBAV.Parent do
-            local _, mp = getVehicle()
-            if not mp or mp ~= driftBAV.Parent then
-                driftActive = false
-                setToggleState(DriftBtn, false)
-                if driftBAV then driftBAV:Destroy() driftBAV = nil end
-                break
-            end
-            local v = mp.AssemblyLinearVelocity
-            local speed = Vector3.new(v.X, 0, v.Z).Magnitude
-            if speed > 8 then
-                driftBAV.AngularVelocity = Vector3.new(0, 3, 0)
-            else
-                driftBAV.AngularVelocity = Vector3.new(0, 0, 0)
-            end
-            task.wait(0.05)
-        end
+SideFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.8, 15, function(t)
+        return CFrame.Angles(math.rad(360) * t, 0, math.rad(180) * t)
     end)
 end)
-
--- ========== دوران شمال / يمين ==========
-local isRotating = false
-local function rotateCar(degrees)
-    local _, mainPart = getVehicle()
-    if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    if isRotating then return end
-    isRotating = true
-    local startCF = mainPart.CFrame
-    local startVel = mainPart.AssemblyLinearVelocity
-    local duration = 0.15
-    local t0 = tick()
-    local rotCF = CFrame.Angles(0, math.rad(degrees), 0)
-    task.spawn(function()
-        while true do
-            if not mainPart or not mainPart.Parent then isRotating = false return end
-            local t = (tick() - t0) / duration
-            if t >= 1 then
-                mainPart.CFrame = startCF * rotCF
-                mainPart.AssemblyLinearVelocity = rotCF * startVel
-                break
-            end
-            local eased = t * t * (3 - 2 * t)
-            mainPart.CFrame = startCF * CFrame.Angles(0, math.rad(degrees * eased), 0)
-            task.wait(0.01)
-        end
-        isRotating = false
+DiagonalFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.8, 18, function(t)
+        return CFrame.Angles(math.rad(360) * t, math.rad(360) * t, 0)
     end)
-end
-RotRightBtn.MouseButton1Click:Connect(function() rotateCar(-90) end)
-RotLeftBtn.MouseButton1Click:Connect(function() rotateCar(90) end)
-
--- ========== تثبيت في هواء ==========
-local hoverActive = false
-local hoverBP = nil
-local function stopHover()
-    hoverActive = false
-    setToggleState(HoverBtn, false)
-    if hoverBP then hoverBP:Destroy() hoverBP = nil end
-end
-HoverBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if not mainPart then showWarning("اركب سيارة أولاً!") return end
-    if hoverActive then
-        stopHover()
-    else
-        hoverActive = true
-        setToggleState(HoverBtn, true)
-        hoverBP = Instance.new("BodyPosition")
-        hoverBP.MaxForce = Vector3.new(0, 500000, 0)
-        hoverBP.P = 15000
-        hoverBP.D = 1500
-        hoverBP.Position = mainPart.Position
-        hoverBP.Parent = mainPart
-        local targetY = mainPart.Position.Y
-        task.spawn(function()
-            while hoverActive and hoverBP and hoverBP.Parent do
-                local _, mp = getVehicle()
-                if not mp or mp ~= hoverBP.Parent then stopHover() break end
-                hoverBP.Position = Vector3.new(mp.Position.X, targetY, mp.Position.Z)
-                task.wait(0.05)
-            end
-        end)
-    end
+end)
+CorkscrewBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.0, 20, function(t)
+        return CFrame.Angles(math.rad(720) * t, math.rad(360) * t, 0)
+    end)
+end)
+TripleFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.4, 25, function(t)
+        return CFrame.Angles(math.rad(1080) * t, 0, 0)
+    end)
+end)
+DoubleBackBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.0, 20, function(t)
+        return CFrame.Angles(-math.rad(720) * t, 0, 0)
+    end)
+end)
+ChaosFlipBtn.MouseButton1Click:Connect(function()
+    local ax = math.random() * 2 - 1
+    local ay = math.random() * 2 - 1
+    local az = math.random() * 2 - 1
+    doCustomFlip(1.0, 20, function(t)
+        local mag = math.sqrt(ax*ax + ay*ay + az*az)
+        if mag < 0.1 then mag = 1 end
+        return CFrame.Angles(
+            math.rad(360) * t * (ax/mag),
+            math.rad(360) * t * (ay/mag),
+            math.rad(360) * t * (az/mag)
+        )
+    end)
+end)
+WhipFlipBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(0.25, 25, function(t)
+        return CFrame.Angles(math.rad(360) * t, 0, 0)
+    end)
+end)
+HelicopterBtn.MouseButton1Click:Connect(function()
+    doCustomFlip(1.2, 20, function(t)
+        return CFrame.Angles(math.rad(360) * t, math.rad(720) * t, 0)
+    end)
 end)
