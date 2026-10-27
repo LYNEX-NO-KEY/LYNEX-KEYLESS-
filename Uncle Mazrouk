@@ -234,7 +234,6 @@ local function findBox()
     return nil, nil
 end
 
--- دالة فحص وجود الصندوق في الحقيبة أو في اليد
 local function hasBox()
     local backpack = player:FindFirstChild("Backpack")
     local char = player.Character
@@ -275,13 +274,9 @@ end)
 ActionBtn.MouseButton1Click:Connect(function()
     if isWorking then return end
     
-    local remaining = cooldownEnd - os.time()
-    if remaining > 0 then
-        StatusText.Text = string.format("انتظر! باقي %02d:%02d", math.floor(remaining/60), remaining%60)
-        StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
-        return
-    end
-
+    -- شلنا الشرط اللي يمنعك من الضغط لما العداد شغال
+    -- الحين تقدر تضغط عادي وهو راح يشتغل ويعيد الوقت
+    
     isWorking = true
     StatusText.Text = "جاري التنفيذ..."
     StatusText.TextColor3 = Color3.fromRGB(255, 255, 0)
@@ -327,12 +322,12 @@ ActionBtn.MouseButton1Click:Connect(function()
         else
             StatusText.Text = "❌ الكول داون شغال (السيرفر رفض)"
             StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
-            cooldownEnd = os.time() + 900 -- بدء العداد 15 دقيقة
+            cooldownEnd = os.time() + 900 -- إعادة تشغيل العداد
             isWorking = false
             return
         end
         
-        -- 4. خالد والتسليم (التثبيت الدائم لحد ما يتأكد)
+        -- 4. خالد والتسليم
         StatusText.Text = "4. جاري البحث عن خالد..."
         local khaled = findKhaled()
         
@@ -359,10 +354,8 @@ ActionBtn.MouseButton1Click:Connect(function()
                 local promptPart = closestPrompt.Parent
                 if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
                 
-                -- تفعيل وضع التثبيت
                 myHumanoid.PlatformStand = true
                 
-                -- ربط الشخصية في الهواء (Heartbeat) طول فترة التسليم
                 local pinConnection
                 pinConnection = RunService.Heartbeat:Connect(function()
                     if myRoot and promptPart then
@@ -372,37 +365,25 @@ ActionBtn.MouseButton1Click:Connect(function()
                     end
                 end)
                 
-                -- حلقة الضغط والتأكد (لحد 10 محاولات)
                 local delivered = false
                 for attempt = 1, 10 do
                     StatusText.Text = "5. جاري التسليم (محاولة "..attempt..")..."
                     
-                    -- الطريقة 1: دالة دلتا الأساسية
                     pcall(function() if type(fireproximityprompt) == "function" then fireproximityprompt(closestPrompt) end end)
-                    
-                    -- الطريقة 2: محاكاة الإصبع (للهاتف)
-                    pcall(function() 
-                        closestPrompt:InputHoldBegin() 
-                        task.wait(0.2) 
-                        closestPrompt:InputHoldEnd() 
-                    end)
-                    
-                    -- الطريقة 3: تفجير الاتصال (للكمبيوتر)
+                    pcall(function() closestPrompt:InputHoldBegin() task.wait(0.2) closestPrompt:InputHoldEnd() end)
                     pcall(function()
                         local conns = getconnections(closestPrompt.PromptButtonHoldBegan)
                         if conns then for _, c in pairs(conns) do c:Fire() end end
                     end)
                     
-                    task.wait(1.2) -- ننتظر السيرفر يعالج الطلب
+                    task.wait(1.2)
                     
-                    -- فحص الحقيبة
                     if not hasBox() then
                         delivered = true
                         break
                     end
                 end
                 
-                -- فك التثبيت
                 if pinConnection then pinConnection:Disconnect() end
                 myHumanoid.PlatformStand = false
                 
@@ -419,15 +400,16 @@ ActionBtn.MouseButton1Click:Connect(function()
             StatusText.Text = "❌ خالد غير موجود في السيرفر!"
         end
         
-        -- 5. الرجوع وبدء العداد
+        -- 5. الرجوع وإعادة العداد تلقائياً
         task.wait(1)
         myRoot.CFrame = originalPosition
         myHumanoid.PlatformStand = false
         
-        cooldownEnd = os.time() + 900 -- 15 دقيقة كول داون
+        -- هنا السر: مهما صار، العداد يرجع 15 دقيقة من جديد
+        cooldownEnd = os.time() + 900 
         
         if not hasBox() then
-            StatusText.Text = "✅ اكتملت المهمة! بدأ العداد."
+            StatusText.Text = "✅ اكتملت المهمة! تم إعادة العداد."
             StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
         end
         
