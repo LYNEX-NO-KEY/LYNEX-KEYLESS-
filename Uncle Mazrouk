@@ -389,47 +389,20 @@ ActionBtn.MouseButton1Click:Connect(function()
             end
         end
         
-        -- 4. الرجوع لمرزوق لاستلام الفلوس (الخطوة المعدلة)
+        -- 4. استلام الفلوس بصمت (بدون ما يفتح تحدث)
         if not hasBox() then
-            StatusText.Text = "4. جاري الرجوع لمرزوق للفلوس..."
+            StatusText.Text = "4. جاري استلام الفلوس بصمت..."
             
-            -- نطير له عشان السيرفر يتأكد من المسافة
+            -- نطير لمرزوق عشان السيرفر يتأكد من المسافة
             myRoot.CFrame = CFrame.new(marzouqPosition + Vector3.new(0, 3, 0))
-            task.wait(1.5) -- ننتظر ثانية ونص عشان نتأكد إننا ثابتين عنده
+            task.wait(1.5) 
             
-            -- نرسل الأمر للسيرفر
+            -- نرسل الأمر الصامت فقط (بدون أي ضغط على تحدث)
             if event and event.Remotes.Events:FindFirstChild("RamiDeliveryQuest") then
                 event.Remotes.Events.RamiDeliveryQuest:FireServer("ClaimReward")
             end
             
-            -- خطة بديلة (لو الأمر المباشر ما نفع، نفتح الحوار ونضغط الزر)
-            task.wait(0.5)
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") and obj.ObjectText == "العم مرزوق" then
-                    obj.HoldDuration = 0
-                    pcall(function() fireproximityprompt(obj) end)
-                    break
-                end
-            end
-            
-            task.wait(0.3) -- ننتظر الواجهة تطلع
-            
-            for _, gui in pairs(player.PlayerGui:GetDescendants()) do
-                if (gui:IsA("TextButton") or gui:IsA("TextLabel")) and gui.Visible then
-                    if string.find(gui.Text, "استلام") or string.find(gui.Text, "شكر") or string.find(gui.Text, "نعم") or string.find(gui.Text, "1.") then
-                        local btn = gui:IsA("TextButton") and gui or gui.Parent
-                        if btn:IsA("TextButton") then
-                            pcall(function() btn:Activate() end)
-                            pcall(function()
-                                local conns = getconnections(btn.MouseButton1Click)
-                                if conns then for _, c in pairs(conns) do c:Fire() end end
-                            end)
-                        end
-                        break
-                    end
-                end
-            end
-            task.wait(1) -- ننتظر السيرفر ياخذ الفلوس
+            task.wait(1.5) -- ننتظر السيرفر ياخذ الفلوس
         end
         
         -- 5. الرجوع وإعادة العداد
