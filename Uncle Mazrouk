@@ -1,0 +1,432 @@
+-- سكربت خالد: تصميم احترافي (حل مشكلة التثبيت في الهواء والضغط)
+if not game:IsLoaded() then game.Loaded:Wait() end
+task.wait(1)
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- إعداد الواجهة الرئيسية
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Khaled_UI_Arabic"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = player:WaitForChild("PlayerGui") end
+
+-- الإطار الرئيسي
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 240, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -120, 0.2, 0) 
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true 
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(60, 60, 75)
+UIStroke.Thickness = 1.5
+UIStroke.Parent = MainFrame
+
+-- الشريط العلوي
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+TitleBar.BorderSizePixel = 0
+TitleBar.Active = true 
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleCover = Instance.new("Frame")
+TitleCover.Size = UDim2.new(1, 0, 0, 15)
+TitleCover.Position = UDim2.new(0, 0, 1, -15)
+TitleCover.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+TitleCover.BorderSizePixel = 0
+TitleCover.Parent = TitleBar
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 32))
+})
+TitleGradient.Parent = TitleBar
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -50, 1, 0) 
+TitleText.Position = UDim2.new(0, 15, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "تتبع خالد | Khaled Tracker"
+TitleText.TextColor3 = Color3.fromRGB(240, 240, 255)
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 16
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Selectable = false 
+TitleText.Parent = TitleBar
+
+-- طبقة اصطياد اللمس للسحب
+local DragCatcher = Instance.new("TextButton")
+DragCatcher.Size = UDim2.new(1, -45, 1, 0) 
+DragCatcher.BackgroundTransparency = 1
+DragCatcher.Text = ""
+DragCatcher.ZIndex = 5
+DragCatcher.Parent = TitleBar
+
+-- زر الطي
+local MoveBtn = Instance.new("TextButton")
+MoveBtn.Size = UDim2.new(0, 24, 0, 24)
+MoveBtn.Position = UDim2.new(1, -32, 0, 8)
+MoveBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+MoveBtn.Text = "−"
+MoveBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MoveBtn.Font = Enum.Font.SourceSansBold
+MoveBtn.TextSize = 20
+MoveBtn.ZIndex = 6
+MoveBtn.Parent = TitleBar
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = MoveBtn
+
+-- حاوية المحتوى
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -20, 1, -50)
+ContentFrame.Position = UDim2.new(0, 10, 0, 45)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 8)
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+ListLayout.Parent = ContentFrame
+
+-- نص الحالة
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, 0, 0, 25)
+StatusText.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+StatusText.Text = "الحالة: جاهز"
+StatusText.TextColor3 = Color3.fromRGB(150, 150, 170)
+StatusText.Font = Enum.Font.SourceSansBold
+StatusText.TextSize = 13
+StatusText.LayoutOrder = 1
+StatusText.Parent = ContentFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 6)
+StatusCorner.Parent = StatusText
+
+-- زر الكشف (ESP)
+local ESPBtn = Instance.new("TextButton")
+ESPBtn.Size = UDim2.new(1, 0, 0, 38)
+ESPBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ESPBtn.Text = "" 
+ESPBtn.LayoutOrder = 2
+ESPBtn.Parent = ContentFrame
+
+local ESPCorner = Instance.new("UICorner")
+ESPCorner.CornerRadius = UDim.new(0, 8)
+ESPCorner.Parent = ESPBtn
+
+local ESPGradient = Instance.new("UIGradient")
+ESPGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(128, 0, 255)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 0, 255))  
+})
+ESPGradient.Rotation = 90
+ESPGradient.Parent = ESPBtn
+
+local ESPText = Instance.new("TextLabel")
+ESPText.Size = UDim2.new(1, 0, 1, 0)
+ESPText.BackgroundTransparency = 1
+ESPText.Text = "كشف خالد (تحديد أحمر)"
+ESPText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPText.Font = Enum.Font.SourceSansBold
+ESPText.TextSize = 14
+ESPText.ZIndex = 2
+ESPText.Active = false 
+ESPText.Parent = ESPBtn
+
+-- زر التسليم التلقائي
+local AutoDeliverBtn = Instance.new("TextButton")
+AutoDeliverBtn.Size = UDim2.new(1, 0, 0, 45)
+AutoDeliverBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+AutoDeliverBtn.Text = "" 
+AutoDeliverBtn.LayoutOrder = 3
+AutoDeliverBtn.Parent = ContentFrame
+
+local DeliverCorner = Instance.new("UICorner")
+DeliverCorner.CornerRadius = UDim.new(0, 8)
+DeliverCorner.Parent = AutoDeliverBtn
+
+local DeliverGradient = Instance.new("UIGradient")
+DeliverGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 100)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 80))   
+})
+DeliverGradient.Rotation = 90
+DeliverGradient.Parent = AutoDeliverBtn
+
+local DeliverText = Instance.new("TextLabel")
+DeliverText.Size = UDim2.new(1, 0, 1, 0)
+DeliverText.BackgroundTransparency = 1
+DeliverText.Text = "تسليم تلقائي ورجوع"
+DeliverText.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeliverText.Font = Enum.Font.SourceSansBold
+DeliverText.TextSize = 16
+DeliverText.ZIndex = 2
+DeliverText.Active = false 
+DeliverText.Parent = AutoDeliverBtn
+
+-- 🖱️ نظام السحب
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+DragCatcher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- منطق طي وفتح الواجهة
+local isMinimized = false
+MoveBtn.MouseButton1Click:Connect(function()
+    if isMinimized then
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 200)}):Play()
+        MoveBtn.Text = "−"
+        isMinimized = false
+    else
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 40)}):Play()
+        MoveBtn.Text = "+"
+        isMinimized = true
+    end
+end)
+
+-- تأثير الضغط
+local function addClickEffect(btn)
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.95, 0, 0, btn.Size.Y.Offset - 2)}):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, btn.Size.Y.Offset + 2)}):Play()
+    end)
+end
+addClickEffect(ESPBtn)
+addClickEffect(AutoDeliverBtn)
+
+-- ==========================================
+-- منطق الكشف والتسليم
+-- ==========================================
+
+local isESPActive = false
+local khaledHighlight = nil
+local khaledBillboard = nil
+
+local function findKhaled()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") then
+            if string.find(obj.Name, "Khaled") or string.find(obj.Name, "خالد") then
+                return obj
+            end
+            local billboard = obj:FindFirstChild("BillboardGui", true)
+            if billboard then
+                local textLabel = billboard:FindFirstChild("TextLabel", true)
+                if textLabel and (string.find(textLabel.Text, "خالد") or string.find(textLabel.Text, "Khaled")) then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
+local function clearESP()
+    if khaledHighlight then khaledHighlight:Destroy() khaledHighlight = nil end
+    if khaledBillboard then khaledBillboard:Destroy() khaledBillboard = nil end
+    isESPActive = false
+    ESPGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(128, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 0, 255))
+    })
+    ESPText.Text = "كشف خالد (تحديد أحمر)"
+end
+
+ESPBtn.MouseButton1Click:Connect(function()
+    if isESPActive then
+        clearESP()
+        StatusText.Text = "الحالة: الكشف مغلق"
+    else
+        local khaled = findKhaled()
+        if khaled then
+            isESPActive = true
+            ESPGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 50, 50)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+            })
+            ESPText.Text = "إخفاء الكشف"
+            StatusText.Text = "الحالة: تم تحديد خالد (أحمر)"
+            
+            local head = khaled:FindFirstChild("Head") or khaled:FindFirstChild("HumanoidRootPart") or khaled.PrimaryPart
+            
+            khaledHighlight = Instance.new("Highlight")
+            khaledHighlight.Adornee = khaled
+            khaledHighlight.FillColor = Color3.fromRGB(255, 0, 0)
+            khaledHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            khaledHighlight.FillTransparency = 0.3
+            khaledHighlight.Parent = ScreenGui
+
+            if head then
+                khaledBillboard = Instance.new("BillboardGui")
+                khaledBillboard.Adornee = head
+                khaledBillboard.Size = UDim2.new(0, 100, 0, 50)
+                khaledBillboard.StudsOffset = Vector3.new(0, 3, 0)
+                khaledBillboard.AlwaysOnTop = true
+                khaledBillboard.Parent = ScreenGui
+
+                local textLabel = Instance.new("TextLabel")
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.BackgroundTransparency = 1
+                textLabel.Text = "⬇ خالد ⬇"
+                textLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+                textLabel.TextStrokeTransparency = 0
+                textLabel.Font = Enum.Font.SourceSansBold
+                textLabel.TextSize = 20
+                textLabel.Parent = khaledBillboard
+            end
+        else
+            StatusText.Text = "الحالة: خالد غير موجود!"
+        end
+    end
+end)
+
+-- 🚀 التسليم التلقائي 
+AutoDeliverBtn.MouseButton1Click:Connect(function()
+    StatusText.Text = "الحالة: جاري البحث..."
+    StatusText.TextColor3 = Color3.fromRGB(150, 150, 170)
+    
+    local khaled = findKhaled()
+    if not khaled then
+        StatusText.Text = "الحالة: خالد غير موجود!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
+        return
+    end
+
+    local myChar = player.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local myHumanoid = myChar and myChar:FindFirstChild("Humanoid")
+    if not myRoot or not myHumanoid then return end
+
+    local targetPos = khaled.PrimaryPart and khaled.PrimaryPart.Position or khaled:FindFirstChild("HumanoidRootPart") and khaled.HumanoidRootPart.Position
+    local closestPrompt = nil
+    local shortestDistance = 30 
+
+    -- البحث عن الزر الأقرب لخالد
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Enabled then
+            local parentPart = obj.Parent
+            if parentPart and parentPart:IsA("Attachment") then parentPart = parentPart.Parent end
+            if parentPart and parentPart:IsA("BasePart") then
+                local dist = (parentPart.Position - targetPos).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    closestPrompt = obj
+                end
+            end
+        end
+    end
+    
+    if not closestPrompt then
+        StatusText.Text = "الحالة: لم يتم العثور على زر التسليم!"
+        StatusText.TextColor3 = Color3.fromRGB(255, 150, 0)
+        return
+    end
+
+    local originalPosition = myRoot.CFrame
+    local promptPart = closestPrompt.Parent
+    if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
+
+    StatusText.Text = "جاري النقل والثبات في الهواء..."
+    StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    -- 1. إيقاف حركة اللاعب مؤقتاً (عشان ما ينزل)
+    myHumanoid.PlatformStand = true 
+
+    -- 2. حلقة تكرار لتثبيت اللاعب في مكانه بالهواء لمدة ثانية كاملة (تخدع السيرفر)
+    local holdTime = tick()
+    while tick() - holdTime < 1.2 do
+        myRoot.CFrame = promptPart.CFrame * CFrame.new(0, 1, 0)
+        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        RunService.Heartbeat:Wait()
+    end
+
+    StatusText.Text = "جاري الضغط على الزر..."
+    
+    -- 3. محاولة الضغط بكل الطرق المتاحة
+    -- الطريقة أ: دالة دلتا الأساسية
+    pcall(function()
+        if type(fireproximityprompt) == "function" then
+            fireproximityprompt(closestPrompt)
+        end
+    end)
+    
+    -- الطريقة ب: محاكاة ضغطة الإصبع (ممتازة للهاتف)
+    pcall(function()
+        closestPrompt:InputHoldBegin()
+        task.wait(closestPrompt.HoldDuration > 0 and closestPrompt.HoldDuration + 0.2 or 0.5)
+        closestPrompt:InputHoldEnd()
+    end)
+
+    -- الطريقة ج: تفجير الاتصال (للسيرفرات التي تتجاهل الطرق السابقة)
+    pcall(function()
+        local connections = getconnections(closestPrompt.PromptButtonHoldBegan)
+        if connections then
+            for _, conn in pairs(connections) do
+                conn:Fire()
+            end
+        end
+    end)
+
+    task.wait(1) -- انتظار انتهاء التسليم
+
+    -- 4. إلغاء وضع الطيران، والعودة للمكان الأصلي
+    myHumanoid.PlatformStand = false
+    myRoot.CFrame = originalPosition
+    
+    StatusText.Text = "تم التسليم والرجوع!"
+    StatusText.TextColor3 = Color3.fromRGB(0, 255, 100)
+    
+    if isESPActive then
+        clearESP()
+    end
+end)
+
+print("تم تحميل سكربت خالد بنجاح! جاهز للاستخدام.")
