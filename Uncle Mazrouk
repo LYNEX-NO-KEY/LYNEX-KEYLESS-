@@ -274,9 +274,6 @@ end)
 ActionBtn.MouseButton1Click:Connect(function()
     if isWorking then return end
     
-    -- شلنا الشرط اللي يمنعك من الضغط لما العداد شغال
-    -- الحين تقدر تضغط عادي وهو راح يشتغل ويعيد الوقت
-    
     isWorking = true
     StatusText.Text = "جاري التنفيذ..."
     StatusText.TextColor3 = Color3.fromRGB(255, 255, 0)
@@ -293,42 +290,49 @@ ActionBtn.MouseButton1Click:Connect(function()
 
         local originalPosition = myRoot.CFrame
         
-        -- 1. مرزوق
-        StatusText.Text = "1. جاري الانتقال لمرزوق..."
+        -- 1. مرزوق (استلام المهمة)
+        StatusText.Text = "1. جاري استلام المهمة..."
         myRoot.CFrame = CFrame.new(marzouqPosition + Vector3.new(0, 3, 0))
-        task.wait(2.5)
+        task.wait(1)
         
-        -- 2. استلام المهمة
-        StatusText.Text = "2. جاري استلام المهمة..."
         local event = ReplicatedStorage:FindFirstChild("BetweenSides")
         if event and event.Remotes.Events:FindFirstChild("RamiDeliveryQuest") then
             event.Remotes.Events.RamiDeliveryQuest:FireServer("Accept")
         end
-        task.wait(3.5)
+        task.wait(1)
         
-        -- 3. الصندوق
-        StatusText.Text = "3. جاري البحث عن الصندوق..."
+        -- 2. الصندوق
+        StatusText.Text = "2. جاري البحث عن الصندوق..."
         local boxPrompt, boxPart = findBox()
+        
+        if not boxPart then
+            for i = 1, 6 do
+                StatusText.Text = "2. انتظار الصندوق ("..i..")..."
+                task.wait(0.5)
+                boxPrompt, boxPart = findBox()
+                if boxPart then break end
+            end
+        end
         
         if boxPart then
             myRoot.CFrame = CFrame.new(boxPart.Position + Vector3.new(0, 3, 0))
-            task.wait(2)
+            task.wait(1)
             if boxPrompt then
                 boxPrompt.HoldDuration = 0
                 pcall(function() fireproximityprompt(boxPrompt) end)
-                pcall(function() boxPrompt:InputHoldBegin() task.wait(0.5) boxPrompt:InputHoldEnd() end)
+                pcall(function() boxPrompt:InputHoldBegin() task.wait(0.2) boxPrompt:InputHoldEnd() end)
             end
-            task.wait(1.5)
+            task.wait(1)
         else
             StatusText.Text = "❌ الكول داون شغال (السيرفر رفض)"
             StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
-            cooldownEnd = os.time() + 900 -- إعادة تشغيل العداد
+            cooldownEnd = os.time() + 900
             isWorking = false
             return
         end
         
-        -- 4. خالد والتسليم
-        StatusText.Text = "4. جاري البحث عن خالد..."
+        -- 3. خالد (التسليم)
+        StatusText.Text = "3. جاري البحث عن خالد..."
         local khaled = findKhaled()
         
         if khaled then
@@ -355,7 +359,6 @@ ActionBtn.MouseButton1Click:Connect(function()
                 if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
                 
                 myHumanoid.PlatformStand = true
-                
                 local pinConnection
                 pinConnection = RunService.Heartbeat:Connect(function()
                     if myRoot and promptPart then
@@ -367,17 +370,14 @@ ActionBtn.MouseButton1Click:Connect(function()
                 
                 local delivered = false
                 for attempt = 1, 10 do
-                    StatusText.Text = "5. جاري التسليم (محاولة "..attempt..")..."
-                    
+                    StatusText.Text = "3. جاري التسليم لخالد ("..attempt..")..."
                     pcall(function() if type(fireproximityprompt) == "function" then fireproximityprompt(closestPrompt) end end)
                     pcall(function() closestPrompt:InputHoldBegin() task.wait(0.2) closestPrompt:InputHoldEnd() end)
                     pcall(function()
                         local conns = getconnections(closestPrompt.PromptButtonHoldBegan)
                         if conns then for _, c in pairs(conns) do c:Fire() end end
                     end)
-                    
-                    task.wait(1.2)
-                    
+                    task.wait(1)
                     if not hasBox() then
                         delivered = true
                         break
@@ -386,33 +386,30 @@ ActionBtn.MouseButton1Click:Connect(function()
                 
                 if pinConnection then pinConnection:Disconnect() end
                 myHumanoid.PlatformStand = false
-                
-                if delivered then
-                    StatusText.Text = "✅ تم التسليم بنجاح!"
-                else
-                    StatusText.Text = "❌ فشل التسليم (السيرفر رفض)"
-                    StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
-                end
-            else
-                StatusText.Text = "❌ لم يجد زر التسليم قرب خالد."
             end
-        else
-            StatusText.Text = "❌ خالد غير موجود في السيرفر!"
         end
         
-        -- 5. الرجوع وإعادة العداد تلقائياً
-        task.wait(1)
+        -- 4. استلام الفلوس بصمت (الخطوة الذهبية الجديدة)
+        if not hasBox() then
+            StatusText.Text = "4. جاري استلام المكافأة بصمت..."
+            
+            -- إرسال أمر استلام المكافأة للسيرفر مباشرة
+            if event and event.Remotes.Events:FindFirstChild("RamiDeliveryQuest") then
+                event.Remotes.Events.RamiDeliveryQuest:FireServer("ClaimReward")
+            end
+            
+            task.wait(1) -- ننتظر ثانية عشان السيرفر يعطينا الفلوس
+        end
+        
+        -- 5. الرجوع وإعادة العداد
+        task.wait(0.5)
         myRoot.CFrame = originalPosition
         myHumanoid.PlatformStand = false
         
-        -- هنا السر: مهما صار، العداد يرجع 15 دقيقة من جديد
         cooldownEnd = os.time() + 900 
         
-        if not hasBox() then
-            StatusText.Text = "✅ اكتملت المهمة! تم إعادة العداد."
-            StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
-        end
-        
+        StatusText.Text = "✅ اكتملت المهمة! (تم استلام الفلوس)"
+        StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
         isWorking = false
     end)
 end)
