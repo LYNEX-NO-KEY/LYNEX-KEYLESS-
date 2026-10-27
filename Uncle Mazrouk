@@ -55,13 +55,6 @@ TitleCover.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 TitleCover.BorderSizePixel = 0
 TitleCover.Parent = TitleBar
 
-local TitleGradient = Instance.new("UIGradient")
-TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 32))
-})
-TitleGradient.Parent = TitleBar
-
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -50, 1, 0) 
 TitleText.Position = UDim2.new(0, 15, 0, 0)
@@ -123,7 +116,7 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 6)
 StatusCorner.Parent = StatusText
 
--- الزر السحري (الشامل)
+-- الزر السحري
 local ActionBtn = Instance.new("TextButton")
 ActionBtn.Size = UDim2.new(1, 0, 0, 45)
 ActionBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -212,7 +205,7 @@ MoveBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================
--- 2. الدوال الأساسية (الرحلة والعداد)
+-- 2. الدوال الأساسية
 -- ==========================================
 
 local function findKhaled()
@@ -239,6 +232,18 @@ local function findBox()
         end
     end
     return nil, nil
+end
+
+-- دالة فحص وجود الصندوق في الحقيبة
+local function hasBox()
+    local backpack = player:FindFirstChild("Backpack")
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            local n = string.lower(item.Name)
+            if string.find(n, "crate") or string.find(n, "supply") or string.find(n, "box") then return true end
+        end
+    end
+    return false
 end
 
 local cooldownEnd = 0
@@ -320,7 +325,7 @@ ActionBtn.MouseButton1Click:Connect(function()
             return
         end
         
-        -- 4. خالد والتسليم (نفس ميزة سكربتك)
+        -- 4. خالد والتسليم (التحقق والتثبيت)
         StatusText.Text = "4. جاري البحث عن خالد..."
         local khaled = findKhaled()
         
@@ -344,30 +349,49 @@ ActionBtn.MouseButton1Click:Connect(function()
             end
             
             if closestPrompt then
-                StatusText.Text = "5. جاري التثبيت والتسليم..."
                 local promptPart = closestPrompt.Parent
                 if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
                 
-                -- خدعة التثبيت
-                myHumanoid.PlatformStand = true
-                local holdTime = tick()
-                while tick() - holdTime < 1.2 do
-                    myRoot.CFrame = promptPart.CFrame * CFrame.new(0, 1, 0)
-                    myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    RunService.Heartbeat:Wait()
+                -- نظام التثبيت والتحقق (نفس سكربتك بالضبط + تحقق)
+                local maxAttempts = 5
+                for attempt = 1, maxAttempts do
+                    StatusText.Text = "5. جاري التثبيت والتسليم (محاولة "..attempt..")..."
+                    
+                    myHumanoid.PlatformStand = true
+                    local holdTime = tick()
+                    
+                    -- التثبيت في الهواء لمدة 1.2 ثانية (عشان نضمن إننا ثابتين)
+                    while tick() - holdTime < 1.2 do
+                        myRoot.CFrame = promptPart.CFrame * CFrame.new(0, 1, 0)
+                        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                        RunService.Heartbeat:Wait()
+                    end
+                    
+                    -- ضرب الزر بكل الطرق
+                    pcall(function() if type(fireproximityprompt) == "function" then fireproximityprompt(closestPrompt) end end)
+                    pcall(function() closestPrompt:InputHoldBegin() task.wait(0.5) closestPrompt:InputHoldEnd() end)
+                    pcall(function()
+                        local conns = getconnections(closestPrompt.PromptButtonHoldBegan)
+                        if conns then for _, c in pairs(conns) do c:Fire() end end
+                    end)
+                    
+                    task.wait(1) -- ننتظر عشان نشوف هل الصندوق اختفى
+                    
+                    -- التحقق: إذا اختفى الصندوق من الحقيبة، خلاص نجحنا
+                    if not hasBox() then
+                        break
+                    end
                 end
                 
-                pcall(function() if type(fireproximityprompt) == "function" then fireproximityprompt(closestPrompt) end end)
-                pcall(function() closestPrompt:InputHoldBegin() task.wait(0.5) closestPrompt:InputHoldEnd() end)
-                pcall(function()
-                    local conns = getconnections(closestPrompt.PromptButtonHoldBegan)
-                    if conns then for _, c in pairs(conns) do c:Fire() end end
-                end)
-                
-                task.wait(1.5)
                 myHumanoid.PlatformStand = false
-                StatusText.Text = "✅ تم التسليم بنجاح!"
+                
+                if not hasBox() then
+                    StatusText.Text = "✅ تم التسليم بنجاح!"
+                else
+                    StatusText.Text = "❌ فشل التسليم، جرب مرة ثانية."
+                    StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
+                end
             else
                 StatusText.Text = "❌ لم يجد زر التسليم قرب خالد."
             end
@@ -382,8 +406,11 @@ ActionBtn.MouseButton1Click:Connect(function()
         
         cooldownEnd = os.time() + 900 -- 15 دقيقة كول داون
         
-        StatusText.Text = "✅ اكتملت المهمة! بدأ العداد."
-        StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
+        if not hasBox() then
+            StatusText.Text = "✅ اكتملت المهمة! بدأ العداد."
+            StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
+        end
+        
         isWorking = false
     end)
 end)
