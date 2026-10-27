@@ -1,27 +1,25 @@
--- سكربت خالد: تصميم احترافي (حل مشكلة التثبيت في الهواء والضغط)
-if not game:IsLoaded() then game.Loaded:Wait() end
-task.wait(1)
-
-local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+local marzouqPosition = Vector3.new(-605.45, -315.84, -400.55)
 
--- إعداد الواجهة الرئيسية
+-- ==========================================
+-- 1. تصميم الواجهة الاحترافي
+-- ==========================================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Khaled_UI_Arabic"
+ScreenGui.Name = "MarzouqMissionUI"
 ScreenGui.ResetOnSpawn = false
 pcall(function() ScreenGui.Parent = CoreGui end)
 if not ScreenGui.Parent then ScreenGui.Parent = player:WaitForChild("PlayerGui") end
 
--- الإطار الرئيسي
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 240, 0, 200)
+MainFrame.Size = UDim2.new(0, 240, 0, 180)
 MainFrame.Position = UDim2.new(0.5, -120, 0.2, 0) 
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 MainFrame.BorderSizePixel = 0
@@ -68,15 +66,14 @@ local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -50, 1, 0) 
 TitleText.Position = UDim2.new(0, 15, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "تتبع خالد | Khaled Tracker"
+TitleText.Text = "مهمة العم مرزوق"
 TitleText.TextColor3 = Color3.fromRGB(240, 240, 255)
 TitleText.Font = Enum.Font.SourceSansBold
-TitleText.TextSize = 16
+TitleText.TextSize = 14
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.Selectable = false 
 TitleText.Parent = TitleBar
 
--- طبقة اصطياد اللمس للسحب
+-- طبقة السحب
 local DragCatcher = Instance.new("TextButton")
 DragCatcher.Size = UDim2.new(1, -45, 1, 0) 
 DragCatcher.BackgroundTransparency = 1
@@ -84,7 +81,7 @@ DragCatcher.Text = ""
 DragCatcher.ZIndex = 5
 DragCatcher.Parent = TitleBar
 
--- زر الطي
+-- زر التصغير
 local MoveBtn = Instance.new("TextButton")
 MoveBtn.Size = UDim2.new(0, 24, 0, 24)
 MoveBtn.Position = UDim2.new(1, -32, 0, 8)
@@ -95,7 +92,6 @@ MoveBtn.Font = Enum.Font.SourceSansBold
 MoveBtn.TextSize = 20
 MoveBtn.ZIndex = 6
 MoveBtn.Parent = TitleBar
-
 local BtnCorner = Instance.new("UICorner")
 BtnCorner.CornerRadius = UDim.new(0, 6)
 BtnCorner.Parent = MoveBtn
@@ -120,81 +116,68 @@ StatusText.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 StatusText.Text = "الحالة: جاهز"
 StatusText.TextColor3 = Color3.fromRGB(150, 150, 170)
 StatusText.Font = Enum.Font.SourceSansBold
-StatusText.TextSize = 13
+StatusText.TextSize = 12
 StatusText.LayoutOrder = 1
 StatusText.Parent = ContentFrame
-
 local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 6)
 StatusCorner.Parent = StatusText
 
--- زر الكشف (ESP)
-local ESPBtn = Instance.new("TextButton")
-ESPBtn.Size = UDim2.new(1, 0, 0, 38)
-ESPBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ESPBtn.Text = "" 
-ESPBtn.LayoutOrder = 2
-ESPBtn.Parent = ContentFrame
+-- الزر السحري (الشامل)
+local ActionBtn = Instance.new("TextButton")
+ActionBtn.Size = UDim2.new(1, 0, 0, 45)
+ActionBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ActionBtn.Text = "" 
+ActionBtn.LayoutOrder = 2
+ActionBtn.Parent = ContentFrame
+local ActionCorner = Instance.new("UICorner")
+ActionCorner.CornerRadius = UDim.new(0, 8)
+ActionCorner.Parent = ActionBtn
 
-local ESPCorner = Instance.new("UICorner")
-ESPCorner.CornerRadius = UDim.new(0, 8)
-ESPCorner.Parent = ESPBtn
-
-local ESPGradient = Instance.new("UIGradient")
-ESPGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(128, 0, 255)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 0, 255))  
+local ActionGradient = Instance.new("UIGradient")
+ActionGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 50, 200)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 0, 150))   
 })
-ESPGradient.Rotation = 90
-ESPGradient.Parent = ESPBtn
+ActionGradient.Rotation = 90
+ActionGradient.Parent = ActionBtn
 
-local ESPText = Instance.new("TextLabel")
-ESPText.Size = UDim2.new(1, 0, 1, 0)
-ESPText.BackgroundTransparency = 1
-ESPText.Text = "كشف خالد (تحديد أحمر)"
-ESPText.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPText.Font = Enum.Font.SourceSansBold
-ESPText.TextSize = 14
-ESPText.ZIndex = 2
-ESPText.Active = false 
-ESPText.Parent = ESPBtn
+local ActionText = Instance.new("TextLabel")
+ActionText.Size = UDim2.new(1, 0, 1, 0)
+ActionText.BackgroundTransparency = 1
+ActionText.Text = "بدء المهمة تلقائي"
+ActionText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ActionText.Font = Enum.Font.SourceSansBold
+ActionText.TextSize = 15
+ActionText.ZIndex = 2
+ActionText.Parent = ActionBtn
 
--- زر التسليم التلقائي
-local AutoDeliverBtn = Instance.new("TextButton")
-AutoDeliverBtn.Size = UDim2.new(1, 0, 0, 45)
-AutoDeliverBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-AutoDeliverBtn.Text = "" 
-AutoDeliverBtn.LayoutOrder = 3
-AutoDeliverBtn.Parent = ContentFrame
+-- العداد
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(1, 0, 0, 30)
+TimerLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+TimerLabel.Text = "العداد: جاهز"
+TimerLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+TimerLabel.Font = Enum.Font.SourceSansBold
+TimerLabel.TextSize = 14
+TimerLabel.LayoutOrder = 3
+TimerLabel.Parent = ContentFrame
+local TimerCorner = Instance.new("UICorner")
+TimerCorner.CornerRadius = UDim.new(0, 6)
+TimerCorner.Parent = TimerLabel
 
-local DeliverCorner = Instance.new("UICorner")
-DeliverCorner.CornerRadius = UDim.new(0, 8)
-DeliverCorner.Parent = AutoDeliverBtn
+-- تأثيرات الضغط
+ActionBtn.MouseButton1Down:Connect(function()
+    TweenService:Create(ActionBtn, TweenInfo.new(0.1), {Size = UDim2.new(0.95, 0, 0, 43)}):Play()
+end)
+ActionBtn.MouseButton1Up:Connect(function()
+    TweenService:Create(ActionBtn, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+end)
 
-local DeliverGradient = Instance.new("UIGradient")
-DeliverGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 100)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 80))   
-})
-DeliverGradient.Rotation = 90
-DeliverGradient.Parent = AutoDeliverBtn
-
-local DeliverText = Instance.new("TextLabel")
-DeliverText.Size = UDim2.new(1, 0, 1, 0)
-DeliverText.BackgroundTransparency = 1
-DeliverText.Text = "تسليم تلقائي ورجوع"
-DeliverText.TextColor3 = Color3.fromRGB(255, 255, 255)
-DeliverText.Font = Enum.Font.SourceSansBold
-DeliverText.TextSize = 16
-DeliverText.ZIndex = 2
-DeliverText.Active = false 
-DeliverText.Parent = AutoDeliverBtn
-
--- 🖱️ نظام السحب
+-- نظام السحب
 local dragging = false
 local dragStart = nil
 local startPos = nil
-
 DragCatcher.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -202,25 +185,23 @@ DragCatcher.InputBegan:Connect(function(input)
         startPos = MainFrame.Position
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
     end
 end)
 
--- منطق طي وفتح الواجهة
+-- نظام التصغير
 local isMinimized = false
 MoveBtn.MouseButton1Click:Connect(function()
     if isMinimized then
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 200)}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 240, 0, 180)}):Play()
         MoveBtn.Text = "−"
         isMinimized = false
     else
@@ -230,203 +211,179 @@ MoveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- تأثير الضغط
-local function addClickEffect(btn)
-    btn.MouseButton1Down:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.95, 0, 0, btn.Size.Y.Offset - 2)}):Play()
-    end)
-    btn.MouseButton1Up:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, btn.Size.Y.Offset + 2)}):Play()
-    end)
-end
-addClickEffect(ESPBtn)
-addClickEffect(AutoDeliverBtn)
-
 -- ==========================================
--- منطق الكشف والتسليم
+-- 2. الدوال الأساسية (الرحلة والعداد)
 -- ==========================================
-
-local isESPActive = false
-local khaledHighlight = nil
-local khaledBillboard = nil
 
 local function findKhaled()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") then
-            if string.find(obj.Name, "Khaled") or string.find(obj.Name, "خالد") then
-                return obj
-            end
+            if string.find(obj.Name, "Khaled") or string.find(obj.Name, "خالد") then return obj end
             local billboard = obj:FindFirstChild("BillboardGui", true)
             if billboard then
                 local textLabel = billboard:FindFirstChild("TextLabel", true)
-                if textLabel and (string.find(textLabel.Text, "خالد") or string.find(textLabel.Text, "Khaled")) then
-                    return obj
-                end
+                if textLabel and (string.find(textLabel.Text, "خالد") or string.find(textLabel.Text, "Khaled")) then return obj end
             end
         end
     end
     return nil
 end
 
-local function clearESP()
-    if khaledHighlight then khaledHighlight:Destroy() khaledHighlight = nil end
-    if khaledBillboard then khaledBillboard:Destroy() khaledBillboard = nil end
-    isESPActive = false
-    ESPGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(128, 0, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 0, 255))
-    })
-    ESPText.Text = "كشف خالد (تحديد أحمر)"
+local function findBox()
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            if string.find(obj.ActionText, "احمل") or string.find(obj.ObjectText, "صندوق") or string.find(obj.Parent.Name, "Crate") or string.find(obj.Parent.Name, "Supply") then
+                local part = obj.Parent:IsA("BasePart") and obj.Parent or obj.Parent:FindFirstChildWhichIsA("BasePart")
+                if part then return obj, part end
+            end
+        end
+    end
+    return nil, nil
 end
 
-ESPBtn.MouseButton1Click:Connect(function()
-    if isESPActive then
-        clearESP()
-        StatusText.Text = "الحالة: الكشف مغلق"
-    else
-        local khaled = findKhaled()
-        if khaled then
-            isESPActive = true
-            ESPGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 50, 50)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
-            })
-            ESPText.Text = "إخفاء الكشف"
-            StatusText.Text = "الحالة: تم تحديد خالد (أحمر)"
-            
-            local head = khaled:FindFirstChild("Head") or khaled:FindFirstChild("HumanoidRootPart") or khaled.PrimaryPart
-            
-            khaledHighlight = Instance.new("Highlight")
-            khaledHighlight.Adornee = khaled
-            khaledHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-            khaledHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            khaledHighlight.FillTransparency = 0.3
-            khaledHighlight.Parent = ScreenGui
+local cooldownEnd = 0
+local isWorking = false
 
-            if head then
-                khaledBillboard = Instance.new("BillboardGui")
-                khaledBillboard.Adornee = head
-                khaledBillboard.Size = UDim2.new(0, 100, 0, 50)
-                khaledBillboard.StudsOffset = Vector3.new(0, 3, 0)
-                khaledBillboard.AlwaysOnTop = true
-                khaledBillboard.Parent = ScreenGui
-
-                local textLabel = Instance.new("TextLabel")
-                textLabel.Size = UDim2.new(1, 0, 1, 0)
-                textLabel.BackgroundTransparency = 1
-                textLabel.Text = "⬇ خالد ⬇"
-                textLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-                textLabel.TextStrokeTransparency = 0
-                textLabel.Font = Enum.Font.SourceSansBold
-                textLabel.TextSize = 20
-                textLabel.Parent = khaledBillboard
-            end
+-- تحديث العداد
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local currentTime = os.time()
+        if cooldownEnd > currentTime then
+            local remaining = cooldownEnd - currentTime
+            TimerLabel.Text = string.format("متبقي: %02d:%02d", math.floor(remaining/60), remaining%60)
+            TimerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
         else
-            StatusText.Text = "الحالة: خالد غير موجود!"
+            TimerLabel.Text = "العداد: جاهز ✅"
+            TimerLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         end
     end
 end)
 
--- 🚀 التسليم التلقائي 
-AutoDeliverBtn.MouseButton1Click:Connect(function()
-    StatusText.Text = "الحالة: جاري البحث..."
-    StatusText.TextColor3 = Color3.fromRGB(150, 150, 170)
+ActionBtn.MouseButton1Click:Connect(function()
+    if isWorking then return end
     
-    local khaled = findKhaled()
-    if not khaled then
-        StatusText.Text = "الحالة: خالد غير موجود!"
+    local remaining = cooldownEnd - os.time()
+    if remaining > 0 then
+        StatusText.Text = string.format("انتظر! باقي %02d:%02d", math.floor(remaining/60), remaining%60)
         StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
         return
     end
 
-    local myChar = player.Character
-    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-    local myHumanoid = myChar and myChar:FindFirstChild("Humanoid")
-    if not myRoot or not myHumanoid then return end
+    isWorking = true
+    StatusText.Text = "جاري التنفيذ..."
+    StatusText.TextColor3 = Color3.fromRGB(255, 255, 0)
+    
+    task.spawn(function()
+        local myChar = player.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local myHumanoid = myChar and myChar:FindFirstChild("Humanoid")
+        if not myRoot or not myHumanoid then
+            StatusText.Text = "❌ الشخصية غير محملة!"
+            isWorking = false
+            return
+        end
 
-    local targetPos = khaled.PrimaryPart and khaled.PrimaryPart.Position or khaled:FindFirstChild("HumanoidRootPart") and khaled.HumanoidRootPart.Position
-    local closestPrompt = nil
-    local shortestDistance = 30 
-
-    -- البحث عن الزر الأقرب لخالد
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("ProximityPrompt") and obj.Enabled then
-            local parentPart = obj.Parent
-            if parentPart and parentPart:IsA("Attachment") then parentPart = parentPart.Parent end
-            if parentPart and parentPart:IsA("BasePart") then
-                local dist = (parentPart.Position - targetPos).Magnitude
-                if dist < shortestDistance then
-                    shortestDistance = dist
-                    closestPrompt = obj
+        local originalPosition = myRoot.CFrame
+        
+        -- 1. مرزوق
+        StatusText.Text = "1. جاري الانتقال لمرزوق..."
+        myRoot.CFrame = CFrame.new(marzouqPosition + Vector3.new(0, 3, 0))
+        task.wait(2.5)
+        
+        -- 2. استلام المهمة
+        StatusText.Text = "2. جاري استلام المهمة..."
+        local event = ReplicatedStorage:FindFirstChild("BetweenSides")
+        if event and event.Remotes.Events:FindFirstChild("RamiDeliveryQuest") then
+            event.Remotes.Events.RamiDeliveryQuest:FireServer("Accept")
+        end
+        task.wait(3.5)
+        
+        -- 3. الصندوق
+        StatusText.Text = "3. جاري البحث عن الصندوق..."
+        local boxPrompt, boxPart = findBox()
+        
+        if boxPart then
+            myRoot.CFrame = CFrame.new(boxPart.Position + Vector3.new(0, 3, 0))
+            task.wait(2)
+            if boxPrompt then
+                boxPrompt.HoldDuration = 0
+                pcall(function() fireproximityprompt(boxPrompt) end)
+                pcall(function() boxPrompt:InputHoldBegin() task.wait(0.5) boxPrompt:InputHoldEnd() end)
+            end
+            task.wait(1.5)
+        else
+            StatusText.Text = "❌ الكول داون شغال (السيرفر رفض)"
+            StatusText.TextColor3 = Color3.fromRGB(255, 50, 50)
+            cooldownEnd = os.time() + 900 -- بدء العداد 15 دقيقة
+            isWorking = false
+            return
+        end
+        
+        -- 4. خالد والتسليم (نفس ميزة سكربتك)
+        StatusText.Text = "4. جاري البحث عن خالد..."
+        local khaled = findKhaled()
+        
+        if khaled then
+            local targetPos = khaled.PrimaryPart and khaled.PrimaryPart.Position or khaled:FindFirstChild("HumanoidRootPart") and khaled.HumanoidRootPart.Position
+            local closestPrompt = nil
+            local shortestDistance = 30
+            
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") and obj.Enabled then
+                    local pPart = obj.Parent
+                    if pPart:IsA("Attachment") then pPart = pPart.Parent end
+                    if pPart:IsA("BasePart") then
+                        local dist = (pPart.Position - targetPos).Magnitude
+                        if dist < shortestDistance then
+                            shortestDistance = dist
+                            closestPrompt = obj
+                        end
+                    end
                 end
             end
-        end
-    end
-    
-    if not closestPrompt then
-        StatusText.Text = "الحالة: لم يتم العثور على زر التسليم!"
-        StatusText.TextColor3 = Color3.fromRGB(255, 150, 0)
-        return
-    end
-
-    local originalPosition = myRoot.CFrame
-    local promptPart = closestPrompt.Parent
-    if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
-
-    StatusText.Text = "جاري النقل والثبات في الهواء..."
-    StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    
-    -- 1. إيقاف حركة اللاعب مؤقتاً (عشان ما ينزل)
-    myHumanoid.PlatformStand = true 
-
-    -- 2. حلقة تكرار لتثبيت اللاعب في مكانه بالهواء لمدة ثانية كاملة (تخدع السيرفر)
-    local holdTime = tick()
-    while tick() - holdTime < 1.2 do
-        myRoot.CFrame = promptPart.CFrame * CFrame.new(0, 1, 0)
-        myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-        RunService.Heartbeat:Wait()
-    end
-
-    StatusText.Text = "جاري الضغط على الزر..."
-    
-    -- 3. محاولة الضغط بكل الطرق المتاحة
-    -- الطريقة أ: دالة دلتا الأساسية
-    pcall(function()
-        if type(fireproximityprompt) == "function" then
-            fireproximityprompt(closestPrompt)
-        end
-    end)
-    
-    -- الطريقة ب: محاكاة ضغطة الإصبع (ممتازة للهاتف)
-    pcall(function()
-        closestPrompt:InputHoldBegin()
-        task.wait(closestPrompt.HoldDuration > 0 and closestPrompt.HoldDuration + 0.2 or 0.5)
-        closestPrompt:InputHoldEnd()
-    end)
-
-    -- الطريقة ج: تفجير الاتصال (للسيرفرات التي تتجاهل الطرق السابقة)
-    pcall(function()
-        local connections = getconnections(closestPrompt.PromptButtonHoldBegan)
-        if connections then
-            for _, conn in pairs(connections) do
-                conn:Fire()
+            
+            if closestPrompt then
+                StatusText.Text = "5. جاري التثبيت والتسليم..."
+                local promptPart = closestPrompt.Parent
+                if promptPart:IsA("Attachment") then promptPart = promptPart.Parent end
+                
+                -- خدعة التثبيت
+                myHumanoid.PlatformStand = true
+                local holdTime = tick()
+                while tick() - holdTime < 1.2 do
+                    myRoot.CFrame = promptPart.CFrame * CFrame.new(0, 1, 0)
+                    myRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    myRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    RunService.Heartbeat:Wait()
+                end
+                
+                pcall(function() if type(fireproximityprompt) == "function" then fireproximityprompt(closestPrompt) end end)
+                pcall(function() closestPrompt:InputHoldBegin() task.wait(0.5) closestPrompt:InputHoldEnd() end)
+                pcall(function()
+                    local conns = getconnections(closestPrompt.PromptButtonHoldBegan)
+                    if conns then for _, c in pairs(conns) do c:Fire() end end
+                end)
+                
+                task.wait(1.5)
+                myHumanoid.PlatformStand = false
+                StatusText.Text = "✅ تم التسليم بنجاح!"
+            else
+                StatusText.Text = "❌ لم يجد زر التسليم قرب خالد."
             end
+        else
+            StatusText.Text = "❌ خالد غير موجود في السيرفر!"
         end
+        
+        -- 5. الرجوع وبدء العداد
+        task.wait(1)
+        myRoot.CFrame = originalPosition
+        myHumanoid.PlatformStand = false
+        
+        cooldownEnd = os.time() + 900 -- 15 دقيقة كول داون
+        
+        StatusText.Text = "✅ اكتملت المهمة! بدأ العداد."
+        StatusText.TextColor3 = Color3.fromRGB(50, 255, 50)
+        isWorking = false
     end)
-
-    task.wait(1) -- انتظار انتهاء التسليم
-
-    -- 4. إلغاء وضع الطيران، والعودة للمكان الأصلي
-    myHumanoid.PlatformStand = false
-    myRoot.CFrame = originalPosition
-    
-    StatusText.Text = "تم التسليم والرجوع!"
-    StatusText.TextColor3 = Color3.fromRGB(0, 255, 100)
-    
-    if isESPActive then
-        clearESP()
-    end
 end)
-
-print("تم تحميل سكربت خالد بنجاح! جاهز للاستخدام.")
