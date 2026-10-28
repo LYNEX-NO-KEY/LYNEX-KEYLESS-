@@ -1,0 +1,315 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+
+local guiName = "TeleportHub_Premium"
+if CoreGui:FindFirstChild(guiName) then CoreGui:FindFirstChild(guiName):Destroy() end
+
+-- ==========================================
+-- 1. الألوان الفاخرة (Dark Gold Theme)
+-- ==========================================
+local ColorBg = Color3.fromRGB(15, 15, 18)          
+local ColorTitleBar = Color3.fromRGB(22, 22, 28)    
+local ColorAccent = Color3.fromRGB(220, 180, 90)    
+local ColorText = Color3.fromRGB(245, 245, 245)     
+local ColorTextDim = Color3.fromRGB(130, 130, 140)  
+local ColorCard = Color3.fromRGB(28, 28, 35)        
+local ColorBtnOff = Color3.fromRGB(35, 35, 42)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 340) 
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170) 
+MainFrame.BackgroundColor3 = ColorBg
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true 
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12) 
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = ColorAccent
+UIStroke.Thickness = 1
+UIStroke.Transparency = 0.6 
+UIStroke.Parent = MainFrame
+
+-- الشريط العلوي
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = ColorTitleBar
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 38)),
+    ColorSequenceKeypoint.new(1, ColorTitleBar)
+})
+TitleGradient.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "📍 انتقالات الماب"
+TitleLabel.TextColor3 = ColorAccent
+TitleLabel.TextSize = 14
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 2
+TitleLabel.Parent = TitleBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 22, 0, 22)
+MinimizeBtn.Position = UDim2.new(1, -28, 0, 6)
+MinimizeBtn.BackgroundColor3 = ColorBtnOff
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = ColorText
+MinimizeBtn.TextSize = 16
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.ZIndex = 2
+MinimizeBtn.Parent = TitleBar
+local MinCorner = Instance.new("UICorner") MinCorner.CornerRadius = UDim.new(0, 6) MinCorner.Parent = MinimizeBtn
+
+-- ==========================================
+-- 2. شريط التبويبات (قابل للسحب)
+-- ==========================================
+local TabBar = Instance.new("ScrollingFrame")
+TabBar.Size = UDim2.new(1, 0, 0, 35)
+TabBar.Position = UDim2.new(0, 0, 0, 35)
+TabBar.BackgroundColor3 = ColorTitleBar
+TabBar.BorderSizePixel = 0
+TabBar.ScrollBarThickness = 2
+TabBar.ScrollBarImageColor3 = ColorAccent
+TabBar.ScrollingDirection = Enum.ScrollingDirection.X
+TabBar.CanvasSize = UDim2.new(0, 0, 0, 0) 
+TabBar.Parent = MainFrame
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Parent = TabBar
+
+-- ⚠️ هنا التعديل: غيرنا "العوالم" إلى "أخرى"
+local tabNames = {"المهام", "المتاجر", "البنوك", "الصيد", "الرسم", "أخرى", "خيم"}
+
+local tabButtons = {}
+local tabFrames = {}
+
+local function createTabButton(text, index)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 65, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text = text
+    btn.TextColor3 = (index == 1) and ColorAccent or ColorTextDim
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.LayoutOrder = index
+    btn.Parent = TabBar
+    
+    btn.MouseButton1Click:Connect(function()
+        for i, b in ipairs(tabButtons) do
+            b.TextColor3 = ColorTextDim
+        end
+        btn.TextColor3 = ColorAccent
+        
+        for i, f in ipairs(tabFrames) do
+            f.Visible = false
+        end
+        tabFrames[index].Visible = true
+        
+        local targetPos = (index - 1) * 65 - 30
+        if targetPos < 0 then targetPos = 0 end
+        TweenService:Create(TabBar, TweenInfo.new(0.2), {CanvasPosition = Vector2.new(targetPos, 0)}):Play()
+    end)
+    
+    table.insert(tabButtons, btn)
+end
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -70)
+ContentFrame.Position = UDim2.new(0, 0, 0, 70)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local function createTabFrame()
+    local f = Instance.new("ScrollingFrame")
+    f.Size = UDim2.new(1, -16, 1, -16)
+    f.Position = UDim2.new(0, 8, 0, 8)
+    f.BackgroundColor3 = ColorBg
+    f.BorderSizePixel = 0
+    f.ScrollBarThickness = 3
+    f.ScrollBarImageColor3 = ColorAccent
+    f.CanvasSize = UDim2.new(0, 0, 0, 0)
+    f.Visible = false
+    f.Parent = ContentFrame
+    
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 6) corner.Parent = f
+    local layout = Instance.new("UIListLayout") layout.Padding = UDim.new(0, 8) layout.SortOrder = Enum.SortOrder.LayoutOrder layout.Parent = f
+    return f
+end
+
+for i, name in ipairs(tabNames) do
+    createTabButton(name, i)
+    local frame = createTabFrame()
+    table.insert(tabFrames, frame)
+end
+
+TabBar.CanvasSize = UDim2.new(0, (#tabNames * 65) + 10, 0, 0)
+tabFrames[1].Visible = true
+
+-- التصغير
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        TabBar.Visible = false
+        ContentFrame.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        MinimizeBtn.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 340), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        task.wait(0.1) 
+        TabBar.Visible = true
+        ContentFrame.Visible = true
+        MinimizeBtn.Text = "−"
+    end
+end)
+
+-- ==========================================
+-- 3. دالة إنشاء زر الانتقال
+-- ==========================================
+local function createTP(name, x, y, z, parentFrame)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 42)
+    btn.BackgroundColor3 = ColorCard
+    btn.Text = "📍 " .. name
+    btn.TextColor3 = ColorText
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    btn.Parent = parentFrame
+    
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 8) corner.Parent = btn
+    
+    local stroke = Instance.new("UIStroke") 
+    stroke.Color = ColorAccent 
+    stroke.Thickness = 1 
+    stroke.Transparency = 0.7 
+    stroke.Parent = btn
+
+    btn.MouseButton1Down:Connect(function() 
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(0.96, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(45, 45, 55)}):Play() 
+        stroke.Transparency = 0.2 
+    end)
+    
+    btn.MouseButton1Up:Connect(function() 
+        TweenService:Create(btn, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = ColorCard}):Play() 
+        stroke.Transparency = 0.7
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(x, y, z) + Vector3.new(0, 3, 0))
+            btn.Text = "✅ تم الانتقال"
+            btn.TextColor3 = ColorAccent 
+            task.wait(1)
+            btn.Text = "📍 " .. name
+            btn.TextColor3 = ColorText
+        end
+    end)
+end
+
+-- ==========================================
+-- 4. تعبئة الأماكن في تبويباتها
+-- ==========================================
+
+-- تبويب 1: المهام
+createTP("مهمه العم مرزوق", -602.65, -314.91, -401.58, tabFrames[1])
+createTP("صندوق العم مرزوق", -571.35, -302.01, -438.86, tabFrames[1])
+createTP("الحظيره", -575.79, -315.05, -460.44, tabFrames[1])
+createTP("البداية", -362.98, -314.05, -32.21, tabFrames[1])
+
+-- تبويب 2: المتاجر
+createTP("المتجر", -350.11, -313.66, 277.05, tabFrames[2])
+createTP("المطعم", -411.95, -311.09, 286.06, tabFrames[2])
+createTP("الكوفي", -201.75, -313.90, -371.56, tabFrames[2])
+createTP("متجر سيارات", 23.79, -314.05, 126.54, tabFrames[2])
+createTP("متجر السمك 1", -303.90, -314.59, -425.32, tabFrames[2])
+createTP("متجر السمك 2", -347.32, -313.79, 582.46, tabFrames[2])
+
+-- تبويب 3: البنوك
+createTP("البنك 1", -373.10, -314.05, -4.08, tabFrames[3])
+
+-- تبويب 4: الصيد
+createTP("الصيد 1", -74.47, -300.42, 612.83, tabFrames[4])
+createTP("الصيد 2", -310.55, -304.62, 426.50, tabFrames[4])
+createTP("الصيد 3", -499.11, -314.14, 497.13, tabFrames[4])
+createTP("الصيد 4", -529.05, -314.14, 670.73, tabFrames[4])
+createTP("الصيد 5", -561.56, -304.43, 361.97, tabFrames[4])
+
+-- تبويب 5: الرسم
+createTP("الرسم 1", -659.31, -314.52, 336.92, tabFrames[5])
+createTP("الرسم 2", -659.93, -314.52, 261.62, tabFrames[5])
+createTP("الرسم 3", -660.61, -314.51, 189.46, tabFrames[5])
+
+-- تبويب 6: أخرى (كانت العوالم)
+createTP("النافوره", -275.47, -304.15, -27.40, tabFrames[6])
+createTP("المسرح", -551.77, -310.45, -197.54, tabFrames[6])
+createTP("جزيره المميزه", 442.04, -90.07, -119.98, tabFrames[6])
+createTP("الملعب", -69.77, -315.05, 295.26, tabFrames[6])
+createTP("البيانو", -130.12, -310.39, -421.34, tabFrames[6])
+
+-- تبويب 7: خيم
+createTP("كوخ", -124.14, -297.20, 669.70, tabFrames[7])
+createTP("الخيمه", -552.63, -314.90, -260.55, tabFrames[7])
+createTP("الخيم", -356.83, -312.53, 645.29, tabFrames[7])
+
+-- تحديث حجم القوائم
+for _, frame in pairs(tabFrames) do
+    local layout = frame:FindFirstChildOfClass("UIListLayout")
+    if layout then
+        frame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end
+end
+
+-- السحب
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
