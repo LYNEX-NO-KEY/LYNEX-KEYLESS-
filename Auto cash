@@ -1,0 +1,703 @@
+--[[
+    💰 Cash Collector V17.1 - Pro Design + Info Panel
+    - 🎨 تصميم عصري مع إصلاح مشكلة التداخل
+    - 📱 يدعم الشاشات الصغيرة (Mobile/PC)
+    - ℹ️ زر معلومات يفتح واجهة توضيحية (معدلة)
+    - ⚡ انتقال فوري للفلوس
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- ========== الثيم ==========
+local Theme = {
+    Bg = Color3.fromRGB(15, 15, 22),
+    BgCard = Color3.fromRGB(24, 24, 34),
+    AccentA = Color3.fromRGB(140, 100, 255),
+    AccentB = Color3.fromRGB(80, 180, 255),
+    Success = Color3.fromRGB(80, 220, 130),
+    Danger = Color3.fromRGB(255, 75, 95),
+    Text = Color3.fromRGB(245, 245, 255),
+    TextDim = Color3.fromRGB(150, 150, 170),
+}
+
+local function tw(obj, props, dur, style, dir)
+    local t = TweenService:Create(
+        obj,
+        TweenInfo.new(dur or 0.25, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out),
+        props
+    )
+    t:Play()
+    return t
+end
+
+-- ========== GUI ==========
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CashV17_1"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- 📱 Auto-Scale عشان يظبط على كل الشاشات
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = ScreenGui
+local function updateScale()
+    local viewport = workspace.CurrentCamera.ViewportSize
+    local scale = math.clamp(viewport.Y / 750, 0.75, 1.1)
+    uiScale.Scale = scale
+end
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+updateScale()
+
+-- Frame الأساسي
+local Frame = Instance.new("Frame")
+Frame.Name = "Main"
+Frame.Size = UDim2.new(0, 260, 0, 290)
+Frame.Position = UDim2.new(0.05, 0, 0.25, 0)
+Frame.BackgroundColor3 = Theme.Bg
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.ClipsDescendants = true
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 18)
+
+local bgGrad = Instance.new("UIGradient")
+bgGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 20, 32)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(13, 13, 20)),
+}
+bgGrad.Rotation = 90
+bgGrad.Parent = Frame
+
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Theme.AccentA
+frameStroke.Thickness = 1.5
+frameStroke.Transparency = 0.55
+frameStroke.Parent = Frame
+
+-- Header (الشريط العلوي)
+local HeaderCard = Instance.new("Frame")
+HeaderCard.Name = "Header"
+HeaderCard.Size = UDim2.new(1, -20, 0, 48)
+HeaderCard.Position = UDim2.new(0, 10, 0, 10)
+HeaderCard.BackgroundColor3 = Color3.new(1, 1, 1)
+HeaderCard.BorderSizePixel = 0
+HeaderCard.Parent = Frame
+Instance.new("UICorner", HeaderCard).CornerRadius = UDim.new(0, 12)
+
+local headerGrad = Instance.new("UIGradient")
+headerGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Theme.AccentA),
+    ColorSequenceKeypoint.new(1, Theme.AccentB),
+}
+headerGrad.Rotation = 20
+headerGrad.Parent = HeaderCard
+
+-- أيقونة الهيدر
+local IconBubble = Instance.new("Frame")
+IconBubble.Size = UDim2.new(0, 32, 0, 32)
+IconBubble.Position = UDim2.new(0, 8, 0.5, -16)
+IconBubble.BackgroundColor3 = Color3.new(1, 1, 1)
+IconBubble.BackgroundTransparency = 0.8
+IconBubble.BorderSizePixel = 0
+IconBubble.Parent = HeaderCard
+Instance.new("UICorner", IconBubble).CornerRadius = UDim.new(0, 10)
+
+local Icon = Instance.new("TextLabel")
+Icon.Size = UDim2.new(1, 0, 1, 0)
+Icon.BackgroundTransparency = 1
+Icon.Text = "💰"
+Icon.TextSize = 18
+Icon.Font = Enum.Font.GothamBold
+Icon.Parent = IconBubble
+
+-- نص الهيدر
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -110, 0, 18)
+Title.Position = UDim2.new(0, 48, 0, 9)
+Title.BackgroundTransparency = 1
+Title.Text = "CASH COLLECTOR"
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Parent = HeaderCard
+
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Size = UDim2.new(1, -110, 0, 12)
+Subtitle.Position = UDim2.new(0, 48, 0, 27)
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "v17.1 • Auto Farm"
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.Font = Enum.Font.Gotham
+Subtitle.TextSize = 9
+Subtitle.TextColor3 = Color3.fromRGB(240, 240, 250)
+Subtitle.TextTransparency = 0.2
+Subtitle.Parent = HeaderCard
+
+-- زر المعلومات ℹ️
+local infoBtn = Instance.new("TextButton")
+infoBtn.Size = UDim2.new(0, 26, 0, 26)
+infoBtn.Position = UDim2.new(1, -66, 0.5, -13)
+infoBtn.BackgroundColor3 = Color3.new(1, 1, 1)
+infoBtn.BackgroundTransparency = 0.75
+infoBtn.Text = "ℹ️"
+infoBtn.TextColor3 = Color3.new(1, 1, 1)
+infoBtn.Font = Enum.Font.GothamBold
+infoBtn.TextSize = 14
+infoBtn.BorderSizePixel = 0
+infoBtn.AutoButtonColor = false
+infoBtn.Parent = HeaderCard
+Instance.new("UICorner", infoBtn).CornerRadius = UDim.new(1, 0)
+
+infoBtn.MouseEnter:Connect(function()
+    tw(infoBtn, {BackgroundTransparency = 0.5}, 0.15)
+end)
+infoBtn.MouseLeave:Connect(function()
+    tw(infoBtn, {BackgroundTransparency = 0.75}, 0.15)
+end)
+
+-- زر التصغير ➖
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 26, 0, 26)
+toggleBtn.Position = UDim2.new(1, -34, 0.5, -13)
+toggleBtn.BackgroundColor3 = Color3.new(1, 1, 1)
+toggleBtn.BackgroundTransparency = 0.75
+toggleBtn.Text = "−"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 18
+toggleBtn.BorderSizePixel = 0
+toggleBtn.AutoButtonColor = false
+toggleBtn.Parent = HeaderCard
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+toggleBtn.MouseEnter:Connect(function()
+    tw(toggleBtn, {BackgroundTransparency = 0.5}, 0.15)
+end)
+toggleBtn.MouseLeave:Connect(function()
+    tw(toggleBtn, {BackgroundTransparency = 0.75}, 0.15)
+end)
+
+-- ========== Body (المحتوى) ==========
+local Body = Instance.new("Frame")
+Body.Name = "Body"
+Body.Size = UDim2.new(1, -24, 0, 210)
+Body.Position = UDim2.new(0, 12, 0, 70)
+Body.BackgroundTransparency = 1
+Body.Parent = Frame
+
+-- Status Pill
+local StatusPill = Instance.new("Frame")
+StatusPill.Size = UDim2.new(1, 0, 0, 32)
+StatusPill.BackgroundColor3 = Theme.BgCard
+StatusPill.BorderSizePixel = 0
+StatusPill.Parent = Body
+Instance.new("UICorner", StatusPill).CornerRadius = UDim.new(0, 10)
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 8, 0, 8)
+StatusDot.Position = UDim2.new(0, 12, 0.5, -4)
+StatusDot.BackgroundColor3 = Theme.Danger
+StatusDot.BorderSizePixel = 0
+StatusDot.Parent = StatusPill
+Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -30, 1, 0)
+StatusLabel.Position = UDim2.new(0, 28, 0, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "متوقف"
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Font = Enum.Font.GothamMedium
+StatusLabel.TextSize = 12
+StatusLabel.TextColor3 = Theme.Text
+StatusLabel.Parent = StatusPill
+
+-- Stats (الإحصائيات)
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(1, 0, 0, 58)
+StatsFrame.Position = UDim2.new(0, 0, 0, 40)
+StatsFrame.BackgroundTransparency = 1
+StatsFrame.Parent = Body
+
+local function makeStatCard(x, w, titleTxt, color)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(w, -3, 1, 0)
+    card.Position = UDim2.new(x, 0, 0, 0)
+    card.BackgroundColor3 = Theme.BgCard
+    card.BorderSizePixel = 0
+    card.Parent = StatsFrame
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+    
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1, 0, 0, 14)
+    t.Position = UDim2.new(0, 0, 0, 8)
+    t.BackgroundTransparency = 1
+    t.Text = titleTxt
+    t.Font = Enum.Font.Gotham
+    t.TextSize = 9
+    t.TextColor3 = Theme.TextDim
+    t.Parent = card
+    
+    local v = Instance.new("TextLabel")
+    v.Size = UDim2.new(1, 0, 0, 26)
+    v.Position = UDim2.new(0, 0, 0, 24)
+    v.BackgroundTransparency = 1
+    v.Text = "0"
+    v.Font = Enum.Font.GothamBold
+    v.TextSize = 18
+    v.TextColor3 = color
+    v.Parent = card
+    
+    return v
+end
+
+local collectedLabel = makeStatCard(0, 0.34, "جمع", Theme.Success)
+local failedLabel = makeStatCard(0.34, 0.34, "فشل", Theme.Danger)
+local activeLabel = makeStatCard(0.68, 0.34, "نشط", Theme.AccentB)
+
+-- Methods (الطرق)
+local MethodsFrame = Instance.new("Frame")
+MethodsFrame.Size = UDim2.new(1, 0, 0, 28)
+MethodsFrame.Position = UDim2.new(0, 0, 0, 106)
+MethodsFrame.BackgroundTransparency = 1
+MethodsFrame.Parent = Body
+
+-- زر التشغيل
+local btn = Instance.new("TextButton")
+btn.Size = UDim2.new(1, 0, 0, 48)
+btn.Position = UDim2.new(0, 0, 1, -48)
+btn.BackgroundColor3 = Color3.new(1, 1, 1)
+btn.Text = ""
+btn.BorderSizePixel = 0
+btn.AutoButtonColor = false
+btn.Parent = Body
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
+
+local btnGrad = Instance.new("UIGradient")
+btnGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Theme.Danger),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 130, 130)),
+}
+btnGrad.Rotation = 20
+btnGrad.Parent = btn
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Color = Color3.new(1, 1, 1)
+btnStroke.Thickness = 1
+btnStroke.Transparency = 1
+btnStroke.Parent = btn
+
+local btnScale = Instance.new("UIScale")
+btnScale.Scale = 1
+btnScale.Parent = btn
+
+local btnIcon = Instance.new("TextLabel")
+btnIcon.Size = UDim2.new(0, 26, 1, 0)
+btnIcon.Position = UDim2.new(0, 16, 0, 0)
+btnIcon.BackgroundTransparency = 1
+btnIcon.Text = "▶"
+btnIcon.Font = Enum.Font.GothamBold
+btnIcon.TextSize = 16
+btnIcon.TextColor3 = Color3.new(1, 1, 1)
+btnIcon.Parent = btn
+
+local btnText = Instance.new("TextLabel")
+btnText.Size = UDim2.new(1, -60, 1, 0)
+btnText.Position = UDim2.new(0, 48, 0, 0)
+btnText.BackgroundTransparency = 1
+btnText.Text = "بدء الجمع"
+btnText.TextXAlignment = Enum.TextXAlignment.Left
+btnText.Font = Enum.Font.GothamBold
+btnText.TextSize = 14
+btnText.TextColor3 = Color3.new(1, 1, 1)
+btnText.Parent = btn
+
+btn.MouseEnter:Connect(function()
+    tw(btnStroke, {Transparency = 0.5, Thickness = 2}, 0.15)
+    tw(btnScale, {Scale = 1.02}, 0.15)
+end)
+btn.MouseLeave:Connect(function()
+    tw(btnStroke, {Transparency = 1, Thickness = 1}, 0.15)
+    tw(btnScale, {Scale = 1}, 0.15)
+end)
+
+-- ========== ℹ️ واجهة المعلومات ==========
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Name = "InfoFrame"
+InfoFrame.Size = UDim2.new(1, -24, 0, 150)
+InfoFrame.Position = UDim2.new(0, 12, 0, 280)
+InfoFrame.BackgroundColor3 = Theme.BgCard
+InfoFrame.BorderSizePixel = 0
+InfoFrame.Visible = false
+InfoFrame.Parent = Frame
+Instance.new("UICorner", InfoFrame).CornerRadius = UDim.new(0, 10)
+
+local infoStroke = Instance.new("UIStroke")
+infoStroke.Color = Theme.AccentB
+infoStroke.Thickness = 1
+infoStroke.Transparency = 0.3
+infoStroke.Parent = InfoFrame
+
+local infoTitle = Instance.new("TextLabel")
+infoTitle.Size = UDim2.new(1, -20, 0, 20)
+infoTitle.Position = UDim2.new(0, 10, 0, 8)
+infoTitle.BackgroundTransparency = 1
+infoTitle.Text = "⚠️ رسالة مهمة"
+infoTitle.Font = Enum.Font.GothamBold
+infoTitle.TextSize = 12
+infoTitle.TextColor3 = Theme.Danger
+infoTitle.TextXAlignment = Enum.TextXAlignment.Right
+infoTitle.Parent = InfoFrame
+
+-- 🔴 هنا تم تعديل الرسالة
+local infoText = Instance.new("TextLabel")
+infoText.Size = UDim2.new(1, -20, 1, -35)
+infoText.Position = UDim2.new(0, 10, 0, 30)
+infoText.BackgroundTransparency = 1
+infoText.Text = "هذا السكربت مخصص لسرقة الفلوس التي يتم رميها على الأرض.\n\nوقت ما يصير تحديث بالماب أو فعالية، الأدمن بيبدأ يرمي فلوس على الأرض. هذا السكربت شغال تلقائياً وبيلقطها ويسرقها أول بأول قبل أي حد ثاني.\n\n📱 متوافق مع الهاتف والكمبيوتر."
+infoText.Font = Enum.Font.Gotham
+infoText.TextSize = 11
+infoText.TextColor3 = Theme.Text
+infoText.TextWrapped = true
+infoText.TextXAlignment = Enum.TextXAlignment.Right
+infoText.TextYAlignment = Enum.TextYAlignment.Top
+infoText.Parent = InfoFrame
+
+-- ========== برمجة الأزرار ==========
+local isCollapsed = false
+local isInfoOpen = false
+local FULL_H = 290
+local INFO_H = 450 -- 290 + 160 لـ واجهة المعلومات
+local COLLAPSED_H = 68
+
+-- زر المعلومات
+infoBtn.MouseButton1Click:Connect(function()
+    isInfoOpen = not isInfoOpen
+    
+    if isInfoOpen and isCollapsed then
+        isCollapsed = false
+        Body.Visible = true
+        toggleBtn.Text = "−"
+    end
+    
+    InfoFrame.Visible = isInfoOpen
+    local targetH = isInfoOpen and INFO_H or (isCollapsed and COLLAPSED_H or FULL_H)
+    tw(Frame, {Size = UDim2.new(0, 260, 0, targetH)}, 0.35, Enum.EasingStyle.Quart)
+    
+    if isInfoOpen then
+        infoBtn.Text = "✖"
+        infoBtn.TextColor3 = Theme.Danger
+    else
+        infoBtn.Text = "ℹ️"
+        infoBtn.TextColor3 = Color3.new(1, 1, 1)
+    end
+end)
+
+-- زر التصغير
+toggleBtn.MouseButton1Click:Connect(function()
+    isCollapsed = not isCollapsed
+    
+    if isCollapsed then
+        Body.Visible = false
+        InfoFrame.Visible = false
+        tw(Frame, {Size = UDim2.new(0, 260, 0, COLLAPSED_H)}, 0.35, Enum.EasingStyle.Quart)
+        toggleBtn.Text = "+"
+    else
+        Body.Visible = true
+        InfoFrame.Visible = isInfoOpen
+        local targetH = isInfoOpen and INFO_H or FULL_H
+        tw(Frame, {Size = UDim2.new(0, 260, 0, targetH)}, 0.35, Enum.EasingStyle.Quart)
+        toggleBtn.Text = "−"
+    end
+end)
+
+-- ========== الإعدادات ==========
+_G.CashStealer = false
+_G.MaxRetries = 30
+_G.RetryDelay = 0.15
+_G.ItemTimeout = 8.0
+_G.WaitAtCash = 1.0
+
+local collected = 0
+local failed = 0
+local activeCount = 0
+local connection = nil
+local activeJobs = {}
+
+-- فحص الطرق
+local hasProx = pcall(function() return fireproximityprompt end)
+local hasClick = pcall(function() return fireclickdetector end)
+local hasTouch = pcall(function() return firetouchinterest end)
+
+-- إنشاء badges
+local function createBadge(x, letter, active)
+    local badge = Instance.new("Frame")
+    badge.Size = UDim2.new(0.34, -3, 1, 0)
+    badge.Position = UDim2.new(x, 0, 0, 0)
+    badge.BackgroundColor3 = Theme.BgCard
+    badge.BorderSizePixel = 0
+    badge.Parent = MethodsFrame
+    Instance.new("UICorner", badge).CornerRadius = UDim.new(0, 8)
+    
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 6, 0, 6)
+    dot.Position = UDim2.new(0, 10, 0.5, -3)
+    dot.BackgroundColor3 = active and Theme.Success or Theme.TextDim
+    dot.BorderSizePixel = 0
+    dot.Parent = badge
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+    
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -20, 1, 0)
+    lbl.Position = UDim2.new(0, 22, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = letter
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 10
+    lbl.TextColor3 = Theme.Text
+    lbl.Parent = badge
+end
+
+createBadge(0, "Prox", hasProx)
+createBadge(0.34, "Click", hasClick)
+createBadge(0.68, "Touch", hasTouch)
+
+-- ========== دوال السكربت الأساسية ==========
+local function getRoot()
+    local char = player.Character
+    if not char then return nil end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function isBlacklisted(fullName)
+    local n = fullName:lower()
+    for _, w in ipairs({"table","board","game","ludo","جلسة","طاولة","seat","chair","bench","lockedframe","barrier"}) do
+        if n:find(w) then return true end
+    end
+    return false
+end
+
+local function updateUI()
+    collectedLabel.Text = tostring(collected)
+    failedLabel.Text = tostring(failed)
+    activeLabel.Text = tostring(activeCount)
+end
+
+local cachedRemotes = {}
+local function findRemotes()
+    cachedRemotes = {}
+    for _, name in ipairs({"CashDrop","CollectCash","PickupCash","Collect","Pickup","GetCash","Cash"}) do
+        local ok, remote = pcall(function() return ReplicatedStorage:FindFirstChild(name, true) end)
+        if ok and remote then
+            table.insert(cachedRemotes, remote)
+        end
+    end
+end
+
+local function pressAll(item, char)
+    if not item or not item.Parent then return end
+    
+    local prompt = item:FindFirstChildOfClass("ProximityPrompt")
+    if not prompt then prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true) end
+    if prompt and hasProx then
+        pcall(function()
+            if prompt.HoldDuration > 0 then prompt.HoldDuration = 0 end
+            fireproximityprompt(prompt)
+        end)
+    end
+    
+    local clicker = item:FindFirstChildOfClass("ClickDetector")
+    if not clicker then clicker = item:FindFirstChildWhichIsA("ClickDetector", true) end
+    if clicker and hasClick then
+        pcall(fireclickdetector, clicker, 100)
+    end
+    
+    if hasTouch and item:IsA("BasePart") and char then
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then
+            pcall(function()
+                firetouchinterest(root, item, 0)
+                task.wait(0.01)
+                firetouchinterest(root, item, 1)
+            end)
+        end
+    end
+    
+    for _, remote in ipairs(cachedRemotes) do
+        pcall(function()
+            if remote:IsA("RemoteEvent") then
+                remote:FireServer(item)
+            elseif remote:IsA("RemoteFunction") then
+                remote:InvokeServer(item)
+            end
+        end)
+    end
+end
+
+local function isItemGone(item)
+    if not item or not item.Parent then return true end
+    if item:IsA("BasePart") and item.Transparency >= 0.95 then return true end
+    return false
+end
+
+local function collectItem(item)
+    if not _G.CashStealer then return end
+    if activeJobs[item] then return end
+    if not item or not item.Parent then return end
+    if not item:IsA("BasePart") then return end
+    
+    activeJobs[item] = true
+    activeCount += 1
+    
+    task.spawn(function()
+        local char = player.Character
+        local root = getRoot()
+        if not root or not char then
+            activeJobs[item] = nil
+            activeCount -= 1
+            return
+        end
+        
+        local savedCFrame = root.CFrame
+        local savedRotation = savedCFrame - savedCFrame.Position
+        local savedY = savedCFrame.Position.Y
+        
+        local targetPos = Vector3.new(item.Position.X, savedY, item.Position.Z)
+        pcall(function()
+            root.CFrame = CFrame.new(targetPos) * savedRotation
+        end)
+        
+        task.wait(_G.WaitAtCash)
+        
+        local startTime = tick()
+        while _G.CashStealer and (tick() - startTime) < _G.ItemTimeout do
+            if isItemGone(item) then break end
+            
+            char = player.Character
+            if not char then break end
+            root = char:FindFirstChild("HumanoidRootPart")
+            if not root then break end
+            
+            local currentTarget = Vector3.new(item.Position.X, savedY, item.Position.Z)
+            pcall(function()
+                root.CFrame = CFrame.new(currentTarget) * savedRotation
+            end)
+            
+            pressAll(item, char)
+            task.wait(_G.RetryDelay)
+        end
+        
+        if isItemGone(item) then
+            collected += 1
+        else
+            failed += 1
+        end
+        
+        if _G.CashStealer then
+            root = getRoot()
+            if root then
+                pcall(function() root.CFrame = savedCFrame end)
+            end
+        end
+        
+        activeJobs[item] = nil
+        activeCount -= 1
+        if activeCount < 0 then activeCount = 0 end
+    end)
+end
+
+local function start()
+    findRemotes()
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.spawn(collectItem, obj)
+            task.wait(0.05)
+        end
+    end
+    
+    connection = workspace.DescendantAdded:Connect(function(obj)
+        if not _G.CashStealer then return end
+        if obj.Name == "CashDrop" and not isBlacklisted(obj:GetFullName()) then
+            task.wait(0.05)
+            task.spawn(collectItem, obj)
+        end
+    end)
+end
+
+local function stop()
+    _G.CashStealer = false
+    if connection then connection:Disconnect() connection = nil end
+    activeJobs = {}
+    activeCount = 0
+    updateUI()
+end
+
+-- Pulse animation
+local pulseRunning = false
+local function startPulse()
+    if pulseRunning then return end
+    pulseRunning = true
+    task.spawn(function()
+        while _G.CashStealer do
+            StatusDot.BackgroundTransparency = 0
+            tw(StatusDot, {BackgroundTransparency = 0.5}, 0.5)
+            task.wait(0.5)
+            tw(StatusDot, {BackgroundTransparency = 0}, 0.5)
+            task.wait(0.5)
+        end
+        StatusDot.BackgroundTransparency = 0
+        pulseRunning = false
+    end)
+end
+
+-- زر التشغيل
+btn.MouseButton1Click:Connect(function()
+    _G.CashStealer = not _G.CashStealer
+    
+    tw(btnScale, {Scale = 0.95}, 0.08)
+    task.wait(0.1)
+    tw(btnScale, {Scale = 1}, 0.15, Enum.EasingStyle.Back)
+    
+    if _G.CashStealer then
+        btnText.Text = "إيقاف الجمع"
+        btnIcon.Text = "■"
+        btnGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Theme.Success),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(130, 240, 170)),
+        }
+        StatusLabel.Text = "شغال"
+        StatusLabel.TextColor3 = Theme.Success
+        StatusDot.BackgroundColor3 = Theme.Success
+        tw(frameStroke, {Color = Theme.Success, Transparency = 0.4}, 0.3)
+        startPulse()
+        start()
+    else
+        btnText.Text = "بدء الجمع"
+        btnIcon.Text = "▶"
+        btnGrad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Theme.Danger),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 130, 130)),
+        }
+        StatusLabel.Text = "متوقف"
+        StatusLabel.TextColor3 = Theme.Text
+        StatusDot.BackgroundColor3 = Theme.Danger
+        tw(frameStroke, {Color = Theme.AccentA, Transparency = 0.55}, 0.3)
+        stop()
+    end
+end)
+
+-- UI update loop
+task.spawn(function()
+    while task.wait(0.3) do
+        updateUI()
+    end
+end)
