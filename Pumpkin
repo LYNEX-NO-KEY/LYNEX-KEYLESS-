@@ -1,0 +1,329 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+local guiName = "SpookyPumpkinUI"
+if CoreGui:FindFirstChild(guiName) then CoreGui:FindFirstChild(guiName):Destroy() end
+
+-- ==========================================
+-- 1. ألوان الهالوين
+-- ==========================================
+local ColorBg = Color3.fromRGB(20, 10, 30)        -- بنفسجي غامق (ليل هالوين)
+local ColorTitle = Color3.fromRGB(35, 15, 45)     -- بنفسجي أفتح للشريط
+local ColorPumpkin = Color3.fromRGB(255, 110, 0)  -- برتقالي اليقطين
+local ColorText = Color3.fromRGB(255, 245, 230)   -- أبيض دافئ
+local ColorRed = Color3.fromRGB(220, 40, 40)      -- أحمر للإيقاف
+local ColorGreen = Color3.fromRGB(50, 255, 50)    -- أخضر للتوهج
+
+-- ==========================================
+-- 2. بناء الواجهة
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 250, 0, 150)
+MainFrame.Position = UDim2.new(0, 30, 0.2, 0) 
+MainFrame.BackgroundColor3 = ColorBg
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+-- إطار متوهج بلون اليقطين
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = ColorPumpkin
+UIStroke.Thickness = 1.5
+UIStroke.Transparency = 0.2
+UIStroke.Parent = MainFrame
+
+-- الشريط العلوي
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = ColorTitle
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 20, 60)),
+    ColorSequenceKeypoint.new(1, ColorTitle)
+})
+TitleGradient.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🎃 كنز الهالوين التلقائي 🎃"
+TitleLabel.TextColor3 = ColorPumpkin
+TitleLabel.TextSize = 14
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 2
+TitleLabel.Parent = TitleBar
+
+-- زر التصغير
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+MinimizeBtn.Position = UDim2.new(1, -36, 0, 7)
+MinimizeBtn.BackgroundColor3 = ColorTitle
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = ColorPumpkin
+MinimizeBtn.TextSize = 20
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.ZIndex = 2
+MinimizeBtn.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 8)
+MinCorner.Parent = MinimizeBtn
+
+local MinStroke = Instance.new("UIStroke")
+MinStroke.Color = ColorPumpkin
+MinStroke.Thickness = 1
+MinStroke.Parent = MinimizeBtn
+
+-- حاوية المحتوى
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- زر التشغيل الرئيسي
+local ActionBtn = Instance.new("TextButton")
+ActionBtn.Size = UDim2.new(0.85, 0, 0, 45)
+ActionBtn.Position = UDim2.new(0.5, 0, 0.5, -5)
+ActionBtn.BackgroundColor3 = ColorPumpkin
+ActionBtn.Text = "" 
+ActionBtn.BorderSizePixel = 0
+ActionBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+ActionBtn.Parent = ContentFrame
+
+local ActionCorner = Instance.new("UICorner")
+ActionCorner.CornerRadius = UDim.new(0, 10)
+ActionCorner.Parent = ActionBtn
+
+local ActionGradient = Instance.new("UIGradient")
+ActionGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 140, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 70, 0))
+})
+ActionGradient.Rotation = 90
+ActionGradient.Parent = ActionBtn
+
+-- إضاءة للزر
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = ColorPumpkin
+BtnStroke.Thickness = 2
+BtnStroke.Transparency = 0.4
+BtnStroke.Parent = ActionBtn
+
+-- النص المنفصل (ليظهر فوق كل شيء)
+local ActionText = Instance.new("TextLabel")
+ActionText.Size = UDim2.new(1, 0, 1, 0)
+ActionText.BackgroundTransparency = 1
+ActionText.Text = "بدء الجمع 👻"
+ActionText.TextColor3 = ColorText
+ActionText.TextSize = 15
+ActionText.Font = Enum.Font.GothamBold
+ActionText.ZIndex = 5
+ActionText.Parent = ActionBtn
+
+-- مؤشر الحالة
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 8, 0, 8)
+StatusDot.Position = UDim2.new(0, 25, 1, -20)
+StatusDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+StatusDot.BorderSizePixel = 0
+StatusDot.Parent = ContentFrame
+local DotCorner = Instance.new("UICorner")
+DotCorner.CornerRadius = UDim.new(1, 0)
+DotCorner.Parent = StatusDot
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -50, 0, 20)
+StatusLabel.Position = UDim2.new(0, 40, 1, -26)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "الوضع الليلي... جاهز 🦇"
+StatusLabel.TextColor3 = ColorPumpkin
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = ContentFrame
+
+-- ==========================================
+-- 3. تأثيرات الأزرار
+-- ==========================================
+ActionBtn.MouseButton1Down:Connect(function()
+    TweenService:Create(ActionBtn, TweenInfo.new(0.1), {Size = UDim2.new(0.8, 0, 0, 40)}):Play()
+end)
+ActionBtn.MouseButton1Up:Connect(function()
+    TweenService:Create(ActionBtn, TweenInfo.new(0.1), {Size = UDim2.new(0.85, 0, 0, 45)}):Play()
+end)
+
+-- ==========================================
+-- 4. منطق التصغير
+-- ==========================================
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        ContentFrame.Visible = false
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 250, 0, 40)}):Play()
+        MinimizeBtn.Text = "+"
+        MinimizeBtn.BackgroundColor3 = ColorPumpkin
+        MinimizeBtn.TextColor3 = ColorBg
+    else
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 250, 0, 150)}):Play()
+        task.wait(0.1) 
+        ContentFrame.Visible = true
+        MinimizeBtn.Text = "−"
+        MinimizeBtn.BackgroundColor3 = ColorTitle
+        MinimizeBtn.TextColor3 = ColorPumpkin
+    end
+end)
+
+-- ==========================================
+-- 5. منطق الجمع (نفس السكربت اللي ضبط)
+-- ==========================================
+local function getExactPumpkins()
+    local parts = {}
+    local halloweenFolder = Workspace:FindFirstChild("Halloween")
+    if halloweenFolder then
+        for _, obj in ipairs(halloweenFolder:GetDescendants()) do
+            if obj:IsA("BasePart") and (string.find(obj.Name, "Copyright") or obj.Name == "Cash") then
+                table.insert(parts, obj)
+            end
+        end
+    end
+    return parts
+end
+
+local isRunning = false
+local loopThread = nil
+local savedPosition = nil
+
+local function stopScript()
+    if not isRunning then return end
+    isRunning = false
+    
+    if loopThread then
+        task.cancel(loopThread)
+        loopThread = nil
+    end
+    
+    ActionText.Text = "بدء الجمع 👻"
+    ActionGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 140, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 70, 0))
+    })
+    BtnStroke.Color = ColorPumpkin
+    StatusLabel.Text = "تم الإيقاف والرجوع..."
+    StatusDot.BackgroundColor3 = ColorRed
+    
+    if savedPosition and player.Character then
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            root.CFrame = savedPosition
+            StatusLabel.Text = "رجعت لمكانك 🎃"
+            task.wait(1)
+            StatusLabel.Text = "الوضع الليلي... جاهز 🦇"
+            StatusDot.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        end
+    end
+    savedPosition = nil
+end
+
+player.CharacterAdded:Connect(function()
+    if isRunning then stopScript() end
+end)
+
+ActionBtn.MouseButton1Click:Connect(function()
+    if isRunning then
+        stopScript()
+    else
+        isRunning = true
+        ActionText.Text = "إيقاف والرجوع 🛑"
+        ActionGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 50, 50)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 20, 20))
+        })
+        BtnStroke.Color = ColorRed
+        
+        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not myRoot then return end
+        
+        savedPosition = myRoot.CFrame
+        StatusDot.BackgroundColor3 = ColorGreen
+        StatusLabel.Text = "جاري جمع الكاش..."
+        
+        loopThread = task.spawn(function()
+            while isRunning do
+                local pumpkins = getExactPumpkins()
+                
+                if #pumpkins == 0 then
+                    StatusLabel.Text = "ما في يقطين حالياً..."
+                    task.wait(2)
+                else
+                    for i, part in ipairs(pumpkins) do
+                        if not isRunning then break end
+                        StatusLabel.Text = "جمع " .. i .. " من " .. #pumpkins
+                        
+                        myRoot.CFrame = CFrame.new(part.Position + Vector3.new(0, 2, 0))
+                        task.wait(0.2) 
+                        myRoot.CFrame = CFrame.new(part.Position)
+                        
+                        pcall(function()
+                            firetouchinterest(myRoot, part, 0)
+                            task.wait(0.1)
+                            firetouchinterest(myRoot, part, 1)
+                        end)
+                        task.wait(0.3)
+                    end
+                end
+                task.wait(0.5)
+            end
+        end)
+    end
+end)
+
+-- ==========================================
+-- 6. السحب
+-- ==========================================
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
