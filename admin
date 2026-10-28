@@ -1,0 +1,554 @@
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+
+local guiName = "AdminSmartDetector"
+if CoreGui:FindFirstChild(guiName) then CoreGui:FindFirstChild(guiName):Destroy() end
+
+-- ==========================================
+-- 1. الألوان والتصميم 
+-- ==========================================
+local ColorBg = Color3.fromRGB(13, 15, 23)         
+local ColorTitleBar = Color3.fromRGB(20, 24, 38)   
+local ColorAccent = Color3.fromRGB(0, 210, 255)    
+local ColorAccentDark = Color3.fromRGB(0, 150, 200)
+local ColorText = Color3.fromRGB(255, 255, 255)    
+local ColorTextDim = Color3.fromRGB(140, 150, 170) 
+local ColorCard = Color3.fromRGB(25, 30, 48)       
+local ColorBtnOff = Color3.fromRGB(35, 42, 60)     
+local ColorRed = Color3.fromRGB(255, 60, 90)       
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 240, 0, 310) 
+MainFrame.Position = UDim2.new(0.5, -120, 0.5, -155) 
+MainFrame.BackgroundColor3 = ColorBg
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true 
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = ColorAccent
+UIStroke.Thickness = 1
+UIStroke.Transparency = 0.6 
+UIStroke.Parent = MainFrame
+
+-- ==========================================
+-- 2. الشريط العلوي
+-- ==========================================
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = ColorTitleBar
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, ColorTitleBar),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 35, 55))
+})
+TitleGradient.Parent = TitleBar
+
+local BottomCover = Instance.new("Frame")
+BottomCover.Size = UDim2.new(1, 0, 0, 10)
+BottomCover.Position = UDim2.new(0, 0, 1, -10)
+BottomCover.BackgroundColor3 = ColorTitleBar
+BottomCover.BorderSizePixel = 0
+BottomCover.Parent = TitleBar
+
+local BottomCoverGradient = Instance.new("UIGradient")
+BottomCoverGradient.Color = TitleGradient.Color
+BottomCoverGradient.Parent = BottomCover
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🛡️ كاشف الادمن"
+TitleLabel.TextColor3 = ColorAccent
+TitleLabel.TextSize = 13
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.ZIndex = 2
+TitleLabel.Parent = TitleBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 22, 0, 22)
+MinimizeBtn.Position = UDim2.new(1, -28, 0, 6)
+MinimizeBtn.BackgroundColor3 = ColorBtnOff
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = ColorText
+MinimizeBtn.TextSize = 16
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.ZIndex = 2
+MinimizeBtn.Parent = TitleBar
+local MinCorner = Instance.new("UICorner") MinCorner.CornerRadius = UDim.new(0, 6) MinCorner.Parent = MinimizeBtn
+
+-- ==========================================
+-- 3. شريط التبويبات (Tabs)
+-- ==========================================
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.Position = UDim2.new(0, 0, 0, 35)
+TabBar.BackgroundColor3 = ColorTitleBar
+TabBar.BorderSizePixel = 0
+TabBar.Parent = MainFrame
+
+local TabLine = Instance.new("Frame") 
+TabLine.Size = UDim2.new(0.5, 0, 0, 2)
+TabLine.Position = UDim2.new(0, 0, 1, -2)
+TabLine.BackgroundColor3 = ColorAccent
+TabLine.BorderSizePixel = 0
+TabLine.Parent = TabBar
+
+local Tab1Btn = Instance.new("TextButton")
+Tab1Btn.Size = UDim2.new(0.5, 0, 1, 0)
+Tab1Btn.BackgroundTransparency = 1
+Tab1Btn.Text = "أدوات الكشف"
+Tab1Btn.TextColor3 = ColorAccent
+Tab1Btn.Font = Enum.Font.GothamBold
+Tab1Btn.TextSize = 12
+Tab1Btn.Parent = TabBar
+
+local Tab2Btn = Instance.new("TextButton")
+Tab2Btn.Size = UDim2.new(0.5, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.5, 0, 0, 0)
+Tab2Btn.BackgroundTransparency = 1
+Tab2Btn.Text = "بيانات الإدارة"
+Tab2Btn.TextColor3 = ColorTextDim
+Tab2Btn.Font = Enum.Font.GothamBold
+Tab2Btn.TextSize = 12
+Tab2Btn.Parent = TabBar
+
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, 0, 1, -65)
+ContentFrame.Position = UDim2.new(0, 0, 0, 65)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- ==========================================
+-- 4. تبويب أدوات الكشف (ESP)
+-- ==========================================
+local ESPFrame = Instance.new("Frame")
+ESPFrame.Size = UDim2.new(1, 0, 1, 0)
+ESPFrame.BackgroundTransparency = 1
+ESPFrame.Visible = true
+ESPFrame.Parent = ContentFrame
+
+local function createToggleButton(text, yPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.5, 0, 0, yPos)
+    btn.BackgroundColor3 = ColorBtnOff
+    btn.Text = text .. ": OFF"
+    btn.TextColor3 = ColorTextDim
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.BorderSizePixel = 0
+    btn.AnchorPoint = Vector2.new(0.5, 0)
+    btn.Parent = ESPFrame
+    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 8) corner.Parent = btn
+    local stroke = Instance.new("UIStroke") stroke.Color = Color3.fromRGB(60, 60, 70) stroke.Thickness = 1 stroke.Parent = btn
+    return btn, stroke
+end
+
+local HighlightBtn, HLStroke = createToggleButton("التحديد الأحمر", 15)
+local TextBtn, TextStroke = createToggleButton("كلمة (أدمن)", 60)
+local LineBtn, LineStroke = createToggleButton("خط الكشف", 105)
+
+-- ==========================================
+-- 5. تبويب بيانات الإدارة
+-- ==========================================
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Size = UDim2.new(1, 0, 1, 0)
+InfoFrame.BackgroundTransparency = 1
+InfoFrame.Visible = false
+InfoFrame.Parent = ContentFrame
+
+local ListFrame = Instance.new("ScrollingFrame")
+ListFrame.Size = UDim2.new(1, -16, 1, -16)
+ListFrame.Position = UDim2.new(0, 8, 0, 8)
+ListFrame.BackgroundColor3 = ColorBg
+ListFrame.BorderSizePixel = 0
+ListFrame.ScrollBarThickness = 3
+ListFrame.ScrollBarImageColor3 = ColorAccent
+ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ListFrame.Parent = InfoFrame
+local ListCorner = Instance.new("UICorner") ListCorner.CornerRadius = UDim.new(0, 6) ListCorner.Parent = ListFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ListFrame
+
+-- ==========================================
+-- 6. منطق التبويبات
+-- ==========================================
+local function switchTab(tabNum)
+    if tabNum == 1 then
+        ESPFrame.Visible = true
+        InfoFrame.Visible = false
+        TweenService:Create(TabLine, TweenInfo.new(0.3), {Position = UDim2.new(0, 0, 1, -2)}):Play()
+        Tab1Btn.TextColor3 = ColorAccent
+        Tab2Btn.TextColor3 = ColorTextDim
+    else
+        ESPFrame.Visible = false
+        InfoFrame.Visible = true
+        TweenService:Create(TabLine, TweenInfo.new(0.3), {Position = UDim2.new(0.5, 0, 1, -2)}):Play()
+        Tab1Btn.TextColor3 = ColorTextDim
+        Tab2Btn.TextColor3 = ColorAccent
+    end
+end
+
+Tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
+Tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
+
+-- التصغير
+local isMinimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        TabBar.Visible = false
+        ContentFrame.Visible = false
+        BottomCover.Visible = false 
+        MainFrame:TweenSize(UDim2.new(0, 240, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        MinimizeBtn.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 240, 0, 310), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        task.wait(0.1) 
+        TabBar.Visible = true
+        ContentFrame.Visible = true
+        BottomCover.Visible = true 
+        MinimizeBtn.Text = "−"
+    end
+end)
+
+-- ==========================================
+-- 7. منطق الكشف الذكي (أدوات + السيرفر)
+-- ==========================================
+local detectedAdmins = {} 
+local activeHighlights = {}
+local activeBillboards = {}
+local activeLines = {} 
+local adminCards = {} 
+
+local isHighlightActive = false
+local isTextActive = false
+local isLineActive = false
+
+local function hasAdminHandcuffs(plr)
+    local backpack = plr:FindFirstChild("Backpack")
+    local char = plr.Character
+    local function check(container)
+        if container then
+            for _, tool in ipairs(container:GetChildren()) do
+                local name = string.lower(tool.Name)
+                if string.find(name, "admin") and string.find(name, "handcuff") then return true end
+                if string.find(tool.Name, "ادارة") and string.find(tool.Name, "كلبش") then return true end
+            end
+        end
+        return false
+    end
+    return check(backpack) or check(char)
+end
+
+local function fetchServerAdmins()
+    local betweenSides = ReplicatedStorage:FindFirstChild("BetweenSides")
+    if betweenSides and betweenSides:FindFirstChild("Remotes") and betweenSides.Remotes:FindFirstChild("Functions") then
+        local getAdmin = betweenSides.Remotes.Functions:FindFirstChild("GetAdminPlayers")
+        if getAdmin then
+            local success, result = pcall(function() return getAdmin:InvokeServer() end)
+            if success and result and type(result) == "table" then
+                return result
+            end
+        end
+    end
+    return {}
+end
+
+local function createAdminCard(plr)
+    if adminCards[plr] then return end
+    
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, 0, 0, 50)
+    card.BackgroundColor3 = ColorCard
+    card.BorderSizePixel = 0
+    card.Parent = ListFrame
+    local cardCorner = Instance.new("UICorner") cardCorner.CornerRadius = UDim.new(0, 6) cardCorner.Parent = card
+    local cardStroke = Instance.new("UIStroke") cardStroke.Color = ColorAccent cardStroke.Thickness = 1 cardStroke.Transparency = 0.8 cardStroke.Parent = card
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 40, 0, 40)
+    avatar.Position = UDim2.new(0, 5, 0, 5) 
+    avatar.BackgroundColor3 = ColorBg
+    avatar.BorderSizePixel = 0
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. plr.UserId .. "&w=150&h=150"
+    avatar.Parent = card
+    local avatarCorner = Instance.new("UICorner") avatarCorner.CornerRadius = UDim.new(1, 0) avatarCorner.Parent = avatar
+
+    local displayName = Instance.new("TextLabel")
+    displayName.Size = UDim2.new(1, -55, 0, 15)
+    displayName.Position = UDim2.new(0, 50, 0, 5) 
+    displayName.BackgroundTransparency = 1
+    displayName.Text = plr.DisplayName
+    displayName.TextColor3 = ColorText
+    displayName.TextSize = 11
+    displayName.Font = Enum.Font.GothamBold
+    displayName.TextXAlignment = Enum.TextXAlignment.Left
+    displayName.Parent = card
+
+    local username = Instance.new("TextLabel")
+    username.Size = UDim2.new(1, -55, 0, 15)
+    username.Position = UDim2.new(0, 50, 0, 18)
+    username.BackgroundTransparency = 1
+    username.Text = "@" .. plr.Name
+    username.TextColor3 = ColorAccent
+    username.TextSize = 10
+    username.Font = Enum.Font.Gotham
+    username.TextXAlignment = Enum.TextXAlignment.Left
+    username.Parent = card
+
+    local idLabel = Instance.new("TextLabel")
+    idLabel.Size = UDim2.new(1, -55, 0, 15)
+    idLabel.Position = UDim2.new(0, 50, 0, 31)
+    idLabel.BackgroundTransparency = 1
+    idLabel.Text = "ID: " .. plr.UserId
+    idLabel.TextColor3 = ColorTextDim
+    idLabel.TextSize = 9
+    idLabel.Font = Enum.Font.Code
+    idLabel.TextXAlignment = Enum.TextXAlignment.Left
+    idLabel.Parent = card
+
+    adminCards[plr] = card
+end
+
+local function removeAdminCard(plr)
+    if adminCards[plr] then adminCards[plr]:Destroy() adminCards[plr] = nil end
+end
+
+local function applyHighlight(plr)
+    if not plr.Character or activeHighlights[plr] then return end
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = plr.Character
+    highlight.FillColor = ColorRed
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = CoreGui
+    activeHighlights[plr] = highlight
+end
+local function removeHighlight(plr)
+    if activeHighlights[plr] then activeHighlights[plr]:Destroy() activeHighlights[plr] = nil end
+end
+
+local function applyText(plr)
+    if not plr.Character or activeBillboards[plr] then return end
+    local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
+    if not head then return end
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 120, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Adornee = head
+    billboard.Parent = CoreGui
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.BackgroundTransparency = 1
+    -- ⚠️ هنا التعديل: غيرنا النص إلى "ادمن" فقط
+    txt.Text = "👑 ادمن 👑" 
+    txt.TextColor3 = ColorAccent
+    txt.TextStrokeTransparency = 0
+    txt.Font = Enum.Font.GothamBold
+    txt.TextSize = 14
+    txt.Parent = billboard
+    activeBillboards[plr] = billboard
+end
+local function removeText(plr)
+    if activeBillboards[plr] then activeBillboards[plr]:Destroy() activeBillboards[plr] = nil end
+end
+
+local function applyLine(plr)
+    if not plr.Character or activeLines[plr] then return end
+    if Drawing then
+        local line = Drawing.new("Line")
+        line.Visible = false
+        line.Thickness = 2
+        line.Color = ColorAccent
+        line.Transparency = 0.6
+        activeLines[plr] = line
+    end
+end
+local function removeLine(plr)
+    if activeLines[plr] then activeLines[plr]:Remove() activeLines[plr] = nil end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not isLineActive then return end
+    local screenSize = camera.ViewportSize
+    local startPos = Vector2.new(screenSize.X / 2, screenSize.Y)
+    for plr, line in pairs(activeLines) do
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local screenPos, onScreen = camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if onScreen then
+                line.From = startPos
+                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                line.Visible = true
+            else
+                line.Visible = false
+            end
+        else
+            line.Visible = false
+        end
+    end
+end)
+
+local function scanLoop()
+    while task.wait(1.5) do 
+        local currentAdmins = {}
+        
+        -- 1. فحص الكلبشة الحقيقية
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= player and hasAdminHandcuffs(plr) then
+                currentAdmins[plr] = true
+            end
+        end
+        
+        -- 2. جلب الأدمن من السيرفر (الرموت)
+        local serverAdmins = fetchServerAdmins()
+        if type(serverAdmins) == "table" then
+            for _, adminName in pairs(serverAdmins) do
+                local targetPlr = Players:FindFirstChild(tostring(adminName))
+                if targetPlr then
+                    currentAdmins[targetPlr] = true
+                end
+            end
+        end
+        
+        -- 3. تطبيق التحديدات
+        for plr in pairs(currentAdmins) do
+            detectedAdmins[plr] = true
+            createAdminCard(plr)
+            if isHighlightActive then applyHighlight(plr) end
+            if isTextActive then applyText(plr) end
+            if isLineActive then applyLine(plr) end
+        end
+        
+        -- 4. تنظيف اللي خرجوا
+        for plr in pairs(detectedAdmins) do
+            if not currentAdmins[plr] then
+                detectedAdmins[plr] = nil
+                removeAdminCard(plr)
+                removeHighlight(plr)
+                removeText(plr)
+                removeLine(plr)
+            end
+        end
+        
+        ListFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
+    end
+end
+task.spawn(scanLoop)
+
+HighlightBtn.MouseButton1Click:Connect(function()
+    isHighlightActive = not isHighlightActive
+    if isHighlightActive then
+        HighlightBtn.Text = "التحديد الأحمر: ON"
+        HighlightBtn.BackgroundColor3 = ColorAccentDark
+        HighlightBtn.TextColor3 = ColorText
+        HLStroke.Color = ColorAccent
+        for plr in pairs(detectedAdmins) do applyHighlight(plr) end
+    else
+        HighlightBtn.Text = "التحديد الأحمر: OFF"
+        HighlightBtn.BackgroundColor3 = ColorBtnOff
+        HighlightBtn.TextColor3 = ColorTextDim
+        HLStroke.Color = Color3.fromRGB(60, 60, 70)
+        for plr in pairs(activeHighlights) do removeHighlight(plr) end
+    end
+end)
+
+TextBtn.MouseButton1Click:Connect(function()
+    isTextActive = not isTextActive
+    if isTextActive then
+        TextBtn.Text = "كلمة (أدمن): ON"
+        TextBtn.BackgroundColor3 = ColorAccentDark
+        TextBtn.TextColor3 = ColorText
+        TextStroke.Color = ColorAccent
+        for plr in pairs(detectedAdmins) do applyText(plr) end
+    else
+        TextBtn.Text = "كلمة (أدمن): OFF"
+        TextBtn.BackgroundColor3 = ColorBtnOff
+        TextBtn.TextColor3 = ColorTextDim
+        TextStroke.Color = Color3.fromRGB(60, 60, 70)
+        for plr in pairs(activeBillboards) do removeText(plr) end
+    end
+end)
+
+LineBtn.MouseButton1Click:Connect(function()
+    isLineActive = not isLineActive
+    if isLineActive then
+        LineBtn.Text = "خط الكشف: ON"
+        LineBtn.BackgroundColor3 = ColorAccentDark
+        LineBtn.TextColor3 = ColorText
+        LineStroke.Color = ColorAccent
+        for plr in pairs(detectedAdmins) do applyLine(plr) end
+    else
+        LineBtn.Text = "خط الكشف: OFF"
+        LineBtn.BackgroundColor3 = ColorBtnOff
+        LineBtn.TextColor3 = ColorTextDim
+        LineStroke.Color = Color3.fromRGB(60, 60, 70)
+        for plr in pairs(activeLines) do removeLine(plr) end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    detectedAdmins[plr] = nil
+    removeAdminCard(plr)
+    removeHighlight(plr)
+    removeText(plr)
+    removeLine(plr)
+end)
+
+-- السحب
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
