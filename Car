@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -13,6 +14,7 @@ local flySpeed = 150
 local carSpeedValue = 200
 local verticalDir = 0
 local forwardDir = 0
+local lateralDir = 0
 
 -- ============ Design Tokens ============
 local C = {
@@ -42,7 +44,6 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent = playerGui
 
--- الحجم صغير
 local W, H = 280, 360
 local EXPANDED_SIZE = UDim2.new(0, W, 0, H)
 local COLLAPSED_SIZE = UDim2.new(0, W, 0, 40)
@@ -559,21 +560,14 @@ local DownBtn    = ctrlBtn("هبوط",  Color3.fromRGB(75, 55, 55),  0.25)
 local ForwardBtn = ctrlBtn("أمام",  Color3.fromRGB(45, 75, 55),  0.5)
 local BackBtn    = ctrlBtn("خلف",   Color3.fromRGB(70, 62, 45),  0.75)
 
-local FlyOneShotBtn = createCard(tab1, {
-    name = "FlyOneShotBtn",
-    icon = "rbxassetid://6031243533",
-    text = "تطير سياره",
-    size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 108),
-})
-
+-- ⚠️ تم شطب زر "تطير سياره" — HoverBtn صار y=108 و ClimbBtn صار y=144
 local HoverBtn = createCard(tab1, {
     name = "HoverBtn",
     icon = "rbxassetid://6034684930",
     text = "تثبيت في هواء",
     isToggle = true,
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 144),
+    position = UDim2.new(0, 0, 0, 108),
 })
 
 local ClimbBtn = createCard(tab1, {
@@ -582,7 +576,7 @@ local ClimbBtn = createCard(tab1, {
     text = "تسلق",
     isToggle = true,
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 180),
+    position = UDim2.new(0, 0, 0, 144),
 })
 
 -- ============ Populate Tab 2: سرعة ============
@@ -624,20 +618,13 @@ local BrakeBtn = createCard(tab2, {
     position = UDim2.new(0, 0, 0, 144),
 })
 
-local RewindBtn = createCard(tab2, {
-    name = "RewindBtn",
-    icon = "rbxassetid://8400033134",
-    text = "ترجيع",
-    size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 180),
-})
-
+-- ⚠️ تم شطب زر "ترجيع" — ResetBtn صار y=180 و NoclipBtn صار y=216
 local ResetBtn = createCard(tab2, {
     name = "ResetBtn",
     icon = "rbxassetid://7734053426",
     text = "رست",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 216),
+    position = UDim2.new(0, 0, 0, 180),
 })
 
 local NoclipBtn = createCard(tab2, {
@@ -646,7 +633,7 @@ local NoclipBtn = createCard(tab2, {
     text = "اختراق",
     isToggle = true,
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 252),
+    position = UDim2.new(0, 0, 0, 216),
 })
 
 -- ============ Populate Tab 3: تحكم ============
@@ -661,12 +648,22 @@ local WheelieBtn = createCard(tab3, {
     position = UDim2.new(0, 0, 0, 0),
 })
 
+-- 🆕 زر ستوبي (عكس الويللي)
+local StoppieBtn = createCard(tab3, {
+    name = "StoppieBtn",
+    icon = "rbxassetid://6034684930",
+    text = "ستوبي (رفع عكسي)",
+    isToggle = true,
+    size = UDim2.new(1, 0, 0, 32),
+    position = UDim2.new(0, 0, 0, 36),
+})
+
 local RotLeftBtn = createCard(tab3, {
     name = "RotLeftBtn",
     icon = "rbxassetid://6031091004",
     text = "دوران شمال",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 36),
+    position = UDim2.new(0, 0, 0, 72),
 })
 
 local RotRightBtn = createCard(tab3, {
@@ -674,7 +671,7 @@ local RotRightBtn = createCard(tab3, {
     icon = "rbxassetid://6035047448",
     text = "دوران يمين",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 72),
+    position = UDim2.new(0, 0, 0, 108),
 })
 
 local SuperJumpBtn = createCard(tab3, {
@@ -682,7 +679,7 @@ local SuperJumpBtn = createCard(tab3, {
     icon = "rbxassetid://6031243533",
     text = "قفزة عالية",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 108),
+    position = UDim2.new(0, 0, 0, 144),
 })
 
 local SlamDunkBtn = createCard(tab3, {
@@ -690,7 +687,7 @@ local SlamDunkBtn = createCard(tab3, {
     icon = "rbxassetid://7734053426",
     text = "سلام دانك",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 144),
+    position = UDim2.new(0, 0, 0, 180),
 })
 
 local LoopBtn = createCard(tab3, {
@@ -698,7 +695,7 @@ local LoopBtn = createCard(tab3, {
     icon = "rbxassetid://6035047448",
     text = "لوب كامل",
     size = UDim2.new(1, 0, 0, 32),
-    position = UDim2.new(0, 0, 0, 180),
+    position = UDim2.new(0, 0, 0, 216),
 })
 
 -- ============ Populate Tab 4: شقلبات ============
@@ -770,18 +767,18 @@ local tab5 = TabContents[5]
 
 local instructionsData = {
     { "طيران (تحكم)", "الطيران والتحكم بالاتجاه" },
+    { "تحكم WASD (طيران)", "W:أمام S:خلف A:يسار D:يمين Space:صعود Shift/Ctrl:هبوط" },
     { "سرعة الطيران", "سرعة الطيران (10-5000)" },
     { "صعود / هبوط", "الحركة العمودية في الطيران" },
     { "أمام / خلف", "الحركة الأمامية والخلفية" },
     { "سرعة سياره", "تثبيت سرعة السيارة" },
     { "السرعة", "قيمة السرعة (10-10000)" },
-    { "ترجيع", "الرجوع لآخر موقع آمن" },
     { "اندفاع", "دفعة سريعة للأمام" },
     { "رست", "رفع وإعادة تعيين السيارة" },
     { "فرامل", "إيقاف السيارة فوراً" },
     { "تسلق", "تسلق الجدران للأعلى" },
     { "اختراق", "اختراق الأجسام" },
-    { "تطير سياره", "دفعة عمودية للأعلى" },
+    { "ستوبي", "عكس الويللي (نزول المقدمة / رفع الخلفي)" },
     { "شقلبه في هواء", "شقلبة 360 أمامية" },
     { "دوران شمال", "تدوير 90 درجة يسار" },
     { "دوران يمين", "تدوير 90 درجة يمين" },
@@ -819,7 +816,6 @@ for i, data in ipairs(instructionsData) do
     rC.CornerRadius = UDim.new(0, 6)
     rC.Parent = row
     
-    -- Stripe
     local stripe = Instance.new("Frame")
     stripe.Parent = row
     stripe.Position = UDim2.new(0, 3, 0, 6)
@@ -985,19 +981,6 @@ local function getVehicle()
     return nil, nil
 end
 
-local lastSafeCFrame = nil
-local lastVehicle = nil
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        local vehicle, mainPart = getVehicle()
-        if mainPart and mainPart.AssemblyLinearVelocity.Y < 20 then
-            lastSafeCFrame = mainPart.CFrame
-            lastVehicle = vehicle
-        end
-    end
-end)
-
 -- ===== doCustomFlip =====
 local isAirMoveActive = false
 local function doCustomFlip(duration, liftHeight, rotationFn)
@@ -1065,6 +1048,7 @@ local function stopFly()
     flyActive = false
     verticalDir = 0
     forwardDir = 0
+    lateralDir = 0
     setToggleState(FlyToggleBtn, false)
     if flyBV then flyBV:Destroy() flyBV = nil end
     if flyBG then flyBG:Destroy() flyBG = nil end
@@ -1099,7 +1083,9 @@ FlyToggleBtn.MouseButton1Click:Connect(function()
                 flyBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook)
                 local v = verticalDir * flySpeed * 0.7
                 local f = forwardDir * flySpeed
-                flyBV.Velocity = (flatLook * f) + Vector3.new(0, v, 0)
+                local l = lateralDir * flySpeed * 0.7
+                local rightLook = Vector3.new(-flatLook.Z, 0, flatLook.X)
+                flyBV.Velocity = (flatLook * f) + (rightLook * l) + Vector3.new(0, v, 0)
                 task.wait(0.03)
             end
         end)
@@ -1123,17 +1109,42 @@ bindHold(DownBtn,    function() if flyActive then verticalDir = -1 end end, func
 bindHold(ForwardBtn, function() if flyActive then forwardDir = 1 end end,  function() if forwardDir == 1 then forwardDir = 0 end end)
 bindHold(BackBtn,    function() if flyActive then forwardDir = -1 end end, function() if forwardDir == -1 then forwardDir = 0 end end)
 
--- ============ Fly one shot ============
-FlyOneShotBtn.MouseButton1Click:Connect(function()
-    local _, mainPart = getVehicle()
-    if mainPart then
-        local bv = Instance.new("BodyVelocity")
-        bv.Velocity = Vector3.new(0, flySpeed, 0)
-        bv.MaxForce = Vector3.new(0, 500000, 0)
-        bv.Parent = mainPart
-        Debris:AddItem(bv, 1)
-    else
-        showWarning("اركب سيارة أولاً!")
+-- ============ Keyboard (WASD) Controls for Flight ============
+local kbHeld = {}
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed or not flyActive then return end
+    local k = input.KeyCode
+    if k == Enum.KeyCode.W then kbHeld.W = true; forwardDir = 1
+    elseif k == Enum.KeyCode.S then kbHeld.S = true; forwardDir = -1
+    elseif k == Enum.KeyCode.A then kbHeld.A = true; lateralDir = -1
+    elseif k == Enum.KeyCode.D then kbHeld.D = true; lateralDir = 1
+    elseif k == Enum.KeyCode.Space then kbHeld.Space = true; verticalDir = 1
+    elseif k == Enum.KeyCode.LeftShift or k == Enum.KeyCode.LeftControl then kbHeld.Shift = true; verticalDir = -1
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    local k = input.KeyCode
+    if k == Enum.KeyCode.W then kbHeld.W = false; if forwardDir == 1 then forwardDir = 0 end
+    elseif k == Enum.KeyCode.S then kbHeld.S = false; if forwardDir == -1 then forwardDir = 0 end
+    elseif k == Enum.KeyCode.A then kbHeld.A = false; if lateralDir == -1 then lateralDir = 0 end
+    elseif k == Enum.KeyCode.D then kbHeld.D = false; if lateralDir == 1 then lateralDir = 0 end
+    elseif k == Enum.KeyCode.Space then kbHeld.Space = false; if verticalDir == 1 then verticalDir = 0 end
+    elseif k == Enum.KeyCode.LeftShift or k == Enum.KeyCode.LeftControl then kbHeld.Shift = false; if verticalDir == -1 then verticalDir = 0 end
+    end
+end)
+
+FlyToggleBtn:GetAttributeChangedSignal("Active"):Connect(function()
+    if FlyToggleBtn:GetAttribute("Active") then
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then forwardDir = 1; kbHeld.W = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then forwardDir = -1; kbHeld.S = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then lateralDir = -1; kbHeld.A = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then lateralDir = 1; kbHeld.D = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then verticalDir = 1; kbHeld.Space = true end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            verticalDir = -1; kbHeld.Shift = true
+        end
     end
 end)
 
@@ -1178,7 +1189,7 @@ CarSpeedBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ============ Rush / Brake / Rewind / Reset ============
+-- ============ Rush / Brake / Reset ============
 RushBtn.MouseButton1Click:Connect(function()
     local _, mainPart = getVehicle()
     if mainPart then
@@ -1198,21 +1209,6 @@ BrakeBtn.MouseButton1Click:Connect(function()
     if mainPart then
         mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    else
-        showWarning("اركب سيارة أولاً!")
-    end
-end)
-
-RewindBtn.MouseButton1Click:Connect(function()
-    local vehicle, mainPart = getVehicle()
-    if mainPart then
-        if lastSafeCFrame and lastVehicle == vehicle then
-            mainPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            mainPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            mainPart.CFrame = lastSafeCFrame
-        else
-            showWarning("لم يتم العثور على موقع سابق آمن!")
-        end
     else
         showWarning("اركب سيارة أولاً!")
     end
@@ -1456,6 +1452,45 @@ WheelieBtn.MouseButton1Click:Connect(function()
             if flatLook.Magnitude < 0.05 then flatLook = Vector3.new(0, 0, -1) end
             flatLook = flatLook.Unit
             wheelieBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook) * CFrame.Angles(-tiltAngle, 0, 0)
+            task.wait(0.03)
+        end
+    end)
+end)
+
+-- ============ Stoppie (عكس الويللي) ============
+local stoppieActive = false
+local stoppieBG = nil
+StoppieBtn.MouseButton1Click:Connect(function()
+    local _, mainPart = getVehicle()
+    if not mainPart then showWarning("اركب سيارة أولاً!") return end
+    if stoppieActive then
+        stoppieActive = false
+        setToggleState(StoppieBtn, false)
+        if stoppieBG then stoppieBG:Destroy() stoppieBG = nil end
+        return
+    end
+    stoppieActive = true
+    setToggleState(StoppieBtn, true)
+    local tiltAngle = math.rad(35)
+    stoppieBG = Instance.new("BodyGyro")
+    stoppieBG.MaxTorque = Vector3.new(500000, 500000, 500000)
+    stoppieBG.P = 5000
+    stoppieBG.D = 500
+    stoppieBG.Parent = mainPart
+    task.spawn(function()
+        while stoppieActive and stoppieBG and stoppieBG.Parent do
+            local _, mp = getVehicle()
+            if not mp or mp ~= stoppieBG.Parent then
+                stoppieActive = false
+                setToggleState(StoppieBtn, false)
+                if stoppieBG then stoppieBG:Destroy() stoppieBG = nil end
+                break
+            end
+            local look = mp.CFrame.LookVector
+            local flatLook = Vector3.new(look.X, 0, look.Z)
+            if flatLook.Magnitude < 0.05 then flatLook = Vector3.new(0, 0, -1) end
+            flatLook = flatLook.Unit
+            stoppieBG.CFrame = CFrame.lookAt(mp.Position, mp.Position + flatLook) * CFrame.Angles(tiltAngle, 0, 0)
             task.wait(0.03)
         end
     end)
