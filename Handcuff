@@ -1,0 +1,799 @@
+--[[
+    🌟 سكربت الهالوين الأسطوري (Legendary Halloween Edition) 🌟
+    - إصلاح مشكلة الانتقال (Desync) عن طريق توجيه الكاميرا وزيادة وقت الانتظار.
+]]
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local MAX_DISTANCE = 15
+
+local function findRemote(name)
+    local remote = ReplicatedStorage:FindFirstChild(name, true)
+    if remote and remote:IsA("RemoteEvent") then return remote end
+    return nil
+end
+local throwRemote = findRemote("ThrowHandler")
+
+-- ==============================================================
+-- الجزء الأول: قائمة الأرواح (الواجهة الكبيرة)
+-- ==============================================================
+
+local listGui = Instance.new("ScreenGui")
+listGui.Name = "HalloweenProPlayersUI"
+listGui.ResetOnSpawn = false
+listGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+listGui.Parent = PlayerGui
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 45, 0, 45)
+toggleBtn.Position = UDim2.new(0, 15, 0.6, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(30, 0, 40)
+toggleBtn.Text = "🎃"
+toggleBtn.TextSize = 24
+toggleBtn.TextColor3 = Color3.fromRGB(255, 150, 0)
+toggleBtn.Parent = listGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 12)
+local toggleStroke = Instance.new("UIStroke", toggleBtn)
+toggleStroke.Color = Color3.fromRGB(255, 100, 0)
+toggleStroke.Thickness = 2
+toggleStroke.Transparency = 0.2
+toggleStroke.Parent = toggleBtn
+
+local listFrame = Instance.new("Frame")
+listFrame.Size = UDim2.new(0, 280, 0, 380) 
+listFrame.Position = UDim2.new(0.5, -140, 0.5, -190)
+listFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+listFrame.BackgroundTransparency = 0.1
+listFrame.BorderSizePixel = 0
+listFrame.Active = true
+listFrame.ClipsDescendants = true
+listFrame.Parent = listGui
+Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 12)
+
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 10, 50)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 0, 10))
+}
+mainGradient.Rotation = 90
+mainGradient.Parent = listFrame
+
+local frameStroke = Instance.new("UIStroke", listFrame)
+frameStroke.Thickness = 2
+frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local strokeGradient = Instance.new("UIGradient")
+strokeGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 255, 50))
+}
+strokeGradient.Parent = frameStroke
+
+local listTitleBar = Instance.new("Frame")
+listTitleBar.Size = UDim2.new(1, 0, 0, 35)
+listTitleBar.BackgroundColor3 = Color3.fromRGB(30, 0, 40)
+listTitleBar.BackgroundTransparency = 0.2
+listTitleBar.BorderSizePixel = 0
+listTitleBar.Parent = listFrame
+Instance.new("UICorner", listTitleBar).CornerRadius = UDim.new(0, 10)
+
+local listTitleLabel = Instance.new("TextLabel")
+listTitleLabel.Size = UDim2.new(1, -70, 1, 0)
+listTitleLabel.Position = UDim2.new(0, 10, 0, 0)
+listTitleLabel.BackgroundTransparency = 1
+listTitleLabel.Text = "👻 قائمة الأرواح"
+listTitleLabel.TextColor3 = Color3.fromRGB(255, 150, 0)
+listTitleLabel.TextSize = 14
+listTitleLabel.Font = Enum.Font.SourceSansBold
+listTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+listTitleLabel.Parent = listTitleBar
+
+local listInfoBtn = Instance.new("TextButton")
+listInfoBtn.Size = UDim2.new(0, 25, 0, 25)
+listInfoBtn.Position = UDim2.new(1, -60, 0, 5) 
+listInfoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+listInfoBtn.Text = "؟"
+listInfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+listInfoBtn.TextSize = 14
+listInfoBtn.Font = Enum.Font.SourceSansBold
+listInfoBtn.Parent = listTitleBar
+Instance.new("UICorner", listInfoBtn).CornerRadius = UDim.new(0, 6)
+
+local listMinimizeBtn = Instance.new("TextButton")
+listMinimizeBtn.Size = UDim2.new(0, 25, 0, 25)
+listMinimizeBtn.Position = UDim2.new(1, -30, 0, 5)
+listMinimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 0)
+listMinimizeBtn.Text = "▲" 
+listMinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+listMinimizeBtn.TextSize = 14
+listMinimizeBtn.Font = Enum.Font.SourceSansBold
+listMinimizeBtn.Parent = listTitleBar
+Instance.new("UICorner", listMinimizeBtn).CornerRadius = UDim.new(0, 6)
+
+local searchFrame = Instance.new("Frame")
+searchFrame.Size = UDim2.new(1, -20, 0, 30)
+searchFrame.Position = UDim2.new(0, 10, 0, 35)
+searchFrame.BackgroundColor3 = Color3.fromRGB(10, 15, 10)
+searchFrame.BackgroundTransparency = 0.2
+searchFrame.BorderSizePixel = 0
+searchFrame.Parent = listFrame
+Instance.new("UICorner", searchFrame).CornerRadius = UDim.new(0, 6)
+local searchStroke = Instance.new("UIStroke", searchFrame)
+searchStroke.Color = Color3.fromRGB(50, 200, 50)
+searchStroke.Thickness = 1.5
+searchStroke.Transparency = 0.5
+
+local searchIcon = Instance.new("TextLabel")
+searchIcon.Size = UDim2.new(0, 30, 1, 0)
+searchIcon.Position = UDim2.new(0, 5, 0, 0)
+searchIcon.BackgroundTransparency = 1
+searchIcon.Text = "🕸️"
+searchIcon.TextSize = 14
+searchIcon.Parent = searchFrame
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -70, 1, 0)
+searchBox.Position = UDim2.new(0, 30, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.Text = ""
+searchBox.PlaceholderText = "ابحث عن روح..."
+searchBox.PlaceholderColor3 = Color3.fromRGB(100, 200, 100)
+searchBox.TextColor3 = Color3.fromRGB(200, 255, 200)
+searchBox.TextSize = 12
+searchBox.Font = Enum.Font.SourceSansBold
+searchBox.TextXAlignment = Enum.TextXAlignment.Right
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = searchFrame
+
+local clearSearchBtn = Instance.new("TextButton")
+clearSearchBtn.Size = UDim2.new(0, 20, 0, 20)
+clearSearchBtn.Position = UDim2.new(1, -25, 0.5, -10)
+clearSearchBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+clearSearchBtn.Text = "X"
+clearSearchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+clearSearchBtn.TextSize = 10
+clearSearchBtn.Font = Enum.Font.SourceSansBold
+clearSearchBtn.Visible = false
+clearSearchBtn.Parent = searchFrame
+Instance.new("UICorner", clearSearchBtn).CornerRadius = UDim.new(0, 4)
+
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, -10, 1, -80)
+scrollingFrame.Position = UDim2.new(0, 5, 0, 70)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.ScrollBarThickness = 3
+scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 100, 0)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollingFrame.ClipsDescendants = true
+scrollingFrame.Parent = listFrame
+local listLayout = Instance.new("UIListLayout", scrollingFrame)
+listLayout.Padding = UDim.new(0, 6)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local helpFrame = Instance.new("Frame")
+helpFrame.Size = UDim2.new(1, -10, 1, -45)
+helpFrame.Position = UDim2.new(0, 5, 0, 40)
+helpFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+helpFrame.BorderSizePixel = 0
+helpFrame.Visible = false
+helpFrame.ZIndex = 10
+helpFrame.Parent = listFrame
+Instance.new("UICorner", helpFrame).CornerRadius = UDim.new(0, 8)
+
+local helpScroll = Instance.new("ScrollingFrame")
+helpScroll.Size = UDim2.new(1, -10, 1, -35)
+helpScroll.Position = UDim2.new(0, 5, 0, 5)
+helpScroll.BackgroundTransparency = 1
+helpScroll.BorderSizePixel = 0
+helpScroll.ScrollBarThickness = 3
+helpScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+helpScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+helpScroll.ZIndex = 11
+helpScroll.Parent = helpFrame
+
+local helpText = Instance.new("TextLabel")
+helpText.Size = UDim2.new(1, -10, 0, 250)
+helpText.BackgroundTransparency = 1
+helpText.Text = "🎃 شرح سكربت الأرواح:\n1. اكتب اسم الضحية في البحث.\n2. اضغط 'كلبشة' أو 'رمي'، سينتقل السكربت إليهم ويعود بك.\n\n👻 شرح الزر السريع:\n1. موجود أسفل يمين الشاشة.\n2. يمسك أقرب روح (15 متر) ويفعل بها الأسوأ.\n\n⚠️ تنبيه: جهز أداة في يدك أولاً!"
+helpText.TextColor3 = Color3.fromRGB(255, 200, 150)
+helpText.TextSize = 12
+helpText.Font = Enum.Font.SourceSansBold
+helpText.TextWrapped = true
+helpText.TextXAlignment = Enum.TextXAlignment.Right
+helpText.TextYAlignment = Enum.TextYAlignment.Top
+helpText.ZIndex = 12
+helpText.Parent = helpScroll
+
+local closeHelpBtn = Instance.new("TextButton")
+closeHelpBtn.Size = UDim2.new(1, -20, 0, 25)
+closeHelpBtn.Position = UDim2.new(0, 10, 1, -30)
+closeHelpBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 0)
+closeHelpBtn.Text = "فهمت، عد للرعب"
+closeHelpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeHelpBtn.TextSize = 12
+closeHelpBtn.Font = Enum.Font.SourceSansBold
+closeHelpBtn.ZIndex = 12
+closeHelpBtn.Parent = helpFrame
+Instance.new("UICorner", closeHelpBtn).CornerRadius = UDim.new(0, 6)
+
+listInfoBtn.MouseButton1Click:Connect(function()
+    helpFrame.Visible = true
+    searchFrame.Visible = false
+    scrollingFrame.Visible = false
+end)
+closeHelpBtn.MouseButton1Click:Connect(function()
+    helpFrame.Visible = false
+    searchFrame.Visible = true
+    scrollingFrame.Visible = true
+end)
+
+local isListMinimized = false
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+listMinimizeBtn.MouseButton1Click:Connect(function()
+    isListMinimized = not isListMinimized
+    if isListMinimized then
+        listMinimizeBtn.Text = "▼"
+        searchFrame.Visible = false
+        scrollingFrame.Visible = false
+        helpFrame.Visible = false
+        TweenService:Create(listFrame, tweenInfo, {Size = UDim2.new(0, 280, 0, 35)}):Play()
+    else
+        listMinimizeBtn.Text = "▲"
+        searchFrame.Visible = true
+        scrollingFrame.Visible = true
+        TweenService:Create(listFrame, tweenInfo, {Size = UDim2.new(0, 280, 0, 380)}):Play()
+    end
+end)
+
+toggleBtn.MouseButton1Click:Connect(function() 
+    listFrame.Visible = not listFrame.Visible 
+end)
+
+local listDragging, listDragStart, listStartPos
+listTitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        listDragging = true
+        listDragStart = input.Position
+        listStartPos = listFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then listDragging = false end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if listDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - listDragStart
+        listFrame.Position = UDim2.new(listStartPos.X.Scale, listStartPos.X.Offset + delta.X, listStartPos.Y.Scale, listStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+local function applyFilter()
+    local searchText = string.lower(searchBox.Text)
+    clearSearchBtn.Visible = (#searchText > 0)
+    for _, card in ipairs(scrollingFrame:GetChildren()) do
+        if card:IsA("Frame") then
+            local playerName = string.lower(card.Name)
+            if searchText == "" then
+                card.Visible = true
+                card.LayoutOrder = 1 
+            else
+                local matchPos = string.find(playerName, searchText)
+                if matchPos then
+                    card.Visible = true
+                    card.LayoutOrder = matchPos == 1 and 0 or 1
+                else
+                    card.Visible = false
+                end
+            end
+        end
+    end
+end
+searchBox:GetPropertyChangedSignal("Text"):Connect(applyFilter)
+clearSearchBtn.MouseButton1Click:Connect(function() searchBox.Text = ""; applyFilter() end)
+
+local safeZoneParts = {}
+local function scanForSafeZones()
+    table.clear(safeZoneParts)
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local name = string.lower(part.Name)
+            if string.find(name, "safe") or string.find(name, "protect") or string.find(name, "barrier") or string.find(name, "spawn") then
+                table.insert(safeZoneParts, part)
+            end
+        end
+    end
+end
+local function isPlayerInSafeZone(targetPlayer)
+    local char = targetPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    if targetPlayer:GetAttribute("SafeZone") or targetPlayer:GetAttribute("Protected") or targetPlayer:GetAttribute("InSafeZone") then return true end
+    for _, part in ipairs(safeZoneParts) do
+        if part and part.Parent then
+            local relativePos = part.CFrame:PointToObjectSpace(hrp.Position)
+            local halfSize = part.Size / 2
+            if math.abs(relativePos.X) <= halfSize.X and math.abs(relativePos.Y) <= halfSize.Y and math.abs(relativePos.Z) <= halfSize.Z then
+                return true
+            end
+        end
+    end
+    return false
+end
+scanForSafeZones()
+workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("BasePart") then
+        local name = string.lower(descendant.Name)
+        if string.find(name, "safe") or string.find(name, "protect") or string.find(name, "barrier") or string.find(name, "spawn") then
+            table.insert(safeZoneParts, descendant)
+        end
+    end
+end)
+
+local function isPlayerFlying(targetPlayer)
+    local char = targetPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return false end
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterDescendantsInstances = {char}
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    local raycastResult = workspace:Raycast(hrp.Position, Vector3.new(0, -100, 0), raycastParams)
+    local distanceToGround = raycastResult and (hrp.Position.Y - raycastResult.Position.Y) or 100
+    if distanceToGround > 15 then return true end
+    if hrp.AssemblyLinearVelocity.Y > 15 and hum:GetState() ~= Enum.HumanoidStateType.Jumping then return true end
+    return false
+end
+
+-- دالة الانتقال والكلبشة (تم إصلاحها لضمان الضغط)
+local function teleportGrabAndReturn(targetPlayer, clickedButton)
+    if not throwRemote then return end
+    local oldText = clickedButton.Text
+    clickedButton.Text = "..." 
+    clickedButton.BackgroundColor3 = Color3.fromRGB(100, 50, 0)
+
+    local myChar = LocalPlayer.Character
+    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local equippedTool = myChar and myChar:FindFirstChildOfClass("Tool")
+
+    if not equippedTool then
+        clickedButton.Text = "جهز أداة!"
+        task.wait(1.5)
+        clickedButton.Text = oldText
+        clickedButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) 
+        return
+    end
+
+    local targetChar = targetPlayer.Character
+    if not myHRP or not targetChar then return end
+    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
+    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+    if not targetHRP or not targetHum or targetHum.Health <= 0 then return end
+
+    -- 1. حفظ الموقع الأصلي
+    local originalCFrame = myHRP.CFrame
+    
+    -- 2. الانتقال أمام اللاعب مباشرة (توجيه الكاميرا نحوه)
+    -- CFrame.lookAt يضعنا على مسافة 2 متر أمام اللاعب وننظر إليه
+    local teleportPos = targetHRP.Position + targetHRP.CFrame.LookVector * 2
+    myHRP.CFrame = CFrame.lookAt(teleportPos, targetHRP.Position)
+    
+    -- 3. انتظار السيرفر ليتعرف على موقعنا الجديد (مهم جداً)
+    task.wait(0.5) 
+
+    -- 4. إرسال الأمر وتفعيل الأداة عدة مرات لضمان الاستجابة
+    for i = 1, 5 do
+        -- تفعيل الأداة
+        pcall(function() equippedTool:Activate() end)
+        
+        -- إرسال الأمر للسيرفر
+        pcall(function() throwRemote:FireServer("Request", targetPlayer) end)
+        
+        -- انتظار بسيط بين كل محاولة
+        task.wait(0.2) 
+    end
+
+    -- 5. انتظار أخير قبل العودة
+    task.wait(0.3)
+    
+    -- 6. العودة للموقع الأصلي
+    if myHRP and myHRP.Parent then 
+        myHRP.CFrame = originalCFrame 
+    end
+    
+    clickedButton.Text = oldText
+    clickedButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) 
+end
+
+local playerUI = {}
+local function createPlayerCard(targetPlayer)
+    if scrollingFrame:FindFirstChild(targetPlayer.Name) then return end
+
+    local card = Instance.new("Frame")
+    card.Name = targetPlayer.Name
+    card.Size = UDim2.new(1, 0, 0, 75)
+    card.BackgroundColor3 = Color3.fromRGB(25, 10, 30)
+    card.BackgroundTransparency = 0.2
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Parent = scrollingFrame
+    card.LayoutOrder = 1
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+    
+    local cardStroke = Instance.new("UIStroke", card)
+    cardStroke.Color = Color3.fromRGB(150, 50, 0)
+    cardStroke.Thickness = 1
+    cardStroke.Transparency = 0.3
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, 35, 0, 35)
+    avatar.Position = UDim2.new(0, 5, 0.5, -17.5)
+    avatar.BackgroundColor3 = Color3.fromRGB(40, 20, 40)
+    avatar.Parent = card
+    Instance.new("UICorner", avatar).CornerRadius = UDim.new(0, 17.5)
+    
+    task.spawn(function()
+        local success, img = pcall(function() return Players:GetUserThumbnailAsync(targetPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
+        if success and avatar.Parent then avatar.Image = img end
+    end)
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0, 100, 0, 14)
+    nameLabel.Position = UDim2.new(0, 45, 0, 2)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = targetPlayer.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 180, 100)
+    nameLabel.TextSize = 11
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLabel.Parent = card
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(0, 100, 0, 14)
+    statusLabel.Position = UDim2.new(0, 45, 0, 17)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "⏳ فحص..."
+    statusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    statusLabel.TextSize = 10
+    statusLabel.Font = Enum.Font.SourceSansBold
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.Parent = card
+
+    local safeLabel = Instance.new("TextLabel")
+    safeLabel.Size = UDim2.new(0, 100, 0, 14)
+    safeLabel.Position = UDim2.new(0, 45, 0, 32)
+    safeLabel.BackgroundTransparency = 1
+    safeLabel.Text = "⏳ فحص..."
+    safeLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    safeLabel.TextSize = 10
+    safeLabel.Font = Enum.Font.SourceSansBold
+    safeLabel.TextXAlignment = Enum.TextXAlignment.Left
+    safeLabel.Parent = card
+
+    local flyLabel = Instance.new("TextLabel")
+    flyLabel.Size = UDim2.new(0, 100, 0, 14)
+    flyLabel.Position = UDim2.new(0, 45, 0, 47)
+    flyLabel.BackgroundTransparency = 1
+    flyLabel.Text = "⏳ فحص..."
+    flyLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    flyLabel.TextSize = 10
+    flyLabel.Font = Enum.Font.SourceSansBold
+    flyLabel.TextXAlignment = Enum.TextXAlignment.Left
+    flyLabel.Parent = card
+
+    playerUI[targetPlayer] = { status = statusLabel, safe = safeLabel, fly = flyLabel }
+
+    local grabBtn = Instance.new("TextButton")
+    grabBtn.Size = UDim2.new(0, 60, 0, 30)
+    grabBtn.Position = UDim2.new(1, -130, 0.5, -15)
+    grabBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+    grabBtn.Text = "كلبشة"
+    grabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    grabBtn.TextSize = 10
+    grabBtn.Font = Enum.Font.SourceSansBold
+    grabBtn.Parent = card
+    Instance.new("UICorner", grabBtn).CornerRadius = UDim.new(0, 6)
+    local grabGradient = Instance.new("UIGradient")
+    grabGradient.Color = ColorSequence.new(Color3.fromRGB(255, 50, 0), Color3.fromRGB(120, 0, 0))
+    grabGradient.Rotation = 90
+    grabGradient.Parent = grabBtn
+
+    local carryBtn = Instance.new("TextButton")
+    carryBtn.Size = UDim2.new(0, 60, 0, 30)
+    carryBtn.Position = UDim2.new(1, -65, 0.5, -15)
+    carryBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 100)
+    carryBtn.Text = "رمي"
+    carryBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    carryBtn.TextSize = 10
+    carryBtn.Font = Enum.Font.SourceSansBold
+    carryBtn.Parent = card
+    Instance.new("UICorner", carryBtn).CornerRadius = UDim.new(0, 6)
+    local carryGradient = Instance.new("UIGradient")
+    carryGradient.Color = ColorSequence.new(Color3.fromRGB(150, 0, 200), Color3.fromRGB(50, 0, 100))
+    carryGradient.Rotation = 90
+    carryGradient.Parent = carryBtn
+
+    grabBtn.MouseButton1Click:Connect(function() teleportGrabAndReturn(targetPlayer, grabBtn) end)
+    carryBtn.MouseButton1Click:Connect(function() teleportGrabAndReturn(targetPlayer, carryBtn) end)
+    applyFilter()
+end
+
+local function addPlayer(player)
+    if player == LocalPlayer then return end
+    createPlayerCard(player)
+end
+local function removePlayer(player)
+    local card = scrollingFrame:FindFirstChild(player.Name)
+    if card then card:Destroy() end
+    playerUI[player] = nil
+end
+for _, player in ipairs(Players:GetPlayers()) do addPlayer(player) end
+Players.PlayerAdded:Connect(addPlayer)
+Players.PlayerRemoving:Connect(removePlayer)
+
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        for player, labels in pairs(playerUI) do
+            if labels.status and labels.status.Parent then
+                local char = player.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp then
+                        if hum.Health <= 0 then
+                            labels.status.Text = "💀 ميت"
+                            labels.status.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        else
+                            local isMoving = hum.MoveDirection.Magnitude > 0 or hrp.AssemblyLinearVelocity.Magnitude > 2
+                            if isMoving then
+                                labels.status.Text = "🏃 يتحرك"
+                                labels.status.TextColor3 = Color3.fromRGB(255, 150, 0)
+                            else
+                                labels.status.Text = "🧟 واقف"
+                                labels.status.TextColor3 = Color3.fromRGB(150, 255, 100)
+                            end
+                        end
+                        
+                        if isPlayerInSafeZone(player) then
+                            labels.safe.Text = "🛡️ منطقة آمنة"
+                            labels.safe.TextColor3 = Color3.fromRGB(0, 255, 255)
+                        else
+                            labels.safe.Text = "❌ ليس بآمن"
+                            labels.safe.TextColor3 = Color3.fromRGB(200, 100, 100)
+                        end
+
+                        if isPlayerFlying(player) then
+                            labels.fly.Text = "🦇 مفعل طيران"
+                            labels.fly.TextColor3 = Color3.fromRGB(255, 0, 255)
+                        else
+                            labels.fly.Text = "👣 على الأرض"
+                            labels.fly.TextColor3 = Color3.fromRGB(150, 150, 150)
+                        end
+                    end
+                else
+                    labels.status.Text = "⏳ يحمّل..."
+                    labels.safe.Text = "⏳ فحص..."
+                    labels.fly.Text = "⏳ فحص..."
+                end
+            end
+        end
+    end
+end)
+
+
+-- ==============================================================
+-- الجزء الثاني: الزر السريع (تصميم هالوين)
+-- ==============================================================
+
+local grabGui = Instance.new("ScreenGui")
+grabGui.Name = "HalloweenDirectGrabUI"
+grabGui.ResetOnSpawn = false
+grabGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+grabGui.Parent = PlayerGui
+
+local grabFrame = Instance.new("Frame")
+grabFrame.Size = UDim2.new(0, 180, 0, 80) 
+grabFrame.Position = UDim2.new(1, -195, 1, -100) 
+grabFrame.BackgroundColor3 = Color3.fromRGB(20, 5, 10)
+grabFrame.BackgroundTransparency = 0.1
+grabFrame.BorderSizePixel = 0
+grabFrame.Active = true
+grabFrame.ClipsDescendants = true
+grabFrame.Parent = grabGui
+Instance.new("UICorner", grabFrame).CornerRadius = UDim.new(0, 10)
+
+local grabFrameStroke = Instance.new("UIStroke", grabFrame)
+grabFrameStroke.Color = Color3.fromRGB(255, 0, 0)
+grabFrameStroke.Thickness = 2
+grabFrameStroke.Transparency = 0.2
+
+local grabTitleBar = Instance.new("Frame")
+grabTitleBar.Size = UDim2.new(1, 0, 0, 25) 
+grabTitleBar.BackgroundColor3 = Color3.fromRGB(40, 0, 10)
+grabTitleBar.BorderSizePixel = 0
+grabTitleBar.Parent = grabFrame
+Instance.new("UICorner", grabTitleBar).CornerRadius = UDim.new(0, 10)
+
+local grabTitleLabel = Instance.new("TextLabel")
+grabTitleLabel.Size = UDim2.new(1, -60, 1, 0)
+grabTitleLabel.Position = UDim2.new(0, 10, 0, 0)
+grabTitleLabel.BackgroundTransparency = 1
+grabTitleLabel.Text = "🩸 الرعب السريع"
+grabTitleLabel.TextColor3 = Color3.fromRGB(255, 100, 0)
+grabTitleLabel.TextSize = 12
+grabTitleLabel.Font = Enum.Font.SourceSansBold
+grabTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+grabTitleLabel.Parent = grabTitleBar
+
+local infoBtn = Instance.new("TextButton")
+infoBtn.Size = UDim2.new(0, 20, 0, 20)
+infoBtn.Position = UDim2.new(1, -50, 0, 2.5) 
+infoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+infoBtn.Text = "؟"
+infoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+infoBtn.TextSize = 12
+infoBtn.Font = Enum.Font.SourceSansBold
+infoBtn.Parent = grabTitleBar
+Instance.new("UICorner", infoBtn).CornerRadius = UDim.new(0, 4)
+
+local grabMinimizeBtn = Instance.new("TextButton")
+grabMinimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+grabMinimizeBtn.Position = UDim2.new(1, -25, 0, 2.5)
+grabMinimizeBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+grabMinimizeBtn.Text = "▲"
+grabMinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+grabMinimizeBtn.TextSize = 10
+grabMinimizeBtn.Font = Enum.Font.SourceSansBold
+grabMinimizeBtn.Parent = grabTitleBar
+Instance.new("UICorner", grabMinimizeBtn).CornerRadius = UDim.new(0, 4)
+
+local isGrabMinimized = false
+
+local grabButton = Instance.new("TextButton")
+grabButton.Size = UDim2.new(1, -20, 0, 40) 
+grabButton.Position = UDim2.new(0, 10, 0, 30)
+grabButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+grabButton.Text = "💀 كلبش وارمي تلقائي"
+grabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+grabButton.Font = Enum.Font.SourceSansBold 
+grabButton.TextScaled = true 
+grabButton.TextStrokeTransparency = 0.4
+grabButton.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+grabButton.Parent = grabFrame
+Instance.new("UICorner", grabButton).CornerRadius = UDim.new(0, 6)
+
+local btnGradient = Instance.new("UIGradient")
+btnGradient.Color = ColorSequence.new(Color3.fromRGB(255, 50, 0), Color3.fromRGB(100, 0, 0))
+btnGradient.Rotation = 90
+btnGradient.Parent = grabButton
+
+local infoFrame = Instance.new("Frame")
+infoFrame.Size = UDim2.new(1, -10, 0, 45)
+infoFrame.Position = UDim2.new(0, 5, 0, 30) 
+infoFrame.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+infoFrame.BorderSizePixel = 0
+infoFrame.Visible = false
+infoFrame.ZIndex = 5
+infoFrame.Parent = grabFrame
+Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 6)
+
+local infoText = Instance.new("TextLabel")
+infoText.Size = UDim2.new(1, -10, 1, -25)
+infoText.Position = UDim2.new(0, 5, 0, 2)
+infoText.BackgroundTransparency = 1
+infoText.Text = "اقترب من الضحية واضغط الزر الأحمر لتبدأ الرعب!"
+infoText.TextColor3 = Color3.fromRGB(255, 150, 0)
+infoText.TextSize = 10
+infoText.Font = Enum.Font.SourceSansBold
+infoText.TextWrapped = true
+infoText.TextScaled = true
+infoText.ZIndex = 6
+infoText.Parent = infoFrame
+
+local closeInfoBtn = Instance.new("TextButton")
+closeInfoBtn.Size = UDim2.new(1, -20, 0, 16)
+closeInfoBtn.Position = UDim2.new(0, 10, 1, -18)
+closeInfoBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+closeInfoBtn.Text = "فهمت"
+closeInfoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeInfoBtn.TextSize = 10
+closeInfoBtn.Font = Enum.Font.SourceSansBold
+closeInfoBtn.ZIndex = 6
+closeInfoBtn.Parent = infoFrame
+Instance.new("UICorner", closeInfoBtn).CornerRadius = UDim.new(0, 4)
+
+infoBtn.MouseButton1Click:Connect(function()
+    infoFrame.Visible = true
+    grabButton.Visible = false 
+end)
+closeInfoBtn.MouseButton1Click:Connect(function()
+    infoFrame.Visible = false
+    grabButton.Visible = true
+end)
+
+grabMinimizeBtn.MouseButton1Click:Connect(function()
+    isGrabMinimized = not isGrabMinimized
+    if isGrabMinimized then
+        grabMinimizeBtn.Text = "▼"
+        grabButton.Visible = false
+        infoFrame.Visible = false
+        TweenService:Create(grabFrame, tweenInfo, {Size = UDim2.new(0, 180, 0, 25)}):Play()
+    else
+        grabMinimizeBtn.Text = "▲"
+        grabButton.Visible = true
+        TweenService:Create(grabFrame, tweenInfo, {Size = UDim2.new(0, 180, 0, 80)}):Play()
+    end
+end)
+
+local grabDragging, grabDragStart, grabStartPos
+grabTitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        grabDragging = true
+        grabDragStart = input.Position
+        grabStartPos = grabFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then grabDragging = false end
+        end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if grabDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - grabDragStart
+        grabFrame.Position = UDim2.new(grabStartPos.X.Scale, grabStartPos.X.Offset + delta.X, grabStartPos.Y.Scale, grabStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+local function performDirectGrab()
+    if not throwRemote then return end
+    local myChar = LocalPlayer.Character
+    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return end
+
+    local closestPlayer = nil
+    local shortestDistance = MAX_DISTANCE
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                local dist = (myHRP.Position - hrp.Position).Magnitude
+                if dist <= shortestDistance then
+                    shortestDistance = dist
+                    closestPlayer = p
+                end
+            end
+        end
+    end
+
+    if closestPlayer then
+        grabButton.Text = "👻 جاري السحب..."
+        grabButton.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+
+        for i = 1, 3 do
+            pcall(function() throwRemote:FireServer("Request", closestPlayer) end)
+            task.wait(0.1)
+        end
+        
+        task.wait(0.2)
+        grabButton.Text = "💀 كلبش وارمي تلقائي"
+        grabButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    else
+        grabButton.Text = "🚫 لا يوجد أحد!"
+        task.wait(1)
+        grabButton.Text = "💀 كلبش وارمي تلقائي"
+    end
+end
+
+grabButton.MouseButton1Click:Connect(performDirectGrab)
+
+print("🎃✅ تم إصلاح مشكلة الانتقال! جرب الآن.")
