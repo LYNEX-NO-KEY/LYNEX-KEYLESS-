@@ -1,0 +1,675 @@
+-- ================================================
+-- 🎃 HALLOWEEN ESP v2.3 - Perfect Scaling & Fixed Text
+-- ================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local lp = Players.LocalPlayer
+local cam = workspace.CurrentCamera
+local pg = lp:WaitForChild("PlayerGui")
+
+-- ============ 🎨 HALLOWEEN THEME ============
+local T = {
+    bg      = Color3.fromRGB(13, 8, 16),
+    bg2     = Color3.fromRGB(26, 15, 31),
+    bg3     = Color3.fromRGB(45, 25, 55),
+    orange  = Color3.fromRGB(255, 107, 26),
+    orangeD = Color3.fromRGB(180, 70, 15),
+    purple  = Color3.fromRGB(160, 60, 255),
+    purpleD = Color3.fromRGB(100, 30, 160),
+    text    = Color3.fromRGB(245, 235, 255),
+    textDim = Color3.fromRGB(180, 160, 200),
+    green   = Color3.fromRGB(60, 220, 80),
+    red     = Color3.fromRGB(255, 60, 60),
+    yellow  = Color3.fromRGB(255, 200, 0),
+}
+
+-- ============ ⚙️ SETTINGS ============
+local S = {
+    master = false,
+    tracer = true, name = true, health = true,
+    distance = true, skeleton = true, tool = true,
+    box = true, highlight = false, teamCheck = false,
+    fov = false, maxDist = 500, itemEsp = false,
+}
+
+local ESP_COLORS = {
+    tracer   = T.orange,
+    name     = T.text,
+    dist     = T.orange,
+    skeleton = T.purple,
+    tool     = Color3.fromRGB(180, 200, 255),
+    box      = T.orange,
+    item     = T.purple,
+}
+
+-- ============ 📦 DATA ============
+local esp = {}
+local itemEsp = {}
+local ITEM_NAMES = {
+    Coin=true, Gems=true, Gem=true, Chest=true, Loot=true,
+    Money=true, Cash=true, Diamond=true, Gold=true, Token=true,
+}
+
+local BONES_R15 = {
+    {"Head","UpperTorso"},{"UpperTorso","LowerTorso"},
+    {"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
+    {"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
+    {"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
+    {"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+}
+local BONES_R6 = {
+    {"Head","Torso"},{"Torso","Left Arm"},{"Torso","Right Arm"},
+    {"Torso","Left Leg"},{"Torso","Right Leg"},
+}
+local MAX_BONES = #BONES_R15
+
+-- ============ ✏️ DRAWING HELPERS ============
+local function newText(size, color)
+    local t = Drawing.new("Text")
+    t.Size, t.Color, t.Center, t.Outline = size, color, true, true
+    t.OutlineColor = Color3.new(0,0,0)
+    t.Visible = false
+    return t
+end
+
+local function newLine(color, thickness)
+    local l = Drawing.new("Line")
+    l.Thickness, l.Color, l.Transparency, l.Visible = thickness or 1.5, color, 1, false
+    return l
+end
+
+local function newSquare(color, filled, thickness)
+    local s = Drawing.new("Square")
+    s.Color, s.Filled = color, filled or false
+    s.Thickness, s.Transparency, s.Visible = thickness or 1, 1, false
+    return s
+end
+
+local function hpColor(pct)
+    if pct > 0.6 then return T.green
+    elseif pct > 0.3 then return T.yellow
+    else return T.red end
+end
+
+-- ============ 🧑 PLAYER SETUP ============
+local function attachHighlight(plr, char)
+    if plr == lp or not char then return end
+    local obj = esp[plr]; if not obj then return end
+    local old = char:FindFirstChild("H_ESP"); if old then old:Destroy() end
+    local hl = Instance.new("Highlight")
+    hl.Name = "H_ESP"
+    hl.FillTransparency = 1
+    hl.OutlineTransparency = 0
+    hl.OutlineColor = T.orange
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Adornee = char
+    hl.Enabled = S.highlight and S.master
+    hl.Parent = char
+    obj.Highlight = hl
+end
+
+local function setupPlayer(plr)
+    if plr == lp then return end
+    local skel = {}
+    for i = 1, MAX_BONES do skel[i] = newLine(ESP_COLORS.skeleton, 1.5) end
+    esp[plr] = {
+        Line = newLine(ESP_COLORS.tracer, 1.2),
+        Name = newText(13, ESP_COLORS.name),
+        HealthBar = newSquare(Color3.new(0,0,0), true),
+        HealthFill = newSquare(T.green, true),
+        Dist = newText(11, ESP_COLORS.dist),
+        Tool = newText(12, ESP_COLORS.tool),
+        Skeleton = skel,
+        BoxTopL = newLine(ESP_COLORS.box, 1), BoxTopR = newLine(ESP_COLORS.box, 1),
+        BoxBotL = newLine(ESP_COLORS.box, 1), BoxBotR = newLine(ESP_COLORS.box, 1),
+        BoxTL = newLine(ESP_COLORS.box, 1.5), BoxTR = newLine(ESP_COLORS.box, 1.5),
+        BoxBL = newLine(ESP_COLORS.box, 1.5), BoxBR = newLine(ESP_COLORS.box, 1.5),
+        Highlight = nil,
+    }
+    if plr.Character then attachHighlight(plr, plr.Character) end
+    plr.CharacterAdded:Connect(function(c) task.wait(0.3) attachHighlight(plr, c) end)
+end
+
+local function removePlayer(plr)
+    local obj = esp[plr]; if not obj then return end
+    for _, k in ipairs({"Line","Name","HealthBar","HealthFill","Dist","Tool",
+        "BoxTopL","BoxTopR","BoxBotL","BoxBotR","BoxTL","BoxTR","BoxBL","BoxBR"}) do
+        pcall(function() obj[k]:Remove() end)
+    end
+    for _, l in ipairs(obj.Skeleton) do pcall(function() l:Remove() end) end
+    if obj.Highlight then obj.Highlight:Destroy() end
+    esp[plr] = nil
+end
+
+for _, p in pairs(Players:GetPlayers()) do setupPlayer(p) end
+Players.PlayerAdded:Connect(setupPlayer)
+Players.PlayerRemoving:Connect(removePlayer)
+
+-- ============ 👻 ITEM ESP ============
+local function clearItemEsp()
+    for obj, data in pairs(itemEsp) do
+        if data.Text then pcall(function() data.Text:Remove() end) end
+        if data.Highlight then data.Highlight:Destroy() end
+    end
+    itemEsp = {}
+end
+
+local function scanItems()
+    clearItemEsp()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and ITEM_NAMES[obj.Name] then
+            local t = newText(12, ESP_COLORS.item)
+            local hl = Instance.new("Highlight")
+            hl.FillColor = T.purple
+            hl.FillTransparency = 0.7
+            hl.OutlineColor = T.orange
+            hl.OutlineTransparency = 0
+            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            hl.Adornee = obj
+            hl.Enabled = false
+            hl.Parent = obj
+            itemEsp[obj] = {Text = t, Highlight = hl}
+        end
+    end
+end
+
+-- ============ 🎯 RENDER LOOP ============
+RunService.RenderStepped:Connect(function()
+    if not S.master then return end
+    local lpChar = lp.Character
+    local lpRoot = lpChar and lpChar:FindFirstChild("HumanoidRootPart")
+    local screenCenter = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+
+    if fovCircle then
+        fovCircle.Position = screenCenter
+        fovCircle.Visible = S.fov
+    end
+
+    for plr, obj in pairs(esp) do
+        local skip = false
+        if S.teamCheck and plr.Team and lp.Team and plr.Team == lp.Team then
+            skip = true
+        end
+
+        local char = plr.Character
+        local head = char and char:FindFirstChild("Head")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        if skip or not head or not hrp or not hum or hum.Health <= 0 then
+            obj.Line.Visible = false; obj.Name.Visible = false
+            obj.HealthBar.Visible = false; obj.HealthFill.Visible = false
+            obj.Dist.Visible = false; obj.Tool.Visible = false
+            for _, l in ipairs(obj.Skeleton) do l.Visible = false end
+            for _, k in ipairs({"BoxTopL","BoxTopR","BoxBotL","BoxBotR","BoxTL","BoxTR","BoxBL","BoxBR"}) do
+                obj[k].Visible = false
+            end
+            if obj.Highlight then obj.Highlight.Enabled = false end
+            continue
+        end
+
+        local from = lpRoot and lpRoot.Position or cam.CFrame.Position
+        local dist3D = (from - head.Position).Magnitude
+        if S.maxDist > 0 and dist3D > S.maxDist then
+            obj.Line.Visible = false; obj.Name.Visible = false
+            obj.HealthBar.Visible = false; obj.HealthFill.Visible = false
+            obj.Dist.Visible = false; obj.Tool.Visible = false
+            for _, l in ipairs(obj.Skeleton) do l.Visible = false end
+            for _, k in ipairs({"BoxTopL","BoxTopR","BoxBotL","BoxBotR","BoxTL","BoxTR","BoxBL","BoxBR"}) do
+                obj[k].Visible = false
+            end
+            if obj.Highlight then obj.Highlight.Enabled = false end
+            continue
+        end
+
+        -- 📐 حساب الإحداثيات بدقة من رأس اللاعب لقدمه (وداعاً لـ GetBoundingBox)
+        local topPos = head.Position + Vector3.new(0, 1.2, 0)
+        local botPos = hrp.Position - Vector3.new(0, 2.8, 0)
+
+        local sTop, oTop = cam:WorldToViewportPoint(topPos)
+        local sBot, oBot = cam:WorldToViewportPoint(botPos)
+
+        if not oTop or not oBot or sTop.Z <= 0 or sBot.Z <= 0 then
+            obj.Line.Visible = false; obj.Name.Visible = false
+            obj.HealthBar.Visible = false; obj.HealthFill.Visible = false
+            obj.Dist.Visible = false; obj.Tool.Visible = false
+            for _, l in ipairs(obj.Skeleton) do l.Visible = false end
+            for _, k in ipairs({"BoxTopL","BoxTopR","BoxBotL","BoxBotR","BoxTL","BoxTR","BoxBL","BoxBR"}) do
+                obj[k].Visible = false
+            end
+            if obj.Highlight then obj.Highlight.Enabled = false end
+            continue
+        end
+
+        -- إحداثيات المربع
+        local minY = math.min(sTop.Y, sBot.Y)
+        local maxY = math.max(sTop.Y, sBot.Y)
+        local centerX = (sTop.X + sBot.X) / 2
+        local h = maxY - minY
+        local w = h * 0.55 -- عرض المربع يتناسب مع طول اللاعب
+        
+        local minX = centerX - (w / 2)
+        local maxX = centerX + (w / 2)
+        local sp = Vector2.new(centerX, sTop.Y)
+
+        -- ❤️ Health Bar (بطول اللاعب بالضبط وثابت معه)
+        local pct = hum.Health / math.max(hum.MaxHealth, 1)
+        if S.health then
+            local barW = math.max(w * 0.1, 3) -- عرض شريط الدم
+            local barH = h -- طول شريط الدم يساوي طول اللاعب
+            
+            local barX = minX - barW - 3 -- يلتصق بيسار المربع
+            local barY = minY
+
+            obj.HealthBar.Size = Vector2.new(barW, barH)
+            obj.HealthBar.Position = Vector2.new(barX, barY)
+            obj.HealthBar.Visible = true
+
+            obj.HealthFill.Size = Vector2.new(barW, barH * pct)
+            obj.HealthFill.Position = Vector2.new(barX, barY + barH * (1 - pct))
+            obj.HealthFill.Color = hpColor(pct)
+            obj.HealthFill.Visible = true
+        else
+            obj.HealthBar.Visible = false
+            obj.HealthFill.Visible = false
+        end
+
+        -- 📝 Text Elements (مرتبة فوق المربع مباشرة)
+        local eqTool = char:FindFirstChildOfClass("Tool")
+        
+        obj.Tool.Visible = S.tool and eqTool ~= nil
+        if obj.Tool.Visible then
+            obj.Tool.Position = Vector2.new(centerX, minY - 42)
+            obj.Tool.Text = "["..eqTool.Name.."]"
+        end
+
+        obj.Name.Visible = S.name
+        if S.name then
+            obj.Name.Position = Vector2.new(centerX, minY - 26)
+            obj.Name.Text = plr.DisplayName
+        end
+
+        obj.Dist.Visible = S.distance
+        if S.distance then
+            obj.Dist.Position = Vector2.new(centerX, minY - 12)
+            obj.Dist.Text = ("%dm"):format(math.floor(dist3D))
+        end
+
+        -- 🎯 Tracer
+        if S.tracer then
+            obj.Line.Visible = true
+            obj.Line.From = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+            obj.Line.To = sp
+        else
+            obj.Line.Visible = false
+        end
+
+        -- 🦴 Skeleton
+        if S.skeleton then
+            local bones = char:FindFirstChild("UpperTorso") and BONES_R15 or BONES_R6
+            for i, b in ipairs(bones) do
+                local p1, p2 = char:FindFirstChild(b[1]), char:FindFirstChild(b[2])
+                if p1 and p2 then
+                    local s1, o1 = cam:WorldToViewportPoint(p1.Position)
+                    local s2, o2 = cam:WorldToViewportPoint(p2.Position)
+                    if o1 and o2 then
+                        obj.Skeleton[i].From = Vector2.new(s1.X, s1.Y)
+                        obj.Skeleton[i].To = Vector2.new(s2.X, s2.Y)
+                        obj.Skeleton[i].Visible = true
+                    else obj.Skeleton[i].Visible = false end
+                else obj.Skeleton[i].Visible = false end
+            end
+            for i = #bones + 1, MAX_BONES do obj.Skeleton[i].Visible = false end
+        else
+            for i = 1, MAX_BONES do obj.Skeleton[i].Visible = false end
+        end
+
+        -- 🔲 Box ESP (مرسوم على نفس إحداثيات الدم بالضبط)
+        if S.box then
+            local cs = math.min(w, h) * 0.25
+            obj.BoxTL.From = Vector2.new(minX, minY); obj.BoxTL.To = Vector2.new(minX + cs, minY)
+            obj.BoxTR.From = Vector2.new(maxX - cs, minY); obj.BoxTR.To = Vector2.new(maxX, minY)
+            obj.BoxBL.From = Vector2.new(minX, maxY); obj.BoxBL.To = Vector2.new(minX + cs, maxY)
+            obj.BoxBR.From = Vector2.new(maxX - cs, maxY); obj.BoxBR.To = Vector2.new(maxX, maxY)
+            local vcs = math.min(w, h) * 0.25
+            obj.BoxTopL.From = Vector2.new(minX, minY); obj.BoxTopL.To = Vector2.new(minX, minY + vcs)
+            obj.BoxTopR.From = Vector2.new(maxX, minY); obj.BoxTopR.To = Vector2.new(maxX, minY + vcs)
+            obj.BoxBotL.From = Vector2.new(minX, maxY - vcs); obj.BoxBotL.To = Vector2.new(minX, maxY)
+            obj.BoxBotR.From = Vector2.new(maxX, maxY - vcs); obj.BoxBotR.To = Vector2.new(maxX, maxY)
+            for _, k in ipairs({"BoxTL","BoxTR","BoxBL","BoxBR","BoxTopL","BoxTopR","BoxBotL","BoxBotR"}) do
+                obj[k].Visible = true
+            end
+        else
+            for _, k in ipairs({"BoxTL","BoxTR","BoxBL","BoxBR","BoxTopL","BoxTopR","BoxBotL","BoxBotR"}) do
+                obj[k].Visible = false
+            end
+        end
+
+        if obj.Highlight then obj.Highlight.Enabled = S.highlight end
+    end
+
+    -- Item ESP Render
+    if S.itemEsp then
+        for part, data in pairs(itemEsp) do
+            if part and part.Parent then
+                local s, o = cam:WorldToViewportPoint(part.Position)
+                if o and s.Z > 0 then
+                    data.Text.Position = Vector2.new(s.X, s.Y)
+                    data.Text.Text = part.Name
+                    data.Text.Visible = true
+                    data.Highlight.Enabled = true
+                else
+                    data.Text.Visible = false
+                    data.Highlight.Enabled = false
+                end
+            else
+                if data.Text then data.Text:Remove() end
+                if data.Highlight then data.Highlight:Destroy() end
+                itemEsp[part] = nil
+            end
+        end
+    else
+        for _, data in pairs(itemEsp) do
+            if data.Text then data.Text.Visible = false end
+            if data.Highlight then data.Highlight.Enabled = false end
+        end
+    end
+end)
+
+lp.CharacterAdded:Connect(function()
+    task.wait(1)
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then attachHighlight(p, p.Character) end
+    end
+end)
+
+-- FOV circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Radius = 250
+fovCircle.Thickness = 1.5
+fovCircle.Color = T.orange
+fovCircle.Filled = false
+fovCircle.Transparency = 0.7
+fovCircle.NumSides = 60
+fovCircle.Visible = false
+fovCircle.Position = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+
+-- ============ 🎃 UI ============
+local gui = Instance.new("ScreenGui")
+gui.Name = "H_ESP"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = pg
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 240, 0, 320)
+main.Position = UDim2.new(0.5, -120, 0.5, -160)
+main.BackgroundColor3 = T.bg
+main.BorderSizePixel = 0
+main.Active = true
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = T.orange
+stroke.Thickness = 1.5
+stroke.Transparency = 0.3
+stroke.Parent = main
+
+local title = Instance.new("Frame")
+title.Size = UDim2.new(1, 0, 0, 36)
+title.BackgroundColor3 = T.bg2
+title.BorderSizePixel = 0
+title.Parent = main
+local tc = Instance.new("UICorner", title)
+tc.CornerRadius = UDim.new(0, 14)
+local titleFix = Instance.new("Frame")
+titleFix.Size = UDim2.new(1, 0, 0, 14)
+titleFix.Position = UDim2.new(0, 0, 1, -14)
+titleFix.BackgroundColor3 = T.bg2
+titleFix.BorderSizePixel = 0
+titleFix.Parent = title
+
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size = UDim2.new(1, -70, 1, 0)
+titleLbl.Position = UDim2.new(0, 12, 0, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text = "🎃 Halloween ESP 🦇"
+titleLbl.TextColor3 = T.orange
+titleLbl.Font = Enum.Font.GothamBold
+titleLbl.TextSize = 15
+titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+titleLbl.Parent = title
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 26, 0, 26)
+minBtn.Position = UDim2.new(1, -32, 0, 5)
+minBtn.BackgroundColor3 = T.bg3
+minBtn.BorderSizePixel = 0
+minBtn.Text = "—"
+minBtn.TextColor3 = T.orange
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 16
+minBtn.Parent = title
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 8)
+
+local masterBtn = Instance.new("TextButton")
+masterBtn.Size = UDim2.new(1, -16, 0, 34)
+masterBtn.Position = UDim2.new(0, 8, 0, 42)
+masterBtn.BackgroundColor3 = T.orangeD
+masterBtn.BorderSizePixel = 0
+masterBtn.Text = "🎃 ESP: OFF"
+masterBtn.TextColor3 = T.text
+masterBtn.Font = Enum.Font.GothamBold
+masterBtn.TextSize = 14
+masterBtn.Parent = main
+Instance.new("UICorner", masterBtn).CornerRadius = UDim.new(0, 8)
+
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, -16, 0, 28)
+tabBar.Position = UDim2.new(0, 8, 0, 82)
+tabBar.BackgroundTransparency = 1
+tabBar.Parent = main
+
+local function makeTab(text, pos, width)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(width, -3, 1, 0)
+    b.Position = pos
+    b.BackgroundColor3 = T.bg2
+    b.BorderSizePixel = 0
+    b.Text = text
+    b.TextColor3 = T.textDim
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 12
+    b.Parent = tabBar
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+    return b
+end
+
+local tabPlayer = makeTab("👤 Player", UDim2.new(0, 0, 0, 0), 0.33)
+local tabVisual = makeTab("🎨 Visual", UDim2.new(0.33, 3, 0, 0), 0.34)
+local tabExtra  = makeTab("👻 Extra", UDim2.new(0.67, 6, 0, 0), 0.33)
+
+local contentC = Instance.new("Frame")
+contentC.Size = UDim2.new(1, -16, 0, 190)
+contentC.Position = UDim2.new(0, 8, 0, 116)
+contentC.BackgroundTransparency = 1
+contentC.Parent = main
+
+local function makeTabContent()
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, 0, 1, 0)
+    f.BackgroundTransparency = 1
+    f.Visible = false
+    f.Parent = contentC
+    return f
+end
+
+local playerTab = makeTabContent()
+local visualTab = makeTabContent()
+local extraTab  = makeTabContent()
+
+local function makeToggle(parent, labelText, key, pos, colorOn)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.5, -3, 0, 30)
+    btn.Position = pos
+    btn.BackgroundColor3 = S[key] and (colorOn or T.purpleD) or T.bg2
+    btn.BorderSizePixel = 0
+    btn.Text = labelText .. (S[key] and " ✓" or " ✗")
+    btn.TextColor3 = T.text
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 11
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function()
+        S[key] = not S[key]
+        btn.Text = labelText .. (S[key] and " ✓" or " ✗")
+        btn.BackgroundColor3 = S[key] and (colorOn or T.purpleD) or T.bg2
+        if key == "itemEsp" and S.itemEsp then scanItems() end
+    end)
+    return btn
+end
+
+makeToggle(playerTab, "Tracer", "tracer", UDim2.new(0, 0, 0, 0), T.orangeD)
+makeToggle(playerTab, "Name", "name", UDim2.new(0.5, 3, 0, 0), T.orangeD)
+makeToggle(playerTab, "Health", "health", UDim2.new(0, 0, 0, 36), T.purpleD)
+makeToggle(playerTab, "Distance", "distance", UDim2.new(0.5, 3, 0, 36), T.purpleD)
+makeToggle(playerTab, "Skeleton", "skeleton", UDim2.new(0, 0, 0, 72), T.purpleD)
+makeToggle(playerTab, "Tool", "tool", UDim2.new(0.5, 3, 0, 72), T.purpleD)
+
+makeToggle(visualTab, "Box", "box", UDim2.new(0, 0, 0, 0), T.orangeD)
+makeToggle(visualTab, "Highlight", "highlight", UDim2.new(0.5, 3, 0, 0), T.orangeD)
+makeToggle(visualTab, "Team Check", "teamCheck", UDim2.new(0, 0, 0, 36), T.purpleD)
+makeToggle(visualTab, "FOV Circle", "fov", UDim2.new(0.5, 3, 0, 36), T.purpleD)
+
+local distBtn = Instance.new("TextButton")
+distBtn.Size = UDim2.new(1, 0, 0, 30)
+distBtn.Position = UDim2.new(0, 0, 0, 72)
+distBtn.BackgroundColor3 = T.bg2
+distBtn.BorderSizePixel = 0
+distBtn.Text = "📏 Max Distance: 500m"
+distBtn.TextColor3 = T.orange
+distBtn.Font = Enum.Font.GothamBold
+distBtn.TextSize = 11
+distBtn.Parent = visualTab
+Instance.new("UICorner", distBtn).CornerRadius = UDim.new(0, 6)
+local distOptions = {100, 250, 500, 1000, 0}
+distBtn.MouseButton1Click:Connect(function()
+    local idx = 1
+    for i, v in ipairs(distOptions) do if v == S.maxDist then idx = i break end end
+    idx = idx % #distOptions + 1
+    S.maxDist = distOptions[idx]
+    distBtn.Text = "📏 Max Distance: " .. (S.maxDist == 0 and "∞" or S.maxDist.."m")
+end)
+
+makeToggle(extraTab, "Item ESP", "itemEsp", UDim2.new(0, 0, 0, 0), T.orangeD)
+
+local rescanBtn = Instance.new("TextButton")
+rescanBtn.Size = UDim2.new(1, 0, 0, 30)
+rescanBtn.Position = UDim2.new(0, 0, 0, 36)
+rescanBtn.BackgroundColor3 = T.bg2
+rescanBtn.BorderSizePixel = 0
+rescanBtn.Text = "🔄 Rescan Items"
+rescanBtn.TextColor3 = T.purple
+rescanBtn.Font = Enum.Font.GothamBold
+rescanBtn.TextSize = 11
+rescanBtn.Parent = extraTab
+Instance.new("UICorner", rescanBtn).CornerRadius = UDim.new(0, 6)
+rescanBtn.MouseButton1Click:Connect(function() scanItems() end)
+
+local kbLbl = Instance.new("TextLabel")
+kbLbl.Size = UDim2.new(1, 0, 0, 24)
+kbLbl.Position = UDim2.new(0, 0, 0, 74)
+kbLbl.BackgroundTransparency = 1
+kbLbl.Text = "⌨️ PC: Press RightShift to toggle"
+kbLbl.TextColor3 = T.textDim
+kbLbl.Font = Enum.Font.Gotham
+kbLbl.TextSize = 10
+kbLbl.Parent = extraTab
+
+local allTabs = {playerTab, visualTab, extraTab}
+local allTabBtns = {tabPlayer, tabVisual, tabExtra}
+local function selectTab(i)
+    for j, c in ipairs(allTabs) do c.Visible = (i == j) end
+    for j, b in ipairs(allTabBtns) do
+        b.BackgroundColor3 = (i == j) and T.orangeD or T.bg2
+        b.TextColor3 = (i == j) and T.text or T.textDim
+    end
+end
+tabPlayer.MouseButton1Click:Connect(function() selectTab(1) end)
+tabVisual.MouseButton1Click:Connect(function() selectTab(2) end)
+tabExtra.MouseButton1Click:Connect(function() selectTab(3) end)
+selectTab(1)
+
+masterBtn.MouseButton1Click:Connect(function()
+    S.master = not S.master
+    if S.master then
+        masterBtn.Text = "🎃 ESP: ON"
+        masterBtn.BackgroundColor3 = T.orange
+    else
+        masterBtn.Text = "🎃 ESP: OFF"
+        masterBtn.BackgroundColor3 = T.orangeD
+        for _, obj in pairs(esp) do
+            obj.Line.Visible = false; obj.Name.Visible = false
+            obj.HealthBar.Visible = false; obj.HealthFill.Visible = false
+            obj.Dist.Visible = false; obj.Tool.Visible = false
+            for _, l in ipairs(obj.Skeleton) do l.Visible = false end
+            for _, k in ipairs({"BoxTopL","BoxTopR","BoxBotL","BoxBotR","BoxTL","BoxTR","BoxBL","BoxBR"}) do
+                obj[k].Visible = false
+            end
+            if obj.Highlight then obj.Highlight.Enabled = false end
+        end
+        if fovCircle then fovCircle.Visible = false end
+    end
+end)
+
+local minimized = false
+local expandedH, collapsedH = 320, 36
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        TweenService:Create(main, TweenInfo.new(0.25), {Size = UDim2.new(0, 240, 0, collapsedH)}):Play()
+        masterBtn.Visible = false; tabBar.Visible = false; contentC.Visible = false
+        minBtn.Text = "🎃"
+    else
+        TweenService:Create(main, TweenInfo.new(0.25), {Size = UDim2.new(0, 240, 0, expandedH)}):Play()
+        task.wait(0.05)
+        masterBtn.Visible = true; tabBar.Visible = true; contentC.Visible = true
+        minBtn.Text = "—"
+    end
+end)
+
+local dragging, dragStart, startPos
+titleLbl.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch) then
+        local d = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X,
+                                  startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        masterBtn.MouseButton1Click:Fire()
+    end
+end)
+
+print("🎃 Halloween ESP v2.3 Loaded 🦇")
