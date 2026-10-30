@@ -1,0 +1,327 @@
+--[[
+    ⚡ القنبلة تلقائي (PRO) ⚡
+    - زر تصغير/تكبير الواجهة
+    - واجهة عربية احترافية
+    - تحديد الهدف (ESP) باللون الأحمر
+    - طيران سلس (مضاد القنبلة)
+--]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ⚙️ الإعدادات المتقدمة
+local CONFIG = {
+    AutoPassEnabled = false,
+    AntiBombEnabled = false,
+    DetectionRange = 1000,
+    TeleportOffset = 2,   -- المسافة بينك وبين اللاعب
+    FlyHeight = 120,      -- ارتفاع الطيران
+    FlySpeed = 0.2,       -- سرعة الصعود
+}
+
+-- 🎨 نظام الحماية من الأخطاء
+local function safeCall(func, ...)
+    local success, err = pcall(func, ...)
+    if not success then warn("[خطأ في السكربت]: " .. tostring(err)) end
+end
+
+-- ==========================================
+-- 🎨 إنشاء واجهة المستخدم الاحترافية
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoBomb_UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- الإطار الرئيسي
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 260, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -90)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- تدرج لوني للواجهة
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 15))
+})
+gradient.Rotation = 45
+gradient.Parent = MainFrame
+
+local stroke = Instance.new("UIStroke", MainFrame)
+stroke.Color = Color3.fromRGB(70, 130, 255)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.5
+
+-- شريط العنوان
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TitleBar.BackgroundTransparency = 0.5
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -60, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "💣 القنبلة تلقائي"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 15
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+-- زر التصغير / التكبير (بدل X)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 25, 0, 25)
+MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+MinimizeBtn.Text = "−"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 16
+MinimizeBtn.Parent = TitleBar
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
+
+-- منطقة الأزرار
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -20, 1, -45)
+ContentFrame.Position = UDim2.new(0, 10, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- تصميم زر احترافي
+local function createProButton(text, yPos, color)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 45)
+    btn.Position = UDim2.new(0, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.AutoButtonColor = false
+    btn.Parent = ContentFrame
+    
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 8)
+    
+    local btnStroke = Instance.new("UIStroke", btn)
+    btnStroke.Color = color
+    btnStroke.Thickness = 1
+    
+    return btn
+end
+
+local ToggleBtn = createProButton("🔴 القنبلة تلقائي: متوقف", 5, Color3.fromRGB(255, 50, 50))
+local AntiBombBtn = createProButton("🔒 مضاد القنبلة: متوقف", 60, Color3.fromRGB(100, 100, 100))
+
+-- تأثيرات الأزرار (Hover & Click)
+local function buttonEffects(btn)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 60)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}):Play()
+    end)
+end
+buttonEffects(ToggleBtn)
+buttonEffects(AntiBombBtn)
+
+-- ==========================================
+-- 🖱️ نظام السحب والتصغير
+-- ==========================================
+local dragging, dragInput, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- منطق رفع وإنزال الواجهة (التصغير والتكبير)
+local isMinimized = false
+local originalSize = MainFrame.Size
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        -- تصغير الواجهة (رفعها)
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 260, 0, 35)}):Play()
+        ContentFrame.Visible = false
+        MinimizeBtn.Text = "+"
+    else
+        -- تكبير الواجهة (إنزالها)
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = originalSize}):Play()
+        ContentFrame.Visible = true
+        MinimizeBtn.Text = "−"
+    end
+end)
+
+-- اختصار Right Shift لإخفاء وإظهار الواجهة كاملة (للطوارئ)
+local isHidden = false
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightShift then
+        isHidden = not isHidden
+        MainFrame.Visible = not isHidden
+    end
+end)
+
+-- ==========================================
+-- 💣 منطق السكربت (التمرير والطيران)
+-- ==========================================
+local currentTarget = nil
+local targetHighlight = nil
+
+-- دالة فحص القنبلة
+local function hasBomb(character)
+    if not character then return false end
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Tool") and string.find(string.lower(child.Name), "bomb") then return true end
+    end
+    return false
+end
+
+-- دالة إيجاد أقرب لاعب وتحديده
+local function getClosestPlayer()
+    local closest, shortestDist = nil, CONFIG.DetectionRange
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local targetHum = player.Character:FindFirstChildOfClass("Humanoid")
+            if targetRoot and targetHum and targetHum.Health > 0 and not hasBomb(player.Character) then
+                local dist = (myChar.HumanoidRootPart.Position - targetRoot.Position).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    closest = player.Character
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- الحلقة الرئيسية
+RunService.Heartbeat:Connect(function()
+    safeCall(function()
+        local myChar = LocalPlayer.Character
+        if not myChar then return end
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        local myHum = myChar:FindFirstChildOfClass("Humanoid")
+        if not myRoot or not myHum then return end
+
+        -- 1️⃣ ميزة مضاد القنبلة (الطيران)
+        if CONFIG.AntiBombEnabled then
+            myHum.PlatformStand = true
+            local targetY = myRoot.Position.Y + (CONFIG.FlyHeight * CONFIG.FlySpeed)
+            if targetY < CONFIG.FlyHeight + 50 then
+                myRoot.Velocity = Vector3.new(0, 50, 0)
+            else
+                myRoot.Velocity = Vector3.new(0, 0, 0)
+            end
+        else
+            myHum.PlatformStand = false
+        end
+
+        -- 2️⃣ ميزة القنبلة تلقائي (التمرير)
+        if CONFIG.AutoPassEnabled and not CONFIG.AntiBombEnabled and hasBomb(myChar) then
+            local targetChar = getClosestPlayer()
+            
+            -- إدارة التحديد (ESP)
+            if targetChar ~= currentTarget then
+                if targetHighlight then targetHighlight:Destroy() end
+                currentTarget = targetChar
+                
+                if currentTarget then
+                    targetHighlight = Instance.new("Highlight")
+                    targetHighlight.FillColor = Color3.fromRGB(255, 50, 50)
+                    targetHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    targetHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    targetHighlight.Parent = currentTarget
+                end
+            end
+
+            -- الانتقال للهدف
+            if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
+                local targetRoot = currentTarget.HumanoidRootPart
+                myRoot.CFrame = myRoot.CFrame:Lerp(targetRoot.CFrame * CFrame.new(0, 0, CONFIG.TeleportOffset), 0.5)
+            end
+        else
+            if targetHighlight then 
+                targetHighlight:Destroy() 
+                targetHighlight = nil 
+                currentTarget = nil
+            end
+        end
+    end)
+end)
+
+-- ==========================================
+-- 🎛️ ربط الأزرار
+-- ==========================================
+ToggleBtn.MouseButton1Click:Connect(function()
+    CONFIG.AutoPassEnabled = not CONFIG.AutoPassEnabled
+    if CONFIG.AutoPassEnabled then
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(50, 200, 80)}):Play()
+        TweenService:Create(ToggleBtn.UIStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(100, 255, 100)}):Play()
+        ToggleBtn.Text = "🟢 القنبلة تلقائي: يعمل"
+    else
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}):Play()
+        TweenService:Create(ToggleBtn.UIStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(255, 50, 50)}):Play()
+        ToggleBtn.Text = "🔴 القنبلة تلقائي: متوقف"
+    end
+end)
+
+AntiBombBtn.MouseButton1Click:Connect(function()
+    CONFIG.AntiBombEnabled = not CONFIG.AntiBombEnabled
+    if CONFIG.AntiBombEnabled then
+        TweenService:Create(AntiBombBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(50, 150, 255)}):Play()
+        TweenService:Create(AntiBombBtn.UIStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(100, 200, 255)}):Play()
+        AntiBombBtn.Text = "🛡️ مضاد القنبلة: يعمل"
+    else
+        TweenService:Create(AntiBombBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}):Play()
+        TweenService:Create(AntiBombBtn.UIStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(100, 100, 100)}):Play()
+        AntiBombBtn.Text = "🔒 مضاد القنبلة: متوقف"
+        
+        -- إنزال اللاعب للأرض
+        local myChar = LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            local ray = Ray.new(myChar.HumanoidRootPart.Position, Vector3.new(0, -1000, 0))
+            local hit, pos = workspace:FindPartOnRay(ray, myChar)
+            if hit then
+                myChar.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            end
+        end
+    end
+end)
+
+print("[القنبلة تلقائي] ✅ تم تحميل السكربت بنجاح!")
