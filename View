@@ -1,0 +1,1061 @@
+-- ═══════════════════════════════════════════════
+--   مشاهده الاعب | LYNEX EDITION v3.0
+--   Incremental Update (Zero-Lag for 65+ Players)
+-- ═══════════════════════════════════════════════
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- ───────────── Theme ─────────────
+local Theme = {
+    Bg       = Color3.fromRGB(5, 5, 7),
+    Card     = Color3.fromRGB(12, 12, 16),
+    Card2    = Color3.fromRGB(22, 22, 28),
+    Accent   = Color3.fromRGB(88, 130, 255),
+    Accent2  = Color3.fromRGB(110, 150, 255),
+    Danger   = Color3.fromRGB(230, 70, 90),
+    Danger2  = Color3.fromRGB(250, 90, 110),
+    Red      = Color3.fromRGB(255, 45, 45),
+    Red2     = Color3.fromRGB(255, 90, 90),
+    Green    = Color3.fromRGB(120, 220, 120),
+    Yellow   = Color3.fromRGB(240, 200, 80),
+    Text     = Color3.fromRGB(240, 240, 245),
+    SubText  = Color3.fromRGB(150, 150, 165),
+}
+
+local panelW = isMobile and 260 or 340
+local panelH = isMobile and 350 or 460
+local rowH   = isMobile and 48  or 58
+local fabSize = isMobile and 50 or 60
+local fontMain = isMobile and 14 or 16
+local fontSub  = isMobile and 10 or 12
+local fontBtn  = isMobile and 11 or 13
+
+-- ───────────── GUI Root ─────────────
+local gui = Instance.new("ScreenGui")
+gui.Name = "SpectatePlayer_LYNEX"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local function corner(parent, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r or 8)
+    c.Parent = parent
+    return c
+end
+
+local function addHover(btn, normalColor, hoverColor)
+    if not isMobile then
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = hoverColor}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = normalColor}):Play()
+        end)
+    end
+end
+
+-- ═══════════════════════════════════════════════
+--  ✨ RED ANIMATED BORDER — Consolidated (1 loop)
+-- ═══════════════════════════════════════════════
+local animatedStrokes = {}
+
+local function addRedAnimatedBorder(frame, baseThickness)
+    baseThickness = baseThickness or 2
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Theme.Red
+    stroke.Thickness = baseThickness
+    stroke.Transparency = 0.15
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = frame
+
+    local inner = Instance.new("UIStroke")
+    inner.Color = Theme.Red2
+    inner.Thickness = 1
+    inner.Transparency = 0.6
+    inner.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    inner.Parent = frame
+
+    table.insert(animatedStrokes, {stroke = stroke, inner = inner, base = baseThickness})
+    return stroke
+end
+
+-- ✅ حلقة وحدة لكل الحدود (بدل 3 حلقات)
+task.spawn(function()
+    while gui.Parent do
+        RunService.Heartbeat:Wait()
+        local pulse = (math.sin(tick() * 2.5) + 1) / 2
+        for i = #animatedStrokes, 1, -1 do
+            local e = animatedStrokes[i]
+            if not e.stroke.Parent then
+                table.remove(animatedStrokes, i)
+            else
+                e.stroke.Transparency = 0.1 + pulse * 0.55
+                e.stroke.Thickness = e.base + pulse * 2
+                e.inner.Transparency = 0.5 + pulse * 0.4
+            end
+        end
+    end
+end)
+
+-- ───────────── FAB ─────────────
+local fab = Instance.new("TextButton")
+fab.Name = "FAB"
+fab.Size = UDim2.new(0, fabSize, 0, fabSize)
+fab.Position = UDim2.new(1, -fabSize - 20, 0.5, -fabSize/2)
+fab.BackgroundColor3 = Theme.Accent
+fab.Text = "👁"
+fab.Font = Enum.Font.GothamBold
+fab.TextSize = isMobile and 24 or 28
+fab.TextColor3 = Color3.new(1, 1, 1)
+fab.AutoButtonColor = false
+fab.Visible = false
+fab.ZIndex = 10
+fab.Parent = gui
+corner(fab, fabSize/2)
+addHover(fab, Theme.Accent, Theme.Accent2)
+
+-- ───────────── Main Panel ─────────────
+local panel = Instance.new("Frame")
+panel.Name = "Panel"
+panel.Size = UDim2.new(0, panelW, 0, panelH)
+panel.Position = UDim2.new(0.5, -panelW/2, 0.5, -panelH/2)
+panel.BackgroundColor3 = Theme.Bg
+panel.BorderSizePixel = 0
+panel.Visible = true
+panel.ZIndex = 5
+panel.Parent = gui
+corner(panel, 12)
+addRedAnimatedBorder(panel, 2)
+
+local headerH = isMobile and 44 or 54
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, headerH)
+header.BackgroundColor3 = Theme.Card
+header.BorderSizePixel = 0
+header.Parent = panel
+corner(header, 12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -120, 0, 18)
+title.Position = UDim2.new(0, 10, 0, isMobile and 6 or 8)
+title.BackgroundTransparency = 1
+title.Text = "مشاهدة اللاعبين"
+title.Font = Enum.Font.GothamBold
+title.TextSize = fontMain
+title.TextColor3 = Theme.Text
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -120, 0, 12)
+subtitle.Position = UDim2.new(0, 10, 0, isMobile and 24 or 30)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "اسحب لتدوير الكاميرا"
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextSize = fontSub
+subtitle.TextColor3 = Theme.SubText
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.Parent = header
+
+local btnSize = isMobile and 28 or 34
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
+closeBtn.Position = UDim2.new(1, -btnSize - 6, 0, isMobile and 8 or 10)
+closeBtn.BackgroundColor3 = Theme.Card2
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = isMobile and 14 or 16
+closeBtn.TextColor3 = Theme.SubText
+closeBtn.AutoButtonColor = false
+closeBtn.Parent = header
+corner(closeBtn, btnSize/2)
+addHover(closeBtn, Theme.Card2, Theme.Danger)
+
+local infoBtn = Instance.new("TextButton")
+infoBtn.Size = UDim2.new(0, btnSize, 0, btnSize)
+infoBtn.Position = UDim2.new(1, -(btnSize*2) - 12, 0, isMobile and 8 or 10)
+infoBtn.BackgroundColor3 = Theme.Card2
+infoBtn.Text = "ℹ️"
+infoBtn.Font = Enum.Font.GothamBold
+infoBtn.TextSize = isMobile and 14 or 16
+infoBtn.TextColor3 = Theme.Text
+infoBtn.AutoButtonColor = false
+infoBtn.Parent = header
+corner(infoBtn, btnSize/2)
+addHover(infoBtn, Theme.Card2, Theme.Accent)
+
+local searchH = isMobile and 30 or 40
+local searchFrame = Instance.new("Frame")
+searchFrame.Size = UDim2.new(1, -20, 0, searchH)
+searchFrame.Position = UDim2.new(0, 10, 0, headerH + 10)
+searchFrame.BackgroundColor3 = Theme.Card
+searchFrame.BorderSizePixel = 0
+searchFrame.Parent = panel
+corner(searchFrame, 8)
+
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -16, 1, 0)
+searchBox.Position = UDim2.new(0, 8, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.PlaceholderText = "بحث..."
+searchBox.PlaceholderColor3 = Theme.SubText
+searchBox.Text = ""
+searchBox.Font = Enum.Font.Gotham
+searchBox.TextSize = isMobile and 12 or 14
+searchBox.TextColor3 = Theme.Text
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+searchBox.ClearTextOnFocus = false
+searchBox.Parent = searchFrame
+
+local list = Instance.new("ScrollingFrame")
+list.Size = UDim2.new(1, -12, 1, -(headerH + searchH + 30))
+list.Position = UDim2.new(0, 6, 0, headerH + searchH + 20)
+list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = isMobile and 3 or 5
+list.ScrollBarImageColor3 = Theme.Red
+list.CanvasSize = UDim2.new(0, 0, 0, 0)
+list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+list.Parent = panel
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingBottom = UDim.new(0, 10)
+listPadding.Parent = list
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 6)
+listLayout.Parent = list
+
+-- ───────────── Info Popup ─────────────
+local popupW = isMobile and 300 or 420
+local popupH = isMobile and 300 or 380
+
+local infoPopup = Instance.new("Frame")
+infoPopup.Size = UDim2.new(0, popupW, 0, popupH)
+infoPopup.Position = UDim2.new(0.5, -popupW/2, 0.5, -popupH/2)
+infoPopup.BackgroundColor3 = Theme.Bg
+infoPopup.BorderSizePixel = 0
+infoPopup.Visible = false
+infoPopup.ZIndex = 50
+infoPopup.Parent = gui
+corner(infoPopup, 12)
+addRedAnimatedBorder(infoPopup, 2)
+
+local popupTitle = Instance.new("TextLabel")
+popupTitle.Size = UDim2.new(1, 0, 0, 40)
+popupTitle.BackgroundTransparency = 1
+popupTitle.Text = "ℹ️ معلومات السكربت"
+popupTitle.Font = Enum.Font.GothamBold
+popupTitle.TextSize = isMobile and 16 or 18
+popupTitle.TextColor3 = Theme.Red2
+popupTitle.Parent = infoPopup
+
+local popupClose = Instance.new("TextButton")
+popupClose.Size = UDim2.new(0, 30, 0, 30)
+popupClose.Position = UDim2.new(1, -40, 0, 5)
+popupClose.BackgroundColor3 = Theme.Card2
+popupClose.Text = "✕"
+popupClose.Font = Enum.Font.GothamBold
+popupClose.TextSize = 14
+popupClose.TextColor3 = Theme.SubText
+popupClose.AutoButtonColor = false
+popupClose.Parent = infoPopup
+corner(popupClose, 15)
+addHover(popupClose, Theme.Card2, Theme.Danger)
+
+local popupText = Instance.new("TextLabel")
+popupText.Size = UDim2.new(1, -20, 1, -50)
+popupText.Position = UDim2.new(0, 10, 0, 40)
+popupText.BackgroundTransparency = 1
+popupText.Text = "📜 تعليمات الاستخدام:\n1. اختر اللاعب واضغط 'مشاهدة'.\n2. 🖱️ اسحب بالماوس / 👆 بصباعك لتدوير الكاميرا.\n3. 🖲️ عجلة الماوس أو زر +/- للزوم.\n4. 🎯 زر 'متابعة/أوربت' للتبديل.\n5. 📋 زر نسخ ID.\n6. 'إيقاف' للعودة لكاميرتك.\n\n✅ القائمة تتحدث تلقائياً — بدون لاق.\n\n⚠️ Anti-Cheat Bypass — LYNEX."
+popupText.Font = Enum.Font.GothamMedium
+popupText.TextSize = isMobile and 12 or 14
+popupText.TextColor3 = Theme.Text
+popupText.TextWrapped = true
+popupText.TextXAlignment = Enum.TextXAlignment.Right
+popupText.TextYAlignment = Enum.TextYAlignment.Top
+popupText.Parent = infoPopup
+
+-- ───────────── Spectate Info Panel ─────────────
+local siW = isMobile and 175 or 200
+local siH = isMobile and 300 or 340
+local siHeaderH = isMobile and 26 or 30
+local siPad = isMobile and 6 or 8
+local siRowH = isMobile and 14 or 16
+local siAvatarSize = isMobile and 55 or 65
+local siGap = isMobile and 3 or 4
+
+local spectateInfo = Instance.new("Frame")
+spectateInfo.Name = "SpectateInfo"
+spectateInfo.Size = UDim2.new(0, siW, 0, siH)
+if isMobile then
+    spectateInfo.Position = UDim2.new(0.5, -siW/2, 1, -siH - 10)
+else
+    spectateInfo.Position = UDim2.new(0, 20, 0.5, -siH/2)
+end
+spectateInfo.BackgroundColor3 = Theme.Bg
+spectateInfo.BorderSizePixel = 0
+spectateInfo.Visible = false
+spectateInfo.ZIndex = 15
+spectateInfo.Parent = gui
+corner(spectateInfo, 10)
+addRedAnimatedBorder(spectateInfo, 2)
+
+local siHeader = Instance.new("Frame")
+siHeader.Size = UDim2.new(1, 0, 0, siHeaderH)
+siHeader.BackgroundColor3 = Theme.Card
+siHeader.BorderSizePixel = 0
+siHeader.Parent = spectateInfo
+corner(siHeader, 10)
+
+local siTitle = Instance.new("TextLabel")
+siTitle.Size = UDim2.new(1, -36, 1, 0)
+siTitle.Position = UDim2.new(0, 8, 0, 0)
+siTitle.BackgroundTransparency = 1
+siTitle.Text = "معلومات اللاعب"
+siTitle.Font = Enum.Font.GothamBold
+siTitle.TextSize = isMobile and 11 or 12
+siTitle.TextColor3 = Theme.Red2
+siTitle.TextXAlignment = Enum.TextXAlignment.Left
+siTitle.Parent = siHeader
+
+local siCloseBtn = Instance.new("TextButton")
+siCloseBtn.Size = UDim2.new(0, 20, 0, 20)
+siCloseBtn.Position = UDim2.new(1, -24, 0.5, -10)
+siCloseBtn.BackgroundColor3 = Theme.Card2
+siCloseBtn.Text = "✕"
+siCloseBtn.Font = Enum.Font.GothamBold
+siCloseBtn.TextSize = 10
+siCloseBtn.TextColor3 = Theme.SubText
+siCloseBtn.AutoButtonColor = false
+siCloseBtn.Parent = siHeader
+corner(siCloseBtn, 10)
+addHover(siCloseBtn, Theme.Card2, Theme.Danger)
+
+siCloseBtn.MouseButton1Click:Connect(function()
+    spectateInfo.Visible = false
+end)
+
+local siContent = Instance.new("Frame")
+siContent.Size = UDim2.new(1, 0, 1, -siHeaderH)
+siContent.Position = UDim2.new(0, 0, 0, siHeaderH)
+siContent.BackgroundTransparency = 1
+siContent.Parent = spectateInfo
+
+local siPadding = Instance.new("UIPadding")
+siPadding.PaddingTop = UDim.new(0, siPad)
+siPadding.PaddingBottom = UDim.new(0, siPad)
+siPadding.PaddingLeft = UDim.new(0, siPad)
+siPadding.PaddingRight = UDim.new(0, siPad)
+siPadding.Parent = siContent
+
+local siLayout = Instance.new("UIListLayout")
+siLayout.Padding = UDim.new(0, siGap)
+siLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+siLayout.SortOrder = Enum.SortOrder.LayoutOrder
+siLayout.Parent = siContent
+
+local siAvatar = Instance.new("ImageLabel")
+siAvatar.Size = UDim2.new(0, siAvatarSize, 0, siAvatarSize)
+siAvatar.BackgroundColor3 = Theme.Card2
+siAvatar.BorderSizePixel = 0
+siAvatar.Image = ""
+siAvatar.ScaleType = Enum.ScaleType.Fit
+siAvatar.LayoutOrder = 1
+siAvatar.Parent = siContent
+corner(siAvatar, 8)
+
+local siDisplayName = Instance.new("TextLabel")
+siDisplayName.Size = UDim2.new(1, 0, 0, siRowH + 2)
+siDisplayName.BackgroundTransparency = 1
+siDisplayName.Text = ""
+siDisplayName.Font = Enum.Font.GothamBold
+siDisplayName.TextSize = isMobile and 12 or 13
+siDisplayName.TextColor3 = Theme.Text
+siDisplayName.TextTruncate = Enum.TextTruncate.AtEnd
+siDisplayName.LayoutOrder = 2
+siDisplayName.Parent = siContent
+
+local siUsername = Instance.new("TextLabel")
+siUsername.Size = UDim2.new(1, 0, 0, siRowH)
+siUsername.BackgroundTransparency = 1
+siUsername.Text = ""
+siUsername.Font = Enum.Font.Gotham
+siUsername.TextSize = isMobile and 10 or 11
+siUsername.TextColor3 = Theme.SubText
+siUsername.TextTruncate = Enum.TextTruncate.AtEnd
+siUsername.LayoutOrder = 3
+siUsername.Parent = siContent
+
+local siUserId = Instance.new("TextLabel")
+siUserId.Size = UDim2.new(1, 0, 0, siRowH)
+siUserId.BackgroundTransparency = 1
+siUserId.Text = ""
+siUserId.Font = Enum.Font.GothamMedium
+siUserId.TextSize = isMobile and 10 or 11
+siUserId.TextColor3 = Theme.Accent
+siUserId.LayoutOrder = 4
+siUserId.Parent = siContent
+
+local siSep = Instance.new("Frame")
+siSep.Size = UDim2.new(1, 0, 0, 1)
+siSep.BackgroundColor3 = Theme.Card2
+siSep.BorderSizePixel = 0
+siSep.LayoutOrder = 5
+siSep.Parent = siContent
+
+local siPosition = Instance.new("TextLabel")
+siPosition.Size = UDim2.new(1, 0, 0, siRowH)
+siPosition.BackgroundTransparency = 1
+siPosition.Text = "📍 —"
+siPosition.Font = Enum.Font.GothamMedium
+siPosition.TextSize = isMobile and 10 or 11
+siPosition.TextColor3 = Theme.Text
+siPosition.TextXAlignment = Enum.TextXAlignment.Center
+siPosition.LayoutOrder = 6
+siPosition.Parent = siContent
+
+local siDistance = Instance.new("TextLabel")
+siDistance.Size = UDim2.new(1, 0, 0, siRowH)
+siDistance.BackgroundTransparency = 1
+siDistance.Text = "📏 —"
+siDistance.Font = Enum.Font.GothamMedium
+siDistance.TextSize = isMobile and 10 or 11
+siDistance.TextColor3 = Theme.Text
+siDistance.TextXAlignment = Enum.TextXAlignment.Center
+siDistance.LayoutOrder = 7
+siDistance.Parent = siContent
+
+local siHealth = Instance.new("TextLabel")
+siHealth.Size = UDim2.new(1, 0, 0, siRowH)
+siHealth.BackgroundTransparency = 1
+siHealth.Text = "❤️ —"
+siHealth.Font = Enum.Font.GothamBold
+siHealth.TextSize = isMobile and 10 or 11
+siHealth.TextColor3 = Theme.Green
+siHealth.TextXAlignment = Enum.TextXAlignment.Center
+siHealth.LayoutOrder = 8
+siHealth.Parent = siContent
+
+local siTool = Instance.new("TextLabel")
+siTool.Size = UDim2.new(1, 0, 0, siRowH)
+siTool.BackgroundTransparency = 1
+siTool.Text = "🔧 —"
+siTool.Font = Enum.Font.GothamMedium
+siTool.TextSize = isMobile and 10 or 11
+siTool.TextColor3 = Theme.Yellow
+siTool.TextXAlignment = Enum.TextXAlignment.Center
+siTool.TextTruncate = Enum.TextTruncate.AtEnd
+siTool.LayoutOrder = 9
+siTool.Parent = siContent
+
+local siZoomRow = Instance.new("Frame")
+siZoomRow.Size = UDim2.new(1, 0, 0, siRowH + 4)
+siZoomRow.BackgroundTransparency = 1
+siZoomRow.LayoutOrder = 10
+siZoomRow.Parent = siContent
+
+local siZoomLayout = Instance.new("UIListLayout")
+siZoomLayout.FillDirection = Enum.FillDirection.Horizontal
+siZoomLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+siZoomLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+siZoomLayout.Padding = UDim.new(0, 6)
+siZoomLayout.Parent = siZoomRow
+
+local function makeSmallBtn(txt, parent, width)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, width or 30, 1, 0)
+    b.BackgroundColor3 = Theme.Card2
+    b.Text = txt
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    b.TextColor3 = Theme.Text
+    b.AutoButtonColor = false
+    b.Parent = parent
+    corner(b, 6)
+    addHover(b, Theme.Card2, Theme.Accent)
+    return b
+end
+
+local zoomOutBtn = makeSmallBtn("−", siZoomRow, 30)
+local zoomInBtn  = makeSmallBtn("+", siZoomRow, 30)
+
+local siActionRow = Instance.new("Frame")
+siActionRow.Size = UDim2.new(1, 0, 0, 24)
+siActionRow.BackgroundTransparency = 1
+siActionRow.LayoutOrder = 11
+siActionRow.Parent = siContent
+
+local siActionLayout = Instance.new("UIListLayout")
+siActionLayout.FillDirection = Enum.FillDirection.Horizontal
+siActionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+siActionLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+siActionLayout.Padding = UDim.new(0, 5)
+siActionLayout.Parent = siActionRow
+
+local followBtn = Instance.new("TextButton")
+followBtn.Size = UDim2.new(0, isMobile and 70 or 82, 1, 0)
+followBtn.BackgroundColor3 = Theme.Card2
+followBtn.Text = "🔄 أوربت"
+followBtn.Font = Enum.Font.GothamBold
+followBtn.TextSize = isMobile and 10 or 11
+followBtn.TextColor3 = Theme.Text
+followBtn.AutoButtonColor = false
+followBtn.Parent = siActionRow
+corner(followBtn, 6)
+addHover(followBtn, Theme.Card2, Theme.Accent)
+
+local copyBtn = Instance.new("TextButton")
+copyBtn.Size = UDim2.new(0, isMobile and 55 or 62, 1, 0)
+copyBtn.BackgroundColor3 = Theme.Card2
+copyBtn.Text = "📋 ID"
+copyBtn.Font = Enum.Font.GothamBold
+copyBtn.TextSize = isMobile and 10 or 11
+copyBtn.TextColor3 = Theme.Text
+copyBtn.AutoButtonColor = false
+copyBtn.Parent = siActionRow
+corner(copyBtn, 6)
+addHover(copyBtn, Theme.Card2, Theme.Accent)
+
+-- ───────────── State ─────────────
+local orbitYaw = 0
+local orbitPitch = math.rad(20)
+local orbitDistance = 14
+local orbitSens = 0.006
+local isDraggingGUI = false
+local isTouchRotating = false
+local followMode = false
+local spectating = nil
+
+followBtn.MouseButton1Click:Connect(function()
+    followMode = not followMode
+    if followMode then
+        followBtn.Text = "🎯 متابعة"
+        followBtn.BackgroundColor3 = Theme.Accent
+    else
+        followBtn.Text = "🔄 أوربت"
+        followBtn.BackgroundColor3 = Theme.Card2
+    end
+end)
+
+copyBtn.MouseButton1Click:Connect(function()
+    if not spectating then return end
+    local ok = pcall(function() setclipboard(tostring(spectating.UserId)) end)
+    if ok then
+        copyBtn.Text = "✓ تم"
+        copyBtn.BackgroundColor3 = Theme.Green
+        task.wait(1.2)
+        if copyBtn and copyBtn.Parent then
+            copyBtn.Text = "📋 ID"
+            copyBtn.BackgroundColor3 = Theme.Card2
+        end
+    else
+        copyBtn.Text = "✗ فشل"
+        task.wait(1)
+        if copyBtn and copyBtn.Parent then
+            copyBtn.Text = "📋 ID"
+        end
+    end
+end)
+
+zoomInBtn.MouseButton1Click:Connect(function()
+    orbitDistance = math.clamp(orbitDistance - 2, 4, 40)
+end)
+zoomOutBtn.MouseButton1Click:Connect(function()
+    orbitDistance = math.clamp(orbitDistance + 2, 4, 40)
+end)
+
+-- ───────────── Row Builder ─────────────
+local function makeRow(player, order)
+    local row = Instance.new("Frame")
+    row.Name = player.Name
+    row.Size = UDim2.new(1, -4, 0, rowH)
+    row.BackgroundColor3 = Theme.Card
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order
+    row.Parent = list
+    corner(row, 8)
+
+    local avatar = Instance.new("ImageLabel")
+    avatar.Size = UDim2.new(0, rowH - 12, 0, rowH - 12)
+    avatar.Position = UDim2.new(0, 6, 0.5, 0)
+    avatar.AnchorPoint = Vector2.new(0, 0.5)
+    avatar.BackgroundColor3 = Theme.Card2
+    avatar.BorderSizePixel = 0
+    avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..player.UserId.."&w=60&h=60"
+    avatar.Parent = row
+    corner(avatar, 6)
+
+    local name = Instance.new("TextLabel")
+    name.Size = UDim2.new(1, -rowH - (isMobile and 80 or 100), 0, 16)
+    name.Position = UDim2.new(0, rowH + 4, 0, isMobile and 6 or 8)
+    name.BackgroundTransparency = 1
+    name.Text = player.DisplayName or player.Name
+    name.Font = Enum.Font.GothamSemibold
+    name.TextSize = isMobile and 13 or 15
+    name.TextColor3 = Theme.Text
+    name.TextXAlignment = Enum.TextXAlignment.Left
+    name.TextTruncate = Enum.TextTruncate.AtEnd
+    name.Parent = row
+
+    local uname = Instance.new("TextLabel")
+    uname.Size = UDim2.new(1, -rowH - (isMobile and 80 or 100), 0, 12)
+    uname.Position = UDim2.new(0, rowH + 4, 0, isMobile and 24 or 28)
+    uname.BackgroundTransparency = 1
+    uname.Text = "@"..player.Name
+    uname.Font = Enum.Font.Gotham
+    uname.TextSize = isMobile and 10 or 11
+    uname.TextColor3 = Theme.SubText
+    uname.TextXAlignment = Enum.TextXAlignment.Left
+    uname.TextTruncate = Enum.TextTruncate.AtEnd
+    uname.Parent = row
+
+    local btnW = isMobile and 60 or 80
+    local btnH = isMobile and 30 or 34
+    local watchBtn = Instance.new("TextButton")
+    watchBtn.Size = UDim2.new(0, btnW, 0, btnH)
+    watchBtn.Position = UDim2.new(1, -btnW - 8, 0.5, -btnH/2)
+    watchBtn.BackgroundColor3 = Theme.Accent
+    watchBtn.Text = "مشاهدة"
+    watchBtn.Font = Enum.Font.GothamBold
+    watchBtn.TextSize = fontBtn
+    watchBtn.TextColor3 = Color3.new(1, 1, 1)
+    watchBtn.AutoButtonColor = false
+    watchBtn.Parent = row
+    corner(watchBtn, 6)
+
+    if not isMobile then
+        watchBtn.MouseEnter:Connect(function()
+            if watchBtn.Text == "مشاهدة" then
+                TweenService:Create(watchBtn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Accent2}):Play()
+            else
+                TweenService:Create(watchBtn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Danger2}):Play()
+            end
+        end)
+        watchBtn.MouseLeave:Connect(function()
+            if watchBtn.Text == "مشاهدة" then
+                TweenService:Create(watchBtn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Accent}):Play()
+            else
+                TweenService:Create(watchBtn, TweenInfo.new(0.15), {BackgroundColor3 = Theme.Danger}):Play()
+            end
+        end)
+    end
+
+    row:SetAttribute("PlayerTarget", player.Name)
+    return row, watchBtn
+end
+
+-- ───────────── Spectate Logic ─────────────
+local function getHeldTool(char)
+    if not char then return "لا شيء" end
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Tool") then return child.Name end
+    end
+    return "لا شيء"
+end
+
+local function updateSpectateInfoStats()
+    if not spectating then return end
+    local char = spectating.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local p = root.Position
+    siPosition.Text = string.format("📍 %d, %d, %d", math.floor(p.X), math.floor(p.Y), math.floor(p.Z))
+
+    if LocalPlayer.Character then
+        local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            siDistance.Text = string.format("📏 %d م", math.floor((myRoot.Position - p).Magnitude))
+        else
+            siDistance.Text = "📏 —"
+        end
+    else
+        siDistance.Text = "📏 —"
+    end
+
+    if hum then
+        local hp = math.floor(hum.Health)
+        local mx = math.floor(hum.MaxHealth)
+        siHealth.Text = string.format("❤️ %d / %d", hp, mx)
+        local pct = hum.Health / math.max(hum.MaxHealth, 1)
+        if pct > 0.6 then
+            siHealth.TextColor3 = Theme.Green
+        elseif pct > 0.3 then
+            siHealth.TextColor3 = Theme.Yellow
+        else
+            siHealth.TextColor3 = Theme.Danger
+        end
+    else
+        siHealth.Text = "❤️ —"
+        siHealth.TextColor3 = Theme.SubText
+    end
+
+    siTool.Text = "🔧 " .. getHeldTool(char)
+end
+
+local function stopSpectate()
+    spectating = nil
+    isTouchRotating = false
+    RunService:UnbindFromRenderStep("ForceSpectateCamera")
+    spectateInfo.Visible = false
+    subtitle.Text = "اسحب لتدوير الكاميرا"
+    subtitle.TextColor3 = Theme.SubText
+
+    if LocalPlayer.Character then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            Camera.CameraType = Enum.CameraType.Custom
+            Camera.CameraSubject = hum
+        end
+    end
+end
+
+local function spectate(player)
+    if not player or player == LocalPlayer then return end
+    spectating = player
+
+    orbitYaw = 0
+    orbitPitch = math.rad(20)
+    orbitDistance = 14
+
+    siAvatar.Image = "rbxthumb://type=Avatar&id="..player.UserId.."&w=420&h=420"
+    siDisplayName.Text = player.DisplayName or player.Name
+    siUsername.Text = "@"..player.Name
+    siUserId.Text = "ID: "..tostring(player.UserId)
+    siPosition.Text = "📍 —"
+    siDistance.Text = "📏 —"
+    siHealth.Text = "❤️ —"
+    siTool.Text = "🔧 —"
+    spectateInfo.Visible = true
+
+    subtitle.Text = "تشاهد: @" .. player.Name
+    subtitle.TextColor3 = Theme.Red2
+
+    pcall(function() RunService:UnbindFromRenderStep("ForceSpectateCamera") end)
+
+    RunService:BindToRenderStep("ForceSpectateCamera", Enum.RenderPriority.Camera.Value + 10, function()
+        if not spectating then return end
+        local char = spectating.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not hum or hum.Health <= 0 or not root then return end
+
+        Camera.CameraType = Enum.CameraType.Scriptable
+        local targetPos = root.Position + Vector3.new(0, 2, 0)
+
+        local cosP = math.cos(orbitPitch)
+        local finalYaw = orbitYaw
+        if followMode then
+            local look = root.CFrame.LookVector
+            finalYaw = math.atan2(look.X, look.Z) + orbitYaw
+        end
+
+        local offset = Vector3.new(
+            math.sin(finalYaw) * cosP,
+            math.sin(orbitPitch),
+            math.cos(finalYaw) * cosP
+        ) * orbitDistance
+
+        Camera.CFrame = CFrame.lookAt(targetPos + offset, targetPos)
+        updateSpectateInfoStats()
+    end)
+end
+
+-- ───────────── Update Buttons ─────────────
+local function updateAllButtons()
+    for _, row in ipairs(list:GetChildren()) do
+        if row:IsA("Frame") then
+            local btn = row:FindFirstChildOfClass("TextButton")
+            local plrName = row:GetAttribute("PlayerTarget")
+            if btn and plrName then
+                local isSpectatingThis = spectating and spectating.Name == plrName
+                if isSpectatingThis then
+                    btn.Text = "إيقاف"
+                    btn.BackgroundColor3 = Theme.Danger
+                else
+                    btn.Text = "مشاهدة"
+                    btn.BackgroundColor3 = Theme.Accent
+                end
+
+                local hi = row:FindFirstChild("RowHighlight")
+                if isSpectatingThis then
+                    if not hi then
+                        local s = Instance.new("UIStroke")
+                        s.Name = "RowHighlight"
+                        s.Color = Theme.Red
+                        s.Thickness = 2
+                        s.Transparency = 0.2
+                        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                        s.Parent = row
+                        task.spawn(function()
+                            while s.Parent do
+                                local pulse = (math.sin(tick() * 4) + 1) / 2
+                                s.Transparency = 0.15 + pulse * 0.5
+                                RunService.Heartbeat:Wait()
+                            end
+                        end)
+                    end
+                else
+                    if hi then hi:Destroy() end
+                end
+            end
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════
+--  🚀 INCREMENTAL SYNC (Zero-Lag)
+-- ═══════════════════════════════════════════════
+local rowCache = {} -- [playerName] = {row, btn, player}
+
+local function shouldShow(plr, filter)
+    if plr == LocalPlayer then return false end
+    if filter == "" then return true end
+    local lname = plr.Name:lower()
+    local ldname = (plr.DisplayName or ""):lower()
+    return lname:find(filter, 1, true) ~= nil
+        or ldname:find(filter, 1, true) ~= nil
+end
+
+local function syncList(filter)
+    filter = (filter or ""):lower()
+
+    -- 1️⃣ احذف الصفوف اللي لازم تختفي
+    local toRemove = {}
+    for name, entry in pairs(rowCache) do
+        local plr = entry.player
+        -- لو اللاعب خرج من اللعبة أو ما عاد يطابق الفلتر
+        if not plr or plr.Parent ~= Players or not shouldShow(plr, filter) then
+            table.insert(toRemove, name)
+        end
+    end
+    for _, name in ipairs(toRemove) do
+        rowCache[name].row:Destroy()
+        rowCache[name] = nil
+    end
+
+    -- 2️⃣ أضف صفوف جديدة + رتّب الموجود
+    local order = 0
+    local visibleCount = 0
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if shouldShow(plr, filter) then
+            visibleCount += 1
+            local entry = rowCache[plr.Name]
+            if not entry then
+                -- ✅ أضف صف جديد (مرة وحدة بس)
+                local ok, row, btn = pcall(makeRow, plr, order)
+                if ok and row and btn then
+                    btn.MouseButton1Click:Connect(function()
+                        if spectating == plr then
+                            stopSpectate()
+                            updateAllButtons()
+                        else
+                            spectate(plr)
+                            updateAllButtons()
+                        end
+                    end)
+                    rowCache[plr.Name] = {row = row, btn = btn, player = plr}
+                end
+            else
+                -- ✅ موجود — فقط حدّث الترتيب
+                entry.row.LayoutOrder = order
+            end
+            order += 1
+        end
+    end
+
+    -- 3️⃣ رسالة "لا يوجد لاعبين"
+    local emptyLabel = list:FindFirstChild("EmptyLabel")
+    if visibleCount == 0 then
+        if not emptyLabel then
+            local empty = Instance.new("TextLabel")
+            empty.Name = "EmptyLabel"
+            empty.Size = UDim2.new(1, 0, 0, 40)
+            empty.BackgroundTransparency = 1
+            empty.Text = "لا يوجد لاعبين"
+            empty.Font = Enum.Font.Gotham
+            empty.TextSize = isMobile and 12 or 14
+            empty.TextColor3 = Theme.SubText
+            empty.LayoutOrder = 999999
+            empty.Parent = list
+        end
+    else
+        if emptyLabel then emptyLabel:Destroy() end
+    end
+
+    updateAllButtons()
+end
+
+-- ═══════════════════════════════════════════════
+--  🔄 SMART EVENTS (Debounced)
+-- ═══════════════════════════════════════════════
+local refreshQueued = false
+local function queueSync()
+    if refreshQueued then return end
+    refreshQueued = true
+    task.delay(0.2, function()
+        refreshQueued = false
+        syncList(searchBox.Text)
+    end)
+end
+
+Players.ChildAdded:Connect(function(child)
+    if child:IsA("Player") and child ~= LocalPlayer then
+        -- استنى الـ DisplayName يجهز
+        task.wait(0.3)
+        queueSync()
+    end
+end)
+
+Players.ChildRemoved:Connect(function(child)
+    if child:IsA("Player") then
+        if spectating == child then
+            stopSpectate()
+        end
+        -- احذف الصف فوراً (بدون debounce)
+        local entry = rowCache[child.Name]
+        if entry then
+            entry.row:Destroy()
+            rowCache[child.Name] = nil
+        end
+        queueSync()
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if spectating == player then
+        stopSpectate()
+        updateAllButtons()
+    end
+end)
+
+-- ───────────── Interactions ─────────────
+local searchToken = 0
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    searchToken += 1
+    local myToken = searchToken
+    task.delay(0.15, function()
+        if myToken == searchToken then
+            syncList(searchBox.Text)
+        end
+    end)
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    panel.Visible = false
+    fab.Visible = true
+end)
+
+fab.MouseButton1Click:Connect(function()
+    fab.Visible = false
+    panel.Visible = true
+    syncList(searchBox.Text)
+end)
+
+local function showPopup()
+    infoPopup.Visible = true
+    local targetY = -popupH/2
+    infoPopup.Position = UDim2.new(0.5, -popupW/2, 0.5, targetY - 40)
+    TweenService:Create(infoPopup, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, -popupW/2, 0.5, targetY)
+    }):Play()
+end
+
+local function hidePopup()
+    local tween = TweenService:Create(infoPopup, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Position = UDim2.new(0.5, -popupW/2, 0.5, -popupH/2 - 40)
+    })
+    tween:Play()
+    tween.Completed:Connect(function()
+        infoPopup.Visible = false
+    end)
+end
+
+infoBtn.MouseButton1Click:Connect(showPopup)
+popupClose.MouseButton1Click:Connect(hidePopup)
+
+-- Draggable
+local function makeDraggable(frame, handle)
+    handle = handle or frame
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            isDraggingGUI = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            isDraggingGUI = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+makeDraggable(fab)
+makeDraggable(panel, header)
+makeDraggable(infoPopup, popupTitle)
+makeDraggable(spectateInfo, siHeader)
+
+-- ───────────── Orbit Camera Input ─────────────
+UserInputService.InputChanged:Connect(function(input, gpe)
+    if not spectating then return end
+    if isDraggingGUI then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        if gpe then return end
+        orbitYaw = orbitYaw - input.Delta.X * orbitSens
+        orbitPitch = math.clamp(orbitPitch + input.Delta.Y * orbitSens, math.rad(-75), math.rad(80))
+    end
+
+    if input.UserInputType == Enum.UserInputType.Touch then
+        if gpe then return end
+        if not isTouchRotating then return end
+        orbitYaw = orbitYaw - input.Delta.X * orbitSens * 1.3
+        orbitPitch = math.clamp(orbitPitch + input.Delta.Y * orbitSens * 1.3, math.rad(-75), math.rad(80))
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        orbitDistance = math.clamp(orbitDistance - input.Position.Z * 2, 4, 40)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not spectating then return end
+    if input.UserInputType == Enum.UserInputType.Touch and not gpe and not isDraggingGUI then
+        isTouchRotating = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        isTouchRotating = false
+    end
+end)
+
+-- ───────────── Initial List ─────────────
+syncList()
