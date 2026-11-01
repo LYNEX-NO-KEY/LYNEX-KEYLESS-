@@ -1,0 +1,561 @@
+-- ══════════════════════════════════════════
+--   [ Fly PC + Infinite Jump + Info Popup ]
+--   Fly: F | Up: Q | Down: E | Infinite Jump: G
+-- ══════════════════════════════════════════
+
+local Players      = game:GetService("Players")
+local UIS          = game:GetService("UserInputService")
+local RunService   = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local old = playerGui:FindFirstChild("FlyPCGui")
+if old then old:Destroy() end
+
+-- ═══════════════ الواجهة الرئيسية ═══════════════
+local gui = Instance.new("ScreenGui")
+gui.Name = "FlyPCGui"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = playerGui
+
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.new(0, 210, 0, 182)
+main.Position = UDim2.new(0.5, -105, 0.5, -91)
+main.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+main.BorderSizePixel = 0
+main.Active = true
+main.Parent = gui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = main
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(100, 130, 240)
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.25
+mainStroke.Parent = main
+
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 32)
+titleBar.BackgroundTransparency = 1
+titleBar.Active = true
+titleBar.Parent = main
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, -50, 1, 0)
+titleText.Position = UDim2.new(0, 12, 0, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "Fly PC"
+titleText.TextColor3 = Color3.fromRGB(240, 240, 255)
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 15
+titleText.Parent = titleBar
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 22, 0, 22)
+minBtn.Position = UDim2.new(1, -28, 0, 5)
+minBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 68)
+minBtn.Text = "−"
+minBtn.TextColor3 = Color3.fromRGB(220, 220, 255)
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 18
+minBtn.BorderSizePixel = 0
+minBtn.AutoButtonColor = false
+minBtn.ZIndex = 5
+minBtn.Parent = main
+
+local minBtnCorner = Instance.new("UICorner")
+minBtnCorner.CornerRadius = UDim.new(0, 6)
+minBtnCorner.Parent = minBtn
+
+local minBtnStroke = Instance.new("UIStroke")
+minBtnStroke.Color = Color3.fromRGB(80, 80, 110)
+minBtnStroke.Thickness = 1
+minBtnStroke.Transparency = 0.4
+minBtnStroke.Parent = minBtn
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -20, 0, 1)
+divider.Position = UDim2.new(0, 10, 0, 31)
+divider.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+divider.BorderSizePixel = 0
+divider.Parent = main
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 178, 0, 36)
+toggleBtn.Position = UDim2.new(0.5, -89, 0, 40)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
+toggleBtn.Text = "تشغيل الطيران"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.BorderSizePixel = 0
+toggleBtn.AutoButtonColor = false
+toggleBtn.Parent = main
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
+
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Color3.fromRGB(90, 220, 130)
+toggleStroke.Thickness = 1
+toggleStroke.Transparency = 0.35
+toggleStroke.Parent = toggleBtn
+
+local infJumpBtn = Instance.new("TextButton")
+infJumpBtn.Size = UDim2.new(0, 178, 0, 30)
+infJumpBtn.Position = UDim2.new(0.5, -89, 0, 82)
+infJumpBtn.BackgroundColor3 = Color3.fromRGB(45, 55, 75)
+infJumpBtn.Text = "قفز لانهائي: معطل"
+infJumpBtn.TextColor3 = Color3.fromRGB(200, 200, 220)
+infJumpBtn.Font = Enum.Font.GothamBold
+infJumpBtn.TextSize = 13
+infJumpBtn.BorderSizePixel = 0
+infJumpBtn.AutoButtonColor = false
+infJumpBtn.Parent = main
+
+local infJumpCorner = Instance.new("UICorner")
+infJumpCorner.CornerRadius = UDim.new(0, 8)
+infJumpCorner.Parent = infJumpBtn
+
+local infJumpStroke = Instance.new("UIStroke")
+infJumpStroke.Color = Color3.fromRGB(80, 90, 120)
+infJumpStroke.Thickness = 1
+infJumpStroke.Transparency = 0.35
+infJumpStroke.Parent = infJumpBtn
+
+local speedRow = Instance.new("Frame")
+speedRow.Size = UDim2.new(1, -20, 0, 22)
+speedRow.Position = UDim2.new(0, 10, 0, 120)
+speedRow.BackgroundTransparency = 1
+speedRow.Parent = main
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0, 60, 1, 0)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "السرعة:"
+speedLabel.TextColor3 = Color3.fromRGB(180, 180, 210)
+speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+speedLabel.Font = Enum.Font.GothamMedium
+speedLabel.TextSize = 13
+speedLabel.Parent = speedRow
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(0, 60, 1, 0)
+speedBox.Position = UDim2.new(0, 65, 0, 0)
+speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+speedBox.Text = "80"
+speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedBox.Font = Enum.Font.GothamMedium
+speedBox.TextSize = 13
+speedBox.BorderSizePixel = 0
+speedBox.ClearTextOnFocus = false
+speedBox.Parent = speedRow
+
+local speedBoxCorner = Instance.new("UICorner")
+speedBoxCorner.CornerRadius = UDim.new(0, 6)
+speedBoxCorner.Parent = speedBox
+
+local speedBoxStroke = Instance.new("UIStroke")
+speedBoxStroke.Color = Color3.fromRGB(70, 70, 100)
+speedBoxStroke.Thickness = 1
+speedBoxStroke.Transparency = 0.3
+speedBoxStroke.Parent = speedBox
+
+local infoBtn = Instance.new("TextButton")
+infoBtn.Size = UDim2.new(0, 178, 0, 26)
+infoBtn.Position = UDim2.new(0.5, -89, 0, 148)
+infoBtn.BackgroundColor3 = Color3.fromRGB(55, 75, 120)
+infoBtn.Text = "📖  تعليمات ومعلومات"
+infoBtn.TextColor3 = Color3.fromRGB(220, 230, 255)
+infoBtn.Font = Enum.Font.GothamBold
+infoBtn.TextSize = 12
+infoBtn.BorderSizePixel = 0
+infoBtn.AutoButtonColor = false
+infoBtn.Parent = main
+
+local infoCorner = Instance.new("UICorner")
+infoCorner.CornerRadius = UDim.new(0, 8)
+infoCorner.Parent = infoBtn
+
+local infoStroke = Instance.new("UIStroke")
+infoStroke.Color = Color3.fromRGB(100, 140, 220)
+infoStroke.Thickness = 1
+infoStroke.Transparency = 0.35
+infoStroke.Parent = infoBtn
+
+-- ═══════════════ نافذة المعلومات ═══════════════
+local popup = Instance.new("Frame")
+popup.Name = "InfoPopup"
+popup.Size = UDim2.new(0, 340, 0, 360)
+popup.Position = UDim2.new(0.5, -170, 0.5, -180)
+popup.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+popup.BorderSizePixel = 0
+popup.Visible = false
+popup.ZIndex = 20
+popup.ClipsDescendants = true
+popup.Parent = gui
+
+local popupCorner = Instance.new("UICorner")
+popupCorner.CornerRadius = UDim.new(0, 12)
+popupCorner.Parent = popup
+
+local popupStroke = Instance.new("UIStroke")
+popupStroke.Color = Color3.fromRGB(100, 130, 240)
+popupStroke.Thickness = 1.5
+popupStroke.Transparency = 0.2
+popupStroke.Parent = popup
+
+local popupTitleBar = Instance.new("Frame")
+popupTitleBar.Size = UDim2.new(1, 0, 0, 38)
+popupTitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
+popupTitleBar.BorderSizePixel = 0
+popupTitleBar.ZIndex = 21
+popupTitleBar.Parent = popup
+
+local popupTitle = Instance.new("TextLabel")
+popupTitle.Size = UDim2.new(1, -50, 1, 0)
+popupTitle.Position = UDim2.new(0, 14, 0, 0)
+popupTitle.BackgroundTransparency = 1
+popupTitle.Text = "📖  تعليمات ومعلومات"
+popupTitle.TextColor3 = Color3.fromRGB(240, 240, 255)
+popupTitle.TextXAlignment = Enum.TextXAlignment.Left
+popupTitle.Font = Enum.Font.GothamBold
+popupTitle.TextSize = 15
+popupTitle.ZIndex = 22
+popupTitle.Parent = popupTitleBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -32, 0, 6)
+closeBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.BorderSizePixel = 0
+closeBtn.AutoButtonColor = false
+closeBtn.ZIndex = 22
+closeBtn.Parent = popupTitleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeBtn
+
+local instrTitle = Instance.new("TextLabel")
+instrTitle.Size = UDim2.new(1, -24, 0, 24)
+instrTitle.Position = UDim2.new(0, 12, 0, 46)
+instrTitle.BackgroundTransparency = 1
+instrTitle.Text = "📋  التعليمات:"
+instrTitle.TextColor3 = Color3.fromRGB(120, 200, 255)
+instrTitle.TextXAlignment = Enum.TextXAlignment.Left
+instrTitle.Font = Enum.Font.GothamBold
+instrTitle.TextSize = 14
+instrTitle.ZIndex = 21
+instrTitle.Parent = popup
+
+-- ✅ التعليمات محدّثة بمفاتيح Q / E
+local instrContent = Instance.new("TextLabel")
+instrContent.Size = UDim2.new(1, -24, 0, 130)
+instrContent.Position = UDim2.new(0, 12, 0, 72)
+instrContent.BackgroundTransparency = 1
+instrContent.Text = [[
+• F ← تشغيل/إيقاف الطيران
+• G ← تشغيل/إيقاف القفز اللانهائي
+• W A S D ← الحركة أثناء الطيران
+• Q ← الصعود (فوق)
+• E ← الهبوط (تحت)
+• Space ← قفز لانهائي (وضع G)
+• اسحب الواجهة من شريط العنوان
+• زر  −  تصغير  /  +  تكبير]]
+instrContent.TextColor3 = Color3.fromRGB(210, 210, 230)
+instrContent.TextXAlignment = Enum.TextXAlignment.Left
+instrContent.TextYAlignment = Enum.TextYAlignment.Top
+instrContent.Font = Enum.Font.GothamMedium
+instrContent.TextSize = 13
+instrContent.ZIndex = 21
+instrContent.Parent = popup
+
+local popupDivider = Instance.new("Frame")
+popupDivider.Size = UDim2.new(1, -24, 0, 1)
+popupDivider.Position = UDim2.new(0, 12, 0, 210)
+popupDivider.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+popupDivider.BorderSizePixel = 0
+popupDivider.ZIndex = 21
+popupDivider.Parent = popup
+
+local importantBox = Instance.new("Frame")
+importantBox.Size = UDim2.new(1, -24, 0, 122)
+importantBox.Position = UDim2.new(0, 12, 0, 220)
+importantBox.BackgroundColor3 = Color3.fromRGB(55, 28, 35)
+importantBox.BorderSizePixel = 0
+importantBox.ZIndex = 21
+importantBox.Parent = popup
+
+local impCorner = Instance.new("UICorner")
+impCorner.CornerRadius = UDim.new(0, 8)
+impCorner.Parent = importantBox
+
+local impStroke = Instance.new("UIStroke")
+impStroke.Color = Color3.fromRGB(230, 80, 90)
+impStroke.Thickness = 1.2
+impStroke.Transparency = 0.25
+impStroke.Parent = importantBox
+
+local impTitle = Instance.new("TextLabel")
+impTitle.Size = UDim2.new(1, -16, 0, 24)
+impTitle.Position = UDim2.new(0, 8, 0, 6)
+impTitle.BackgroundTransparency = 1
+impTitle.Text = "⚠️  رسالة مهمة:"
+impTitle.TextColor3 = Color3.fromRGB(255, 140, 140)
+impTitle.TextXAlignment = Enum.TextXAlignment.Left
+impTitle.Font = Enum.Font.GothamBold
+impTitle.TextSize = 14
+impTitle.ZIndex = 22
+impTitle.Parent = importantBox
+
+local impContent = Instance.new("TextLabel")
+impContent.Size = UDim2.new(1, -16, 0, 84)
+impContent.Position = UDim2.new(0, 8, 0, 32)
+impContent.BackgroundTransparency = 1
+impContent.Text = "هذا السكربت (الطيران والقفز اللانهائي) مخصص للكمبيوتر (PC) فقط، ولا يعمل على الجوال أو الأجهزة اللوحية."
+impContent.TextColor3 = Color3.fromRGB(255, 200, 200)
+impContent.TextXAlignment = Enum.TextXAlignment.Left
+impContent.TextYAlignment = Enum.TextYAlignment.Top
+impContent.Font = Enum.Font.GothamMedium
+impContent.TextSize = 13
+impContent.TextWrapped = true
+impContent.ZIndex = 22
+impContent.Parent = importantBox
+
+-- ═══════════════ منطق الطيران ═══════════════
+local flying, flySpeed, infJump = false, 80, false
+local bv, bg
+local character, hrp
+
+local function refreshChar()
+    character = player.Character or player.CharacterAdded:Wait()
+    hrp = character:WaitForChild("HumanoidRootPart")
+end
+refreshChar()
+
+player.CharacterAdded:Connect(function(c)
+    character = c
+    hrp = c:WaitForChild("HumanoidRootPart")
+    if flying then
+        flying = false
+        bv = nil; bg = nil
+        toggleBtn.Text = "تشغيل الطيران"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
+        toggleStroke.Color = Color3.fromRGB(90, 220, 130)
+    end
+end)
+
+local function startFly()
+    if not hrp or not hrp.Parent then refreshChar() end
+    flying = true
+    bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.Parent = hrp
+    bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    bg.Parent = hrp
+    toggleBtn.Text = "إيقاف الطيران"
+    TweenService:Create(toggleBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(200, 65, 65) }):Play()
+    toggleStroke.Color = Color3.fromRGB(240, 90, 90)
+end
+
+local function stopFly()
+    flying = false
+    if bv then bv:Destroy(); bv = nil end
+    if bg then bg:Destroy(); bg = nil end
+    toggleBtn.Text = "تشغيل الطيران"
+    TweenService:Create(toggleBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(55, 170, 90) }):Play()
+    toggleStroke.Color = Color3.fromRGB(90, 220, 130)
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if flying then stopFly() else startFly() end
+end)
+
+toggleBtn.MouseEnter:Connect(function()
+    local c = flying and Color3.fromRGB(220, 80, 80) or Color3.fromRGB(70, 195, 110)
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), { BackgroundColor3 = c }):Play()
+end)
+toggleBtn.MouseLeave:Connect(function()
+    local c = flying and Color3.fromRGB(200, 65, 65) or Color3.fromRGB(55, 170, 90)
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), { BackgroundColor3 = c }):Play()
+end)
+
+local function updateInfJumpBtn()
+    if infJump then
+        infJumpBtn.Text = "قفز لانهائي: مفعل"
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(55, 170, 90) }):Play()
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+        infJumpStroke.Color = Color3.fromRGB(90, 220, 130)
+    else
+        infJumpBtn.Text = "قفز لانهائي: معطل"
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(45, 55, 75) }):Play()
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { TextColor3 = Color3.fromRGB(200, 200, 220) }):Play()
+        infJumpStroke.Color = Color3.fromRGB(80, 90, 120)
+    end
+end
+
+infJumpBtn.MouseButton1Click:Connect(function()
+    infJump = not infJump
+    updateInfJumpBtn()
+end)
+
+infJumpBtn.MouseEnter:Connect(function()
+    if not infJump then
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(60, 75, 100) }):Play()
+    end
+end)
+infJumpBtn.MouseLeave:Connect(function()
+    if not infJump then
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(45, 55, 75) }):Play()
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if not infJump or flying then return end
+    if not character or not character.Parent then return end
+    if UIS:IsKeyDown(Enum.KeyCode.Space) then
+        local hum = character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+-- ═══════════ حلقة حركة الطيران (Q = فوق / E = تحت) ═══════════
+RunService.RenderStepped:Connect(function()
+    if not flying or not bv or not bg or not hrp or not hrp.Parent then return end
+    local cam = workspace.CurrentCamera
+    local dir = Vector3.zero
+    if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.Q) then dir += Vector3.new(0, 1, 0) end   -- ✅ Q صعود
+    if UIS:IsKeyDown(Enum.KeyCode.E) then dir -= Vector3.new(0, 1, 0) end   -- ✅ E هبوط
+    bv.Velocity = dir * flySpeed
+    bg.CFrame = cam.CFrame
+end)
+
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        if flying then stopFly() else startFly() end
+    elseif input.KeyCode == Enum.KeyCode.G then
+        infJump = not infJump
+        updateInfJumpBtn()
+    end
+end)
+
+speedBox.FocusLost:Connect(function()
+    local n = tonumber(speedBox.Text)
+    if n and n > 0 and n <= 1000 then flySpeed = n
+    else speedBox.Text = tostring(flySpeed) end
+end)
+
+infoBtn.MouseEnter:Connect(function()
+    TweenService:Create(infoBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(75, 100, 150) }):Play()
+end)
+infoBtn.MouseLeave:Connect(function()
+    TweenService:Create(infoBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 75, 120) }):Play()
+end)
+
+infoBtn.MouseButton1Click:Connect(function()
+    if popup.Visible then
+        popup.Visible = false
+    else
+        popup.Visible = true
+        popup.Size = UDim2.new(0, 300, 0, 320)
+        TweenService:Create(popup, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.new(0, 340, 0, 360) }):Play()
+    end
+end)
+
+closeBtn.MouseEnter:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 80, 80) }):Play()
+end)
+closeBtn.MouseLeave:Connect(function()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(180, 60, 60) }):Play()
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    popup.Visible = false
+end)
+
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        TweenService:Create(main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.new(0, 210, 0, 34) }):Play()
+        minBtn.Text = "+"
+        toggleBtn.Visible = false
+        infJumpBtn.Visible = false
+        speedRow.Visible = false
+        infoBtn.Visible = false
+        popup.Visible = false
+    else
+        TweenService:Create(main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.new(0, 210, 0, 182) }):Play()
+        minBtn.Text = "−"
+        toggleBtn.Visible = true
+        infJumpBtn.Visible = true
+        speedRow.Visible = true
+        infoBtn.Visible = true
+    end
+end)
+
+minBtn.MouseEnter:Connect(function()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(70, 70, 95) }):Play()
+end)
+minBtn.MouseLeave:Connect(function()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(50, 50, 68) }):Play()
+end)
+
+local dragging = false
+local dragStart, startPos
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if not dragging then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch then
+        local delta = input.Position - dragStart
+        local newX = startPos.X.Offset + delta.X
+        local newY = startPos.Y.Offset + delta.Y
+        local vp = workspace.CurrentCamera.ViewportSize
+        local w, h = main.AbsoluteSize.X, main.AbsoluteSize.Y
+        newX = math.clamp(newX, -w + 60, vp.X - 60)
+        newY = math.clamp(newY, 0, vp.Y - 35)
+        main.Position = UDim2.new(0, newX, 0, newY)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+print("[Fly PC] تم التحميل ✓ | F=طيران | Q=صعود | E=هبوط | G=قفز لانهائي")
