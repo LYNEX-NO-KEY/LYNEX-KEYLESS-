@@ -1,0 +1,654 @@
+--========================================================
+--  Auto Rope Compact v5
+--  + زر تعليمات (؟) جنب الإعدادات
+--  - إزالة شريط RopeHandler من الأسفل
+--========================================================
+print("[AutoRope] START")
+
+local ok, err = pcall(function()
+
+local Players    = game:GetService("Players")
+local UIS        = game:GetService("UserInputService")
+local RS         = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+
+local LP = Players.LocalPlayer
+while not LP do task.wait(0.1); LP = Players.LocalPlayer end
+
+local function notify(t, x)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title=t, Text=x, Duration=3})
+    end)
+end
+
+local RopeHandler = RS:FindFirstChild("RopeHandler", true)
+if not RopeHandler then
+    pcall(function() RopeHandler = RS.BetweenSides.Remotes.Events.RopeHandler end)
+end
+if not RopeHandler then notify("خطأ","RopeHandler غير موجود"); error("no rope") end
+
+local State = {
+    autoRope = false, range = 60, interval = 0.25,
+    target = nil, targetDist = 0,
+    hotkey = "E",
+    waitingForHotkey = false,
+    closed = false,
+}
+
+local function findNearest()
+    local myChar = LP.Character
+    if not myChar then return nil, 0 end
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then return nil, 0 end
+    local best, bestDist = nil, State.range
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then
+            local c = p.Character
+            if c and c.Parent == workspace then
+                local h = c:FindFirstChild("HumanoidRootPart")
+                local hum = c:FindFirstChildOfClass("Humanoid")
+                if h and hum and hum.Health > 0 then
+                    local d = (myHRP.Position - h.Position).Magnitude
+                    if d < bestDist then best, bestDist = c, d end
+                end
+            end
+        end
+    end
+    return best, bestDist or 0
+end
+
+local function fireRope(t)
+    if not t then return false end
+    return (pcall(function() RopeHandler:FireServer("Request", t) end))
+end
+
+task.spawn(function()
+    while not State.closed do
+        task.wait(State.interval)
+        if State.autoRope then
+            local c, d = findNearest()
+            State.target, State.targetDist = c, d
+            if c then fireRope(c) end
+        end
+    end
+end)
+
+-- GUI
+local parent
+pcall(function() if gethui then parent = gethui() end end)
+if not parent then pcall(function() parent = game:GetService("CoreGui") end) end
+if not parent then parent = LP:WaitForChild("PlayerGui") end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoRopeC"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 9999
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function() if syn and syn.protect_gui then syn.protect_gui(gui) end end)
+gui.Parent = parent
+
+local C = {
+    bg=Color3.fromRGB(20,20,28), bg2=Color3.fromRGB(30,30,42),
+    bg3=Color3.fromRGB(44,44,60), accent=Color3.fromRGB(96,138,255),
+    green=Color3.fromRGB(46,204,113), red=Color3.fromRGB(231,76,60),
+    text=Color3.fromRGB(240,240,250), dim=Color3.fromRGB(150,150,175),
+    stroke=Color3.fromRGB(60,60,85),
+}
+
+-- قللنا الارتفاع لأننا شلنا شريط الفوتر
+local W, H, PAD = 240, 240, 8 
+
+--================ Main Window ================
+local main = Instance.new("Frame")
+main.AnchorPoint = Vector2.new(0.5, 0)
+main.Position = UDim2.new(0.5, 0, 0, 24)
+main.Size = UDim2.fromOffset(W, H)
+main.BackgroundColor3 = C.bg
+main.BorderSizePixel = 0
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+local ms = Instance.new("UIStroke", main)
+ms.Color = C.stroke; ms.Thickness = 1
+
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 34)
+header.BackgroundColor3 = C.bg2
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = main
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
+local hFix = Instance.new("Frame")
+hFix.Size = UDim2.new(1, 0, 0, 10)
+hFix.Position = UDim2.new(0, 0, 1, -10)
+hFix.BackgroundColor3 = C.bg2
+hFix.BorderSizePixel = 0
+hFix.Parent = header
+
+local title = Instance.new("TextLabel")
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Size = UDim2.new(1, -110, 1, 0)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
+title.TextColor3 = C.text
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Text = "🪢 Auto Rope"
+title.Parent = header
+
+-- زر التعليمات ؟
+local helpBtn = Instance.new("TextButton")
+helpBtn.AnchorPoint = Vector2.new(1, 0)
+helpBtn.Position = UDim2.new(1, -62, 0, 5)
+helpBtn.Size = UDim2.fromOffset(24, 24)
+helpBtn.BackgroundColor3 = C.bg3
+helpBtn.Text = "؟"
+helpBtn.TextColor3 = C.text
+helpBtn.Font = Enum.Font.GothamBold
+helpBtn.TextSize = 13
+helpBtn.BorderSizePixel = 0
+helpBtn.Parent = header
+Instance.new("UICorner", helpBtn).CornerRadius = UDim.new(0, 6)
+
+-- زر الإعدادات ⚙
+local setBtn = Instance.new("TextButton")
+setBtn.AnchorPoint = Vector2.new(1, 0)
+setBtn.Position = UDim2.new(1, -34, 0, 5)
+setBtn.Size = UDim2.fromOffset(24, 24)
+setBtn.BackgroundColor3 = C.bg3
+setBtn.Text = "⚙"
+setBtn.TextColor3 = C.text
+setBtn.Font = Enum.Font.GothamBold
+setBtn.TextSize = 13
+setBtn.BorderSizePixel = 0
+setBtn.Parent = header
+Instance.new("UICorner", setBtn).CornerRadius = UDim.new(0, 6)
+
+-- زر التصغير —
+local minBtn = Instance.new("TextButton")
+minBtn.AnchorPoint = Vector2.new(1, 0)
+minBtn.Position = UDim2.new(1, -6, 0, 5)
+minBtn.Size = UDim2.fromOffset(24, 24)
+minBtn.BackgroundColor3 = C.bg3
+minBtn.Text = "—"
+minBtn.TextColor3 = C.text
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 13
+minBtn.BorderSizePixel = 0
+minBtn.Parent = header
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+
+-- Send
+local sendBtn = Instance.new("TextButton")
+sendBtn.Position = UDim2.new(0, PAD, 0, 42)
+sendBtn.Size = UDim2.new(1, -PAD*2, 0, 42)
+sendBtn.BackgroundColor3 = C.accent
+sendBtn.Text = "🪢  إرسال حبل"
+sendBtn.TextColor3 = Color3.new(1,1,1)
+sendBtn.Font = Enum.Font.GothamBold
+sendBtn.TextSize = 13
+sendBtn.BorderSizePixel = 0
+sendBtn.Parent = main
+Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 10)
+
+-- Auto
+local autoBtn = Instance.new("TextButton")
+autoBtn.Position = UDim2.new(0, PAD, 0, 90)
+autoBtn.Size = UDim2.new(1, -PAD*2, 0, 34)
+autoBtn.BackgroundColor3 = C.bg3
+autoBtn.Text = "⏸  تلقائي: مغلق"
+autoBtn.TextColor3 = C.text
+autoBtn.Font = Enum.Font.GothamBold
+autoBtn.TextSize = 12
+autoBtn.BorderSizePixel = 0
+autoBtn.Parent = main
+Instance.new("UICorner", autoBtn).CornerRadius = UDim.new(0, 8)
+
+-- Range
+local rangeVal = Instance.new("TextLabel")
+rangeVal.Position = UDim2.new(0, PAD, 0, 130)
+rangeVal.Size = UDim2.new(0.55, 0, 0, 26)
+rangeVal.BackgroundTransparency = 1
+rangeVal.Font = Enum.Font.GothamBold
+rangeVal.TextSize = 11
+rangeVal.TextColor3 = C.dim
+rangeVal.TextXAlignment = Enum.TextXAlignment.Left
+rangeVal.Text = "المدى: 60"
+rangeVal.Parent = main
+
+local rmBtn = Instance.new("TextButton")
+rmBtn.Position = UDim2.new(1, -PAD - 56, 0, 130)
+rmBtn.Size = UDim2.fromOffset(26, 26)
+rmBtn.BackgroundColor3 = C.bg3
+rmBtn.Text = "−"
+rmBtn.TextColor3 = C.text
+rmBtn.Font = Enum.Font.GothamBold
+rmBtn.TextSize = 14
+rmBtn.BorderSizePixel = 0
+rmBtn.Parent = main
+Instance.new("UICorner", rmBtn).CornerRadius = UDim.new(0, 6)
+
+local rpBtn = Instance.new("TextButton")
+rpBtn.Position = UDim2.new(1, -PAD - 26, 0, 130)
+rpBtn.Size = UDim2.fromOffset(26, 26)
+rpBtn.BackgroundColor3 = C.bg3
+rpBtn.Text = "+"
+rpBtn.TextColor3 = C.text
+rpBtn.Font = Enum.Font.GothamBold
+rpBtn.TextSize = 14
+rpBtn.BorderSizePixel = 0
+rpBtn.Parent = main
+Instance.new("UICorner", rpBtn).CornerRadius = UDim.new(0, 6)
+
+-- Status
+local statusText = Instance.new("TextLabel")
+statusText.Position = UDim2.new(0, PAD, 0, 162)
+statusText.Size = UDim2.new(1, -PAD*2, 0, 64) -- كبرنا شوي عشان ما فيه فوتر
+statusText.BackgroundColor3 = C.bg2
+statusText.Font = Enum.Font.Gotham
+statusText.TextSize = 11
+statusText.TextColor3 = C.text
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.TextYAlignment = Enum.TextYAlignment.Top
+statusText.TextWrapped = true
+statusText.Text = "  جاهز — [E] للإرسال"
+statusText.Parent = main
+Instance.new("UICorner", statusText).CornerRadius = UDim.new(0, 8)
+local sPad = Instance.new("UIPadding", statusText)
+sPad.PaddingTop = UDim.new(0, 6)
+sPad.PaddingBottom = UDim.new(0, 6)
+sPad.PaddingLeft = UDim.new(0, 8)
+sPad.PaddingRight = UDim.new(0, 8)
+
+--================ FAB ================
+local fab = Instance.new("Frame")
+fab.AnchorPoint = Vector2.new(1, 0)
+fab.Position = UDim2.new(1, -16, 0, 120)
+fab.Size = UDim2.fromOffset(46, 46)
+fab.BackgroundColor3 = C.accent
+fab.BorderSizePixel = 0
+fab.Visible = false
+fab.Active = true
+fab.Parent = gui
+Instance.new("UICorner", fab).CornerRadius = UDim.new(0.5, 0)
+
+local fabBtn = Instance.new("TextButton")
+fabBtn.Size = UDim2.new(1, 0, 1, 0)
+fabBtn.BackgroundTransparency = 1
+fabBtn.Text = "🪢"
+fabBtn.TextSize = 20
+fabBtn.Font = Enum.Font.GothamBold
+fabBtn.TextColor3 = Color3.new(1,1,1)
+fabBtn.Parent = fab
+
+local dot = Instance.new("Frame")
+dot.AnchorPoint = Vector2.new(1, 0)
+dot.Position = UDim2.new(1, 0, 0, 0)
+dot.Size = UDim2.fromOffset(10, 10)
+dot.BackgroundColor3 = C.green
+dot.BorderSizePixel = 0
+dot.Visible = false
+dot.Parent = fab
+Instance.new("UICorner", dot).CornerRadius = UDim.new(0.5, 0)
+local ds = Instance.new("UIStroke", dot)
+ds.Color = C.bg; ds.Thickness = 2
+
+--================ Settings Panel ================
+local settingsPanel = Instance.new("Frame")
+settingsPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+settingsPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+settingsPanel.Size = UDim2.fromOffset(240, 150)
+settingsPanel.BackgroundColor3 = C.bg
+settingsPanel.BorderSizePixel = 0
+settingsPanel.Visible = false
+settingsPanel.Active = true
+settingsPanel.ZIndex = 5
+settingsPanel.Parent = gui
+Instance.new("UICorner", settingsPanel).CornerRadius = UDim.new(0, 14)
+local spStroke = Instance.new("UIStroke", settingsPanel)
+spStroke.Color = C.stroke; spStroke.Thickness = 1
+
+local spTitle = Instance.new("TextLabel")
+spTitle.BackgroundTransparency = 1
+spTitle.Position = UDim2.new(0, 12, 0, 10)
+spTitle.Size = UDim2.new(1, -50, 0, 22)
+spTitle.Font = Enum.Font.GothamBold
+spTitle.TextSize = 13
+spTitle.TextColor3 = C.text
+spTitle.TextXAlignment = Enum.TextXAlignment.Left
+spTitle.Text = "⚙  الإعدادات"
+spTitle.Parent = settingsPanel
+
+local spClose = Instance.new("TextButton")
+spClose.AnchorPoint = Vector2.new(1, 0)
+spClose.Position = UDim2.new(1, -6, 0, 6)
+spClose.Size = UDim2.fromOffset(24, 24)
+spClose.BackgroundColor3 = C.bg3
+spClose.Text = "✕"
+spClose.TextColor3 = C.text
+spClose.Font = Enum.Font.GothamBold
+spClose.TextSize = 11
+spClose.BorderSizePixel = 0
+spClose.Parent = settingsPanel
+Instance.new("UICorner", spClose).CornerRadius = UDim.new(0, 6)
+
+local hkLabel = Instance.new("TextLabel")
+hkLabel.BackgroundTransparency = 1
+hkLabel.Position = UDim2.new(0, 12, 0, 44)
+hkLabel.Size = UDim2.new(0.5, 0, 0, 30)
+hkLabel.Font = Enum.Font.Gotham
+hkLabel.TextSize = 12
+hkLabel.TextColor3 = C.text
+hkLabel.TextXAlignment = Enum.TextXAlignment.Left
+hkLabel.Text = "مفتاح الحبل:"
+hkLabel.Parent = settingsPanel
+
+local hkBtn = Instance.new("TextButton")
+hkBtn.AnchorPoint = Vector2.new(1, 0)
+hkBtn.Position = UDim2.new(1, -12, 0, 44)
+hkBtn.Size = UDim2.fromOffset(100, 30)
+hkBtn.BackgroundColor3 = C.bg3
+hkBtn.Text = State.hotkey
+hkBtn.TextColor3 = C.accent
+hkBtn.Font = Enum.Font.GothamBold
+hkBtn.TextSize = 13
+hkBtn.BorderSizePixel = 0
+hkBtn.Parent = settingsPanel
+Instance.new("UICorner", hkBtn).CornerRadius = UDim.new(0, 8)
+
+local spHint = Instance.new("TextLabel")
+spHint.BackgroundTransparency = 1
+spHint.Position = UDim2.new(0, 12, 0, 82)
+spHint.Size = UDim2.new(1, -24, 0, 60)
+spHint.Font = Enum.Font.Gotham
+spHint.TextSize = 10
+spHint.TextColor3 = C.dim
+spHint.TextXAlignment = Enum.TextXAlignment.Left
+spHint.TextYAlignment = Enum.TextYAlignment.Top
+spHint.TextWrapped = true
+spHint.Text = "• اضغط الزر أعلى لتغيير المفتاح\n• اضغط المفتاح في اللعبة لإرسال الحبل\n• ضغطة مطوّلة على 🪢 تُغلق السكربت"
+spHint.Parent = settingsPanel
+
+spClose.Activated:Connect(function() settingsPanel.Visible = false end)
+
+--================ Help Panel ================
+local helpPanel = Instance.new("Frame")
+helpPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+helpPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+helpPanel.Size = UDim2.fromOffset(240, 170)
+helpPanel.BackgroundColor3 = C.bg
+helpPanel.BorderSizePixel = 0
+helpPanel.Visible = false
+helpPanel.Active = true
+helpPanel.ZIndex = 5
+helpPanel.Parent = gui
+Instance.new("UICorner", helpPanel).CornerRadius = UDim.new(0, 14)
+local hpStroke = Instance.new("UIStroke", helpPanel)
+hpStroke.Color = C.stroke; hpStroke.Thickness = 1
+
+local hpTitle = Instance.new("TextLabel")
+hpTitle.BackgroundTransparency = 1
+hpTitle.Position = UDim2.new(0, 12, 0, 10)
+hpTitle.Size = UDim2.new(1, -50, 0, 22)
+hpTitle.Font = Enum.Font.GothamBold
+hpTitle.TextSize = 13
+hpTitle.TextColor3 = C.text
+hpTitle.TextXAlignment = Enum.TextXAlignment.Left
+hpTitle.Text = "❓  التعليمات"
+hpTitle.Parent = helpPanel
+
+local hpClose = Instance.new("TextButton")
+hpClose.AnchorPoint = Vector2.new(1, 0)
+hpClose.Position = UDim2.new(1, -6, 0, 6)
+hpClose.Size = UDim2.fromOffset(24, 24)
+hpClose.BackgroundColor3 = C.bg3
+hpClose.Text = "✕"
+hpClose.TextColor3 = C.text
+hpClose.Font = Enum.Font.GothamBold
+hpClose.TextSize = 11
+hpClose.BorderSizePixel = 0
+hpClose.Parent = helpPanel
+Instance.new("UICorner", hpClose).CornerRadius = UDim.new(0, 6)
+
+local hpText = Instance.new("TextLabel")
+hpText.BackgroundTransparency = 1
+hpText.Position = UDim2.new(0, 12, 0, 40)
+hpText.Size = UDim2.new(1, -24, 0, 120)
+hpText.Font = Enum.Font.Gotham
+hpText.TextSize = 11
+hpText.TextColor3 = C.text
+hpText.TextXAlignment = Enum.TextXAlignment.Right
+hpText.TextYAlignment = Enum.TextYAlignment.Top
+hpText.TextWrapped = true
+hpText.Text = [[• اضغط [E] لإرسال حبل لأقرب لاعب.
+• فعّل "تلقائي" ليرسل باستمرار.
+• من ⚙ يمكنك تغيير مفتاح E.
+• + و - لتغيير مدى البحث.
+• — لتصغير الواجهة للزر العائم.
+• اضغط مطولاً على 🪢 لإغلاق السكربت.
+• إذا لم يرسل الحبل، قم بزيادة المدى.]]
+hpText.Parent = helpPanel
+
+hpClose.Activated:Connect(function() helpPanel.Visible = false end)
+
+--================ Drag Logic ================
+local function dragPanel(handle, panel)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = panel.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            local d = input.Position - dragStart
+            panel.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
+end
+
+dragPanel(spTitle, settingsPanel)
+dragPanel(hpTitle, helpPanel)
+dragPanel(header, main)
+
+-- Drag FAB
+local dragState = { active = false, wasDragged = false, pressStart = 0, dragStart = nil, startPos = nil }
+
+local function startDrag(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragState.active = true
+        dragState.wasDragged = false
+        dragState.pressStart = tick()
+        dragState.dragStart = input.Position
+        dragState.startPos = fab.Position
+    end
+end
+
+UIS.InputChanged:Connect(function(input)
+    if dragState.active and (input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        local d = input.Position - dragState.dragStart
+        if d.Magnitude > 5 then dragState.wasDragged = true end
+        fab.Position = UDim2.new(
+            dragState.startPos.X.Scale, dragState.startPos.X.Offset + d.X,
+            dragState.startPos.Y.Scale, dragState.startPos.Y.Offset + d.Y)
+    end
+end)
+
+--================ Events ================
+local function setMin(m)
+    main.Visible = not m
+    fab.Visible = m
+    if m then
+        settingsPanel.Visible = false
+        helpPanel.Visible = false
+    end
+end
+
+minBtn.Activated:Connect(function() setMin(true) end)
+
+-- فتح/إغلاق الإعدادات
+setBtn.Activated:Connect(function()
+    helpPanel.Visible = false
+    settingsPanel.Visible = not settingsPanel.Visible
+end)
+
+-- فتح/إغلاق التعليمات
+helpBtn.Activated:Connect(function()
+    settingsPanel.Visible = false
+    helpPanel.Visible = not helpPanel.Visible
+end)
+
+fabBtn.InputBegan:Connect(startDrag)
+fabBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch
+    or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if dragState.active and not dragState.wasDragged and dragState.pressStart > 0 then
+            local dur = tick() - dragState.pressStart
+            if dur >= 0.7 then
+                State.autoRope = false
+                State.closed = true
+                gui:Destroy()
+            else
+                setMin(false)
+            end
+        end
+        dragState.active = false
+    end
+end)
+
+-- Hotkey
+local function setHotkeyDisplay()
+    hkBtn.Text = State.hotkey
+    hkBtn.BackgroundColor3 = C.bg3
+end
+
+hkBtn.Activated:Connect(function()
+    if State.waitingForHotkey then
+        State.waitingForHotkey = false
+        setHotkeyDisplay()
+    else
+        State.waitingForHotkey = true
+        hkBtn.Text = "اضغط مفتاح..."
+        hkBtn.BackgroundColor3 = C.accent
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if State.closed then return end
+
+    if State.waitingForHotkey then
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            local kc = input.KeyCode
+            if kc == Enum.KeyCode.Escape then
+                State.waitingForHotkey = false
+                setHotkeyDisplay()
+                return
+            end
+            if kc ~= Enum.KeyCode.Unknown then
+                State.hotkey = kc.Name
+                State.waitingForHotkey = false
+                setHotkeyDisplay()
+                notify("تم", "المفتاح الجديد: " .. State.hotkey)
+            end
+        end
+        return
+    end
+
+    if gameProcessed then return end
+
+    if input.UserInputType == Enum.UserInputType.Keyboard
+       and input.KeyCode.Name == State.hotkey then
+        local c, d = findNearest()
+        if c then
+            fireRope(c)
+            if main.Visible then
+                statusText.Text = string.format("  ✅ %s\n  📏 %.0f", c.Name, d)
+                statusText.TextColor3 = C.green
+            end
+        else
+            if main.Visible then
+                statusText.Text = "  ❌ لا يوجد لاعب في المدى"
+                statusText.TextColor3 = C.red
+            end
+        end
+    end
+end)
+
+sendBtn.Activated:Connect(function()
+    local c, d = findNearest()
+    if not c then
+        statusText.Text = "  ❌ لا يوجد لاعب في المدى"
+        statusText.TextColor3 = C.red
+        return
+    end
+    if fireRope(c) then
+        statusText.Text = string.format("  ✅ %s\n  📏 %.0f", c.Name, d)
+        statusText.TextColor3 = C.green
+    else
+        statusText.Text = "  ❌ فشل الإرسال"
+        statusText.TextColor3 = C.red
+    end
+end)
+
+autoBtn.Activated:Connect(function()
+    State.autoRope = not State.autoRope
+    if State.autoRope then
+        autoBtn.Text = "▶  تلقائي: مفتوح"
+        autoBtn.BackgroundColor3 = C.green
+        autoBtn.TextColor3 = Color3.new(1,1,1)
+        dot.Visible = true
+        statusText.TextColor3 = C.green
+        statusText.Text = "  🔄 يعمل..."
+    else
+        autoBtn.Text = "⏸  تلقائي: مغلق"
+        autoBtn.BackgroundColor3 = C.bg3
+        autoBtn.TextColor3 = C.text
+        dot.Visible = false
+        statusText.TextColor3 = C.text
+        statusText.Text = "  متوقف"
+    end
+end)
+
+rmBtn.Activated:Connect(function()
+    State.range = math.max(10, State.range - 10)
+    rangeVal.Text = "المدى: " .. State.range
+end)
+rpBtn.Activated:Connect(function()
+    State.range = math.min(200, State.range + 10)
+    rangeVal.Text = "المدى: " .. State.range
+end)
+
+task.spawn(function()
+    while not State.closed do
+        task.wait(0.3)
+        if State.autoRope and State.target and main.Visible then
+            statusText.Text = string.format("  🎯 %s\n  📏 %.0f", State.target.Name, State.targetDist)
+        end
+    end
+end)
+
+notify("Auto Rope", "جاهز ✓ اضغط [E] لإرسال حبل")
+print("[AutoRope] READY")
+
+end)
+
+if not ok then
+    print("[AutoRope] ERROR:", tostring(err))
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "خطأ", Text = tostring(err), Duration = 8
+        })
+    end)
+end
