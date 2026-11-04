@@ -1,0 +1,1097 @@
+--[[
+    سكربت الضرب التلقائي — CombatEvent — Delta
+    Modern Dark UI + إعدادات + تعليمات + ثيمات
+    إصلاح: تغيير اللون ما كان يشتغل
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local CONFIG = {
+    AttackRange = 15,
+    AttackSpeed = 1.0,
+    InstantMinGap = 0.15,
+    AttackKey = Enum.KeyCode.E,
+}
+
+local C = {
+    bg        = Color3.fromRGB(14, 14, 22),
+    bgGrad1   = Color3.fromRGB(26, 26, 40),
+    bgGrad2   = Color3.fromRGB(14, 14, 22),
+    surface   = Color3.fromRGB(30, 30, 44),
+    surface2  = Color3.fromRGB(42, 42, 62),
+    accent    = Color3.fromRGB(99, 102, 241),
+    accent2   = Color3.fromRGB(139, 92, 246),
+    success   = Color3.fromRGB(34, 197, 94),
+    danger    = Color3.fromRGB(239, 68, 68),
+    text      = Color3.fromRGB(240, 240, 250),
+    textDim   = Color3.fromRGB(150, 150, 175),
+    border    = Color3.fromRGB(62, 62, 90),
+    toggleOff = Color3.fromRGB(55, 55, 75),
+}
+
+local THEMES = {
+    { name = "بنفسجي", accent = Color3.fromRGB(99,102,241),  accent2 = Color3.fromRGB(139,92,246) },
+    { name = "أزرق",   accent = Color3.fromRGB(59,130,246),  accent2 = Color3.fromRGB(37,99,235) },
+    { name = "أحمر",   accent = Color3.fromRGB(239,68,68),   accent2 = Color3.fromRGB(220,38,38) },
+    { name = "أخضر",   accent = Color3.fromRGB(34,197,94),   accent2 = Color3.fromRGB(22,163,74) },
+    { name = "برتقالي", accent = Color3.fromRGB(249,115,22), accent2 = Color3.fromRGB(234,88,12) },
+    { name = "وردي",   accent = Color3.fromRGB(236,72,153),  accent2 = Color3.fromRGB(219,39,119) },
+}
+
+-- CombatEvent
+local CombatEvent
+task.spawn(function()
+    local ok, result = pcall(function()
+        return ReplicatedStorage:WaitForChild("BetweenSides", 5)
+            :WaitForChild("Remotes", 5)
+            :WaitForChild("Events", 5)
+            :WaitForChild("CombatEvent", 5)
+    end)
+    if ok and result then CombatEvent = result; return end
+    for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") and v.Name == "CombatEvent" then
+            CombatEvent = v; break
+        end
+    end
+end)
+
+local function corner(p, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r or 8)
+    c.Parent = p
+    return c
+end
+
+local function stroke(p, color, thickness, transparency)
+    local s = Instance.new("UIStroke")
+    s.Color = color or C.border
+    s.Thickness = thickness or 1
+    s.Transparency = transparency or 0.5
+    s.Parent = p
+    return s
+end
+
+local function fireAttack()
+    if not CombatEvent then return false end
+    CombatEvent:FireServer("Slipper")
+    return true
+end
+
+local function makeDraggable(frame, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local d = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + d.X,
+                startPos.Y.Scale, startPos.Y.Offset + d.Y
+            )
+        end
+    end)
+end
+
+local function createCard(parent, title, accentColor)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -6, 0, 0)
+    card.AutomaticSize = Enum.AutomaticSize.Y
+    card.BackgroundColor3 = C.surface
+    card.BorderSizePixel = 0
+    card.ZIndex = 12
+    card.Parent = parent
+    corner(card, 8)
+    stroke(card, accentColor or C.border, 1, 0.4)
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 12)
+    padding.PaddingRight = UDim.new(0, 12)
+    padding.Parent = card
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = card
+
+    if title then
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.new(1, 0, 0, 18)
+        t.BackgroundTransparency = 1
+        t.Text = title
+        t.TextColor3 = accentColor or C.accent2
+        t.Font = Enum.Font.GothamBold
+        t.TextSize = 13
+        t.TextXAlignment = Enum.TextXAlignment.Right
+        t.ZIndex = 13
+        t.LayoutOrder = 1
+        t.Parent = card
+    end
+
+    return card
+end
+
+-- Screen GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CombatUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ============ الواجهة الرئيسية ============
+local Wrapper = Instance.new("Frame")
+Wrapper.Size = UDim2.new(0, 240, 0, 220)
+Wrapper.Position = UDim2.new(0.5, -120, 0.5, -110)
+Wrapper.BackgroundTransparency = 1
+Wrapper.Parent = ScreenGui
+
+local Shadow = Instance.new("Frame")
+Shadow.Size = UDim2.new(1, 0, 1, 0)
+Shadow.Position = UDim2.new(0, 0, 0, 8)
+Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Shadow.BackgroundTransparency = 0.45
+Shadow.BorderSizePixel = 0
+Shadow.Parent = Wrapper
+corner(Shadow, 16)
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(1, 0, 1, 0)
+Main.BackgroundColor3 = C.bg
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = Wrapper
+corner(Main, 16)
+
+local mGrad = Instance.new("UIGradient")
+mGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.bgGrad1),
+    ColorSequenceKeypoint.new(1, C.bgGrad2),
+})
+mGrad.Rotation = 90
+mGrad.Parent = Main
+stroke(Main, C.border, 1, 0.5)
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 44)
+Header.BackgroundColor3 = C.accent2
+Header.BorderSizePixel = 0
+Header.Parent = Main
+corner(Header, 16)
+
+local hFix = Instance.new("Frame")
+hFix.Size = UDim2.new(1, 0, 0, 16)
+hFix.Position = UDim2.new(0, 0, 1, -16)
+hFix.BackgroundColor3 = C.accent2
+hFix.BorderSizePixel = 0
+hFix.Parent = Header
+
+local TitleIcon = Instance.new("TextLabel")
+TitleIcon.Size = UDim2.new(0, 26, 0, 26)
+TitleIcon.Position = UDim2.new(0, 12, 0.5, -13)
+TitleIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TitleIcon.BackgroundTransparency = 0.85
+TitleIcon.Text = "⚔"
+TitleIcon.TextSize = 16
+TitleIcon.Font = Enum.Font.GothamBold
+TitleIcon.TextColor3 = C.text
+TitleIcon.Parent = Header
+corner(TitleIcon, 8)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0, 100, 1, 0)
+Title.Position = UDim2.new(0, 46, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "ضرب تلقائي"
+Title.TextColor3 = C.text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+local SettingsBtn = Instance.new("TextButton")
+SettingsBtn.Size = UDim2.new(0, 26, 0, 26)
+SettingsBtn.Position = UDim2.new(1, -94, 0.5, -13)
+SettingsBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SettingsBtn.BackgroundTransparency = 0.75
+SettingsBtn.Text = "⚙"
+SettingsBtn.TextColor3 = C.text
+SettingsBtn.Font = Enum.Font.GothamBold
+SettingsBtn.TextSize = 15
+SettingsBtn.AutoButtonColor = false
+SettingsBtn.Parent = Header
+corner(SettingsBtn, 8)
+
+local HelpBtn = Instance.new("TextButton")
+HelpBtn.Size = UDim2.new(0, 26, 0, 26)
+HelpBtn.Position = UDim2.new(1, -64, 0.5, -13)
+HelpBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HelpBtn.BackgroundTransparency = 0.75
+HelpBtn.Text = "?"
+HelpBtn.TextColor3 = C.text
+HelpBtn.Font = Enum.Font.GothamBold
+HelpBtn.TextSize = 15
+HelpBtn.AutoButtonColor = false
+HelpBtn.Parent = Header
+corner(HelpBtn, 8)
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 26, 0, 26)
+MinBtn.Position = UDim2.new(1, -34, 0.5, -13)
+MinBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MinBtn.BackgroundTransparency = 0.75
+MinBtn.Text = "—"
+MinBtn.TextColor3 = C.text
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 14
+MinBtn.AutoButtonColor = false
+MinBtn.Parent = Header
+corner(MinBtn, 8)
+
+local DragZone = Instance.new("TextButton")
+DragZone.Size = UDim2.new(1, -120, 1, 0)
+DragZone.BackgroundTransparency = 1
+DragZone.Text = ""
+DragZone.Parent = Header
+DragZone.ZIndex = 0
+
+local Body = Instance.new("Frame")
+Body.Size = UDim2.new(1, 0, 1, -44)
+Body.Position = UDim2.new(0, 0, 0, 44)
+Body.BackgroundTransparency = 1
+Body.Parent = Main
+
+local Row1 = Instance.new("Frame")
+Row1.Size = UDim2.new(1, -20, 0, 50)
+Row1.Position = UDim2.new(0, 10, 0, 10)
+Row1.BackgroundColor3 = C.surface
+Row1.BorderSizePixel = 0
+Row1.Parent = Body
+corner(Row1, 10)
+stroke(Row1, C.border, 1, 0.5)
+
+local Row1Btn = Instance.new("TextButton")
+Row1Btn.Size = UDim2.new(1, 0, 1, 0)
+Row1Btn.BackgroundTransparency = 1
+Row1Btn.Text = ""
+Row1Btn.AutoButtonColor = false
+Row1Btn.Parent = Row1
+
+local R1IconBg = Instance.new("Frame")
+R1IconBg.Size = UDim2.new(0, 36, 0, 36)
+R1IconBg.Position = UDim2.new(0, 8, 0.5, -18)
+R1IconBg.BackgroundColor3 = C.accent
+R1IconBg.Parent = Row1
+corner(R1IconBg, 10)
+
+local R1Icon = Instance.new("TextLabel")
+R1Icon.Size = UDim2.new(1, 0, 1, 0)
+R1Icon.BackgroundTransparency = 1
+R1Icon.Text = "⚔"
+R1Icon.TextSize = 18
+R1Icon.Font = Enum.Font.GothamBold
+R1Icon.TextColor3 = C.text
+R1Icon.Parent = R1IconBg
+
+local R1Label = Instance.new("TextLabel")
+R1Label.Size = UDim2.new(1, -140, 1, 0)
+R1Label.Position = UDim2.new(0, 52, 0, 0)
+R1Label.BackgroundTransparency = 1
+R1Label.Text = "ضرب اللاعب"
+R1Label.TextSize = 14
+R1Label.Font = Enum.Font.GothamSemibold
+R1Label.TextColor3 = C.text
+R1Label.TextXAlignment = Enum.TextXAlignment.Left
+R1Label.Parent = Row1
+
+local R1KeyCap = Instance.new("Frame")
+R1KeyCap.Size = UDim2.new(0, 26, 0, 26)
+R1KeyCap.Position = UDim2.new(1, -34, 0.5, -13)
+R1KeyCap.BackgroundColor3 = C.surface2
+R1KeyCap.Parent = Row1
+corner(R1KeyCap, 6)
+stroke(R1KeyCap, C.border, 1, 0.3)
+
+local R1KeyText = Instance.new("TextLabel")
+R1KeyText.Size = UDim2.new(1, 0, 1, 0)
+R1KeyText.BackgroundTransparency = 1
+R1KeyText.Text = CONFIG.AttackKey.Name
+R1KeyText.TextSize = 11
+R1KeyText.Font = Enum.Font.GothamBold
+R1KeyText.TextColor3 = C.textDim
+R1KeyText.Parent = R1KeyCap
+
+local Row2 = Instance.new("Frame")
+Row2.Size = UDim2.new(1, -20, 0, 50)
+Row2.Position = UDim2.new(0, 10, 0, 68)
+Row2.BackgroundColor3 = C.surface
+Row2.BorderSizePixel = 0
+Row2.Parent = Body
+corner(Row2, 10)
+stroke(Row2, C.border, 1, 0.5)
+
+local Row2Btn = Instance.new("TextButton")
+Row2Btn.Size = UDim2.new(1, 0, 1, 0)
+Row2Btn.BackgroundTransparency = 1
+Row2Btn.Text = ""
+Row2Btn.AutoButtonColor = false
+Row2Btn.Parent = Row2
+
+local R2IconBg = Instance.new("Frame")
+R2IconBg.Size = UDim2.new(0, 36, 0, 36)
+R2IconBg.Position = UDim2.new(0, 8, 0.5, -18)
+R2IconBg.BackgroundColor3 = C.surface2
+R2IconBg.Parent = Row2
+corner(R2IconBg, 10)
+
+local R2Icon = Instance.new("TextLabel")
+R2Icon.Size = UDim2.new(1, 0, 1, 0)
+R2Icon.BackgroundTransparency = 1
+R2Icon.Text = "✨"
+R2Icon.TextSize = 18
+R2Icon.Font = Enum.Font.GothamBold
+R2Icon.TextColor3 = C.text
+R2Icon.Parent = R2IconBg
+
+local R2Label = Instance.new("TextLabel")
+R2Label.Size = UDim2.new(1, -140, 1, 0)
+R2Label.Position = UDim2.new(0, 52, 0, 0)
+R2Label.BackgroundTransparency = 1
+R2Label.Text = "هالة ضرب"
+R2Label.TextSize = 14
+R2Label.Font = Enum.Font.GothamSemibold
+R2Label.TextColor3 = C.text
+R2Label.TextXAlignment = Enum.TextXAlignment.Left
+R2Label.Parent = Row2
+
+local Toggle = Instance.new("Frame")
+Toggle.Size = UDim2.new(0, 46, 0, 26)
+Toggle.Position = UDim2.new(1, -54, 0.5, -13)
+Toggle.BackgroundColor3 = C.toggleOff
+Toggle.Parent = Row2
+corner(Toggle, 13)
+
+local Knob = Instance.new("Frame")
+Knob.Size = UDim2.new(0, 20, 0, 20)
+Knob.Position = UDim2.new(0, 3, 0.5, -10)
+Knob.BackgroundColor3 = C.text
+Knob.Parent = Toggle
+corner(Knob, 10)
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = C.success
+ToggleStroke.Thickness = 2
+ToggleStroke.Transparency = 1
+ToggleStroke.Parent = Toggle
+
+local Status = Instance.new("Frame")
+Status.Size = UDim2.new(1, -20, 0, 32)
+Status.Position = UDim2.new(0, 10, 0, 128)
+Status.BackgroundColor3 = C.surface
+Status.BorderSizePixel = 0
+Status.Parent = Body
+corner(Status, 8)
+stroke(Status, C.border, 1, 0.6)
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 8, 0, 8)
+StatusDot.Position = UDim2.new(0, 12, 0.5, -4)
+StatusDot.BackgroundColor3 = C.textDim
+StatusDot.Parent = Status
+corner(StatusDot, 4)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -32, 1, 0)
+StatusLabel.Position = UDim2.new(0, 26, 0, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "جاهز"
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextColor3 = C.textDim
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = Status
+
+makeDraggable(Wrapper, DragZone)
+
+local minimized = false
+local fullSize = Wrapper.Size
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    if minimized then
+        TweenService:Create(Wrapper, ti, {Size = UDim2.new(0, 240, 0, 44)}):Play()
+        Body.Visible = false
+        Shadow.Visible = false
+        MinBtn.Text = "+"
+    else
+        TweenService:Create(Wrapper, ti, {Size = fullSize}):Play()
+        Body.Visible = true
+        Shadow.Visible = true
+        MinBtn.Text = "—"
+    end
+end)
+
+-- ============ نافذة التعليمات ============
+local HelpWrapper = Instance.new("Frame")
+HelpWrapper.Size = UDim2.new(0, 300, 0, 340)
+HelpWrapper.Position = UDim2.new(0.5, -150, 0.5, -170)
+HelpWrapper.BackgroundTransparency = 1
+HelpWrapper.Visible = false
+HelpWrapper.ZIndex = 10
+HelpWrapper.Parent = ScreenGui
+
+local HelpShadow = Instance.new("Frame")
+HelpShadow.Size = UDim2.new(1, 0, 1, 0)
+HelpShadow.Position = UDim2.new(0, 0, 0, 8)
+HelpShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+HelpShadow.BackgroundTransparency = 0.45
+HelpShadow.BorderSizePixel = 0
+HelpShadow.ZIndex = 10
+HelpShadow.Parent = HelpWrapper
+corner(HelpShadow, 16)
+
+local HelpMain = Instance.new("Frame")
+HelpMain.Size = UDim2.new(1, 0, 1, 0)
+HelpMain.BackgroundColor3 = C.bg
+HelpMain.BorderSizePixel = 0
+HelpMain.Active = true
+HelpMain.ZIndex = 11
+HelpMain.Parent = HelpWrapper
+corner(HelpMain, 16)
+
+local hGrad = Instance.new("UIGradient")
+hGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.bgGrad1),
+    ColorSequenceKeypoint.new(1, C.bgGrad2),
+})
+hGrad.Rotation = 90
+hGrad.Parent = HelpMain
+stroke(HelpMain, C.border, 1, 0.5)
+
+local HelpHeader = Instance.new("Frame")
+HelpHeader.Size = UDim2.new(1, 0, 0, 44)
+HelpHeader.BackgroundColor3 = C.accent
+HelpHeader.BorderSizePixel = 0
+HelpHeader.ZIndex = 12
+HelpHeader.Parent = HelpMain
+corner(HelpHeader, 16)
+
+local HelpHFix = Instance.new("Frame")
+HelpHFix.Size = UDim2.new(1, 0, 0, 16)
+HelpHFix.Position = UDim2.new(0, 0, 1, -16)
+HelpHFix.BackgroundColor3 = C.accent
+HelpHFix.BorderSizePixel = 0
+HelpHFix.ZIndex = 12
+HelpHFix.Parent = HelpHeader
+
+local HelpHIcon = Instance.new("TextLabel")
+HelpHIcon.Size = UDim2.new(0, 26, 0, 26)
+HelpHIcon.Position = UDim2.new(0, 12, 0.5, -13)
+HelpHIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HelpHIcon.BackgroundTransparency = 0.85
+HelpHIcon.Text = "?"
+HelpHIcon.TextSize = 16
+HelpHIcon.Font = Enum.Font.GothamBold
+HelpHIcon.TextColor3 = C.text
+HelpHIcon.ZIndex = 13
+HelpHIcon.Parent = HelpHeader
+corner(HelpHIcon, 8)
+
+local HelpHTitle = Instance.new("TextLabel")
+HelpHTitle.Size = UDim2.new(0, 180, 1, 0)
+HelpHTitle.Position = UDim2.new(0, 46, 0, 0)
+HelpHTitle.BackgroundTransparency = 1
+HelpHTitle.Text = "التعليمات"
+HelpHTitle.TextColor3 = C.text
+HelpHTitle.Font = Enum.Font.GothamBold
+HelpHTitle.TextSize = 15
+HelpHTitle.TextXAlignment = Enum.TextXAlignment.Left
+HelpHTitle.ZIndex = 13
+HelpHTitle.Parent = HelpHeader
+
+local HelpClose = Instance.new("TextButton")
+HelpClose.Size = UDim2.new(0, 26, 0, 26)
+HelpClose.Position = UDim2.new(1, -34, 0.5, -13)
+HelpClose.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HelpClose.BackgroundTransparency = 0.75
+HelpClose.Text = "✕"
+HelpClose.TextColor3 = C.text
+HelpClose.Font = Enum.Font.GothamBold
+HelpClose.TextSize = 14
+HelpClose.AutoButtonColor = false
+HelpClose.ZIndex = 13
+HelpClose.Parent = HelpHeader
+corner(HelpClose, 8)
+
+local HelpDragZone = Instance.new("TextButton")
+HelpDragZone.Size = UDim2.new(1, -60, 1, 0)
+HelpDragZone.BackgroundTransparency = 1
+HelpDragZone.Text = ""
+HelpDragZone.ZIndex = 13
+HelpDragZone.Parent = HelpHeader
+
+local HelpBody = Instance.new("ScrollingFrame")
+HelpBody.Size = UDim2.new(1, -20, 1, -54)
+HelpBody.Position = UDim2.new(0, 10, 0, 48)
+HelpBody.BackgroundTransparency = 1
+HelpBody.BorderSizePixel = 0
+HelpBody.ScrollBarThickness = 4
+HelpBody.ScrollBarImageColor3 = C.accent
+HelpBody.CanvasSize = UDim2.new(0, 0, 0, 0)
+HelpBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
+HelpBody.ZIndex = 12
+HelpBody.Parent = HelpMain
+
+local HelpLayout = Instance.new("UIListLayout")
+HelpLayout.Padding = UDim.new(0, 8)
+HelpLayout.SortOrder = Enum.SortOrder.LayoutOrder
+HelpLayout.Parent = HelpBody
+
+local function addHelpSection(title, bodyText, accentColor)
+    local card = createCard(HelpBody, title, accentColor)
+    local b = Instance.new("TextLabel")
+    b.Size = UDim2.new(1, 0, 0, 0)
+    b.AutomaticSize = Enum.AutomaticSize.Y
+    b.BackgroundTransparency = 1
+    b.Text = bodyText
+    b.TextColor3 = C.textDim
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 12
+    b.TextWrapped = true
+    b.TextXAlignment = Enum.TextXAlignment.Right
+    b.TextYAlignment = Enum.TextYAlignment.Top
+    b.ZIndex = 13
+    b.LayoutOrder = 2
+    b.Parent = card
+    return card
+end
+
+addHelpSection("⚔ ضرب اللاعب",
+    "اضغط على الصف مرة واحدة، وسيتم إرسال أمر الضرب فوراً.\n\n⌨️ على PC: اضغط حرف " .. CONFIG.AttackKey.Name .. " مباشرة من أي مكان.\n📱 على الجوال: اضغط على الصف.",
+    C.accent)
+
+addHelpSection("✨ هالة ضرب",
+    "فعّل السويتش لتشغيل الهالة. الهالة تضرب تلقائياً كل اللاعبين القريبين داخل النطاق (15 وحدة).\n\n⚡ ميزة: أول ما يدخل لاعب جديد النطاق، يضربه فوراً.",
+    C.success)
+
+addHelpSection("🎯 نطاق الضرب",
+    "النطاق الحالي: 15 وحدة. أي لاعب يدخل هذا النطاق بيتم كشفه تلقائياً.",
+    C.accent2)
+
+addHelpSection("🎮 طريقة الاستخدام",
+    "1. شغّل السكربت.\n2. اضغط على \"ضرب اللاعب\" أو حرف " .. CONFIG.AttackKey.Name .. ".\n3. أو فعّل \"هالة ضرب\".\n4. من ⚙ تقدر تغيّر المفتاح واللون.",
+    C.accent)
+
+addHelpSection("📌 ملاحظات",
+    "• الزر \"—\" يصغّر الواجهة.\n• الهالة توقف تلقائياً لو متت.",
+    C.danger)
+
+makeDraggable(HelpWrapper, HelpDragZone)
+
+HelpBtn.MouseButton1Click:Connect(function()
+    HelpWrapper.Visible = true
+    HelpWrapper.Size = UDim2.new(0, 300, 0, 0)
+    TweenService:Create(HelpWrapper, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 340)}):Play()
+end)
+
+HelpClose.MouseButton1Click:Connect(function()
+    TweenService:Create(HelpWrapper, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 300, 0, 0)}):Play()
+    task.delay(0.21, function() HelpWrapper.Visible = false end)
+end)
+
+-- ============ نافذة الإعدادات ============
+local SettingsWrapper = Instance.new("Frame")
+SettingsWrapper.Size = UDim2.new(0, 300, 0, 300)
+SettingsWrapper.Position = UDim2.new(0.5, -150, 0.5, -150)
+SettingsWrapper.BackgroundTransparency = 1
+SettingsWrapper.Visible = false
+SettingsWrapper.ZIndex = 20
+SettingsWrapper.Parent = ScreenGui
+
+local SetShadow = Instance.new("Frame")
+SetShadow.Size = UDim2.new(1, 0, 1, 0)
+SetShadow.Position = UDim2.new(0, 0, 0, 8)
+SetShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+SetShadow.BackgroundTransparency = 0.45
+SetShadow.BorderSizePixel = 0
+SetShadow.ZIndex = 20
+SetShadow.Parent = SettingsWrapper
+corner(SetShadow, 16)
+
+local SetMain = Instance.new("Frame")
+SetMain.Size = UDim2.new(1, 0, 1, 0)
+SetMain.BackgroundColor3 = C.bg
+SetMain.BorderSizePixel = 0
+SetMain.Active = true
+SetMain.ZIndex = 21
+SetMain.Parent = SettingsWrapper
+corner(SetMain, 16)
+
+local sGrad = Instance.new("UIGradient")
+sGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, C.bgGrad1),
+    ColorSequenceKeypoint.new(1, C.bgGrad2),
+})
+sGrad.Rotation = 90
+sGrad.Parent = SetMain
+stroke(SetMain, C.border, 1, 0.5)
+
+local SetHeader = Instance.new("Frame")
+SetHeader.Size = UDim2.new(1, 0, 0, 44)
+SetHeader.BackgroundColor3 = C.accent
+SetHeader.BorderSizePixel = 0
+SetHeader.ZIndex = 22
+SetHeader.Parent = SetMain
+corner(SetHeader, 16)
+
+local SetHFix = Instance.new("Frame")
+SetHFix.Size = UDim2.new(1, 0, 0, 16)
+SetHFix.Position = UDim2.new(0, 0, 1, -16)
+SetHFix.BackgroundColor3 = C.accent
+SetHFix.BorderSizePixel = 0
+SetHFix.ZIndex = 22
+SetHFix.Parent = SetHeader
+
+local SetHIcon = Instance.new("TextLabel")
+SetHIcon.Size = UDim2.new(0, 26, 0, 26)
+SetHIcon.Position = UDim2.new(0, 12, 0.5, -13)
+SetHIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SetHIcon.BackgroundTransparency = 0.85
+SetHIcon.Text = "⚙"
+SetHIcon.TextSize = 16
+SetHIcon.Font = Enum.Font.GothamBold
+SetHIcon.TextColor3 = C.text
+SetHIcon.ZIndex = 23
+SetHIcon.Parent = SetHeader
+corner(SetHIcon, 8)
+
+local SetHTitle = Instance.new("TextLabel")
+SetHTitle.Size = UDim2.new(0, 180, 1, 0)
+SetHTitle.Position = UDim2.new(0, 46, 0, 0)
+SetHTitle.BackgroundTransparency = 1
+SetHTitle.Text = "الإعدادات"
+SetHTitle.TextColor3 = C.text
+SetHTitle.Font = Enum.Font.GothamBold
+SetHTitle.TextSize = 15
+SetHTitle.TextXAlignment = Enum.TextXAlignment.Left
+SetHTitle.ZIndex = 23
+SetHTitle.Parent = SetHeader
+
+local SetClose = Instance.new("TextButton")
+SetClose.Size = UDim2.new(0, 26, 0, 26)
+SetClose.Position = UDim2.new(1, -34, 0.5, -13)
+SetClose.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SetClose.BackgroundTransparency = 0.75
+SetClose.Text = "✕"
+SetClose.TextColor3 = C.text
+SetClose.Font = Enum.Font.GothamBold
+SetClose.TextSize = 14
+SetClose.AutoButtonColor = false
+SetClose.ZIndex = 23
+SetClose.Parent = SetHeader
+corner(SetClose, 8)
+
+local SetDragZone = Instance.new("TextButton")
+SetDragZone.Size = UDim2.new(1, -60, 1, 0)
+SetDragZone.BackgroundTransparency = 1
+SetDragZone.Text = ""
+SetDragZone.ZIndex = 23
+SetDragZone.Parent = SetHeader
+
+local SetBody = Instance.new("ScrollingFrame")
+SetBody.Size = UDim2.new(1, -20, 1, -54)
+SetBody.Position = UDim2.new(0, 10, 0, 48)
+SetBody.BackgroundTransparency = 1
+SetBody.BorderSizePixel = 0
+SetBody.ScrollBarThickness = 4
+SetBody.ScrollBarImageColor3 = C.accent
+SetBody.CanvasSize = UDim2.new(0, 0, 0, 0)
+SetBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
+SetBody.ZIndex = 22
+SetBody.Parent = SetMain
+
+local SetLayout = Instance.new("UIListLayout")
+SetLayout.Padding = UDim.new(0, 8)
+SetLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SetLayout.Parent = SetBody
+
+-- قسم المفتاح
+local kbCard = createCard(SetBody, "⌨ مفتاح الضرب", C.accent)
+
+local kbInfo = Instance.new("TextLabel")
+kbInfo.Size = UDim2.new(1, 0, 0, 16)
+kbInfo.BackgroundTransparency = 1
+kbInfo.Text = "اضغط الزر لتغيير مفتاح الضرب السريع"
+kbInfo.TextColor3 = C.textDim
+kbInfo.Font = Enum.Font.Gotham
+kbInfo.TextSize = 11
+kbInfo.TextXAlignment = Enum.TextXAlignment.Right
+kbInfo.ZIndex = 13
+kbInfo.LayoutOrder = 2
+kbInfo.Parent = kbCard
+
+local kbRow = Instance.new("Frame")
+kbRow.Size = UDim2.new(1, 0, 0, 38)
+kbRow.BackgroundTransparency = 1
+kbRow.ZIndex = 13
+kbRow.LayoutOrder = 3
+kbRow.Parent = kbCard
+
+local keyCapBig = Instance.new("Frame")
+keyCapBig.Size = UDim2.new(0, 70, 1, 0)
+keyCapBig.Position = UDim2.new(0, 0, 0, 0)
+keyCapBig.BackgroundColor3 = C.surface2
+keyCapBig.ZIndex = 13
+keyCapBig.Parent = kbRow
+corner(keyCapBig, 8)
+local keyCapBigStroke = stroke(keyCapBig, C.accent, 2, 0.3)
+
+local keyCapBigText = Instance.new("TextLabel")
+keyCapBigText.Size = UDim2.new(1, 0, 1, 0)
+keyCapBigText.BackgroundTransparency = 1
+keyCapBigText.Text = CONFIG.AttackKey.Name
+keyCapBigText.TextSize = 18
+keyCapBigText.Font = Enum.Font.GothamBold
+keyCapBigText.TextColor3 = C.text
+keyCapBigText.ZIndex = 14
+keyCapBigText.Parent = keyCapBig
+
+local changeKbBtn = Instance.new("TextButton")
+changeKbBtn.Size = UDim2.new(0, 110, 1, 0)
+changeKbBtn.Position = UDim2.new(1, -110, 0, 0)
+changeKbBtn.BackgroundColor3 = C.accent
+changeKbBtn.Text = "تغيير"
+changeKbBtn.Font = Enum.Font.GothamBold
+changeKbBtn.TextSize = 13
+changeKbBtn.TextColor3 = C.text
+changeKbBtn.AutoButtonColor = false
+changeKbBtn.ZIndex = 13
+changeKbBtn.Parent = kbRow
+corner(changeKbBtn, 8)
+
+local kbHint = Instance.new("TextLabel")
+kbHint.Size = UDim2.new(1, 0, 0, 16)
+kbHint.BackgroundTransparency = 1
+kbHint.Text = "💡 على PC: اضغط المفتاح من أي مكان ليضرب فوراً"
+kbHint.TextColor3 = C.textDim
+kbHint.Font = Enum.Font.Gotham
+kbHint.TextSize = 10
+kbHint.TextXAlignment = Enum.TextXAlignment.Right
+kbHint.ZIndex = 13
+kbHint.LayoutOrder = 4
+kbHint.Parent = kbCard
+
+-- قسم الألوان
+local colorCard = createCard(SetBody, "🎨 لون الواجهة", C.accent)
+
+local colorInfo = Instance.new("TextLabel")
+colorInfo.Size = UDim2.new(1, 0, 0, 16)
+colorInfo.BackgroundTransparency = 1
+colorInfo.Text = "اختر لون الواجهة"
+colorInfo.TextColor3 = C.textDim
+colorInfo.Font = Enum.Font.Gotham
+colorInfo.TextSize = 11
+colorInfo.TextXAlignment = Enum.TextXAlignment.Right
+colorInfo.ZIndex = 13
+colorInfo.LayoutOrder = 2
+colorInfo.Parent = colorCard
+
+local colorRow = Instance.new("Frame")
+colorRow.Size = UDim2.new(1, 0, 0, 38)
+colorRow.BackgroundTransparency = 1
+colorRow.ZIndex = 13
+colorRow.LayoutOrder = 3
+colorRow.Parent = colorCard
+
+-- ✅ forward declarations (هنا كان الـ bug)
+local ColorBtnStrokes = {}
+local ColorBtns = {}
+local currentTheme = 1
+local isRebinding = false
+local applyTheme
+local updateKeyDisplay
+local cancelRebind
+
+-- أزرار الألوان
+for i, theme in ipairs(THEMES) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 32, 0, 32)
+    btn.Position = UDim2.new(0, (i-1) * 38, 0, 3)
+    btn.BackgroundColor3 = theme.accent
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.ZIndex = 13
+    btn.Parent = colorRow
+    corner(btn, 16)
+
+    local s = Instance.new("UIStroke")
+    s.Color = Color3.fromRGB(255, 255, 255)
+    s.Thickness = 1
+    s.Transparency = 0.7
+    s.Parent = btn
+
+    ColorBtnStrokes[i] = s
+    ColorBtns[i] = btn
+
+    btn.MouseButton1Click:Connect(function()
+        applyTheme(i)
+        -- نبض سريع للتأكيد
+        local ti = TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        TweenService:Create(btn, ti, {Size = UDim2.new(0, 36, 0, 36), Position = UDim2.new(0, (i-1)*38 - 2, 0, 1)}):Play()
+        task.delay(0.12, function()
+            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 32, 0, 32), Position = UDim2.new(0, (i-1)*38, 0, 3)}):Play()
+        end)
+    end)
+end
+
+makeDraggable(SettingsWrapper, SetDragZone)
+
+-- ============ دوال theme + keybind ============
+applyTheme = function(index)
+    currentTheme = index
+    local theme = THEMES[index]
+    C.accent = theme.accent
+    C.accent2 = theme.accent2
+
+    -- الهيدرات (أهم شي مرئي)
+    Header.BackgroundColor3 = theme.accent2
+    hFix.BackgroundColor3 = theme.accent2
+    HelpHeader.BackgroundColor3 = theme.accent
+    HelpHFix.BackgroundColor3 = theme.accent
+    SetHeader.BackgroundColor3 = theme.accent
+    SetHFix.BackgroundColor3 = theme.accent
+
+    -- أيقونات
+    R1IconBg.BackgroundColor3 = theme.accent
+
+    -- أزرار
+    if not isRebinding then
+        changeKbBtn.BackgroundColor3 = theme.accent
+    end
+    keyCapBigStroke.Color = theme.accent
+
+    -- سكرول بار
+    HelpBody.ScrollBarImageColor3 = theme.accent
+    SetBody.ScrollBarImageColor3 = theme.accent
+
+    -- تمييز دائرة اللون المختار
+    for i, s in ipairs(ColorBtnStrokes) do
+        if i == index then
+            s.Thickness = 3
+            s.Transparency = 0
+        else
+            s.Thickness = 1
+            s.Transparency = 0.7
+        end
+    end
+end
+
+updateKeyDisplay = function()
+    R1KeyText.Text = CONFIG.AttackKey.Name
+    keyCapBigText.Text = CONFIG.AttackKey.Name
+end
+
+local function startRebind()
+    isRebinding = true
+    keyCapBigText.Text = "..."
+    keyCapBigText.TextColor3 = C.accent2
+    changeKbBtn.Text = "إلغاء"
+    changeKbBtn.BackgroundColor3 = C.danger
+end
+
+cancelRebind = function()
+    isRebinding = false
+    keyCapBigText.TextColor3 = C.text
+    changeKbBtn.Text = "تغيير"
+    changeKbBtn.BackgroundColor3 = C.accent
+    updateKeyDisplay()
+end
+
+changeKbBtn.MouseButton1Click:Connect(function()
+    if isRebinding then
+        cancelRebind()
+    else
+        startRebind()
+    end
+end)
+
+-- ============ المنطق الرئيسي ============
+local isAuraActive = false
+local previousTargets = {}
+
+local function setStatus(text, color)
+    StatusLabel.Text = text
+    if color then
+        TweenService:Create(StatusLabel, TweenInfo.new(0.2), {TextColor3 = color}):Play()
+        TweenService:Create(StatusDot, TweenInfo.new(0.2), {BackgroundColor3 = color}):Play()
+    end
+end
+
+local function setToggleState(on)
+    local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(Knob, ti, {
+        Position = on and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
+    }):Play()
+    TweenService:Create(Toggle, ti, {
+        BackgroundColor3 = on and C.success or C.toggleOff
+    }):Play()
+    TweenService:Create(ToggleStroke, ti, {
+        Transparency = on and 0.3 or 1
+    }):Play()
+    TweenService:Create(R2IconBg, ti, {
+        BackgroundColor3 = on and C.success or C.surface2
+    }):Play()
+end
+
+local function doManualAttack()
+    local ok = fireAttack()
+    local ti = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local color = ok and C.success or C.danger
+    TweenService:Create(Row1, ti, {BackgroundColor3 = color}):Play()
+    task.delay(0.15, function()
+        TweenService:Create(Row1, TweenInfo.new(0.2), {BackgroundColor3 = C.surface}):Play()
+    end)
+    if ok then
+        setStatus("تم الضرب ✓ [" .. CONFIG.AttackKey.Name .. "]", C.success)
+    else
+        setStatus("خطأ!", C.danger)
+    end
+end
+
+local function getNearbyPlayers()
+    local list = {}
+    local myChar = LocalPlayer.Character
+    if not myChar then return list end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    local myHum = myChar:FindFirstChildOfClass("Humanoid")
+    if not myRoot or not myHum or myHum.Health <= 0 then return list end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local char = player.Character
+            if char then
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if root and hum and hum.Health > 0 then
+                    local dist = (myRoot.Position - root.Position).Magnitude
+                    if dist <= CONFIG.AttackRange then
+                        table.insert(list, { player = player, hum = hum, dist = dist })
+                    end
+                end
+            end
+        end
+    end
+    table.sort(list, function(a, b) return a.dist < b.dist end)
+    return list
+end
+
+Row1Btn.MouseButton1Click:Connect(doManualAttack)
+
+Row2Btn.MouseButton1Click:Connect(function()
+    isAuraActive = not isAuraActive
+    setToggleState(isAuraActive)
+    if isAuraActive then
+        setStatus("الهالة مفتوحة — ضرب فوري عند الكشف", C.success)
+        previousTargets = {}
+    else
+        setStatus("الهالة متوقفة.", C.textDim)
+        previousTargets = {}
+    end
+end)
+
+SettingsBtn.MouseButton1Click:Connect(function()
+    SettingsWrapper.Visible = true
+    SettingsWrapper.Size = UDim2.new(0, 300, 0, 0)
+    TweenService:Create(SettingsWrapper, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 300, 0, 300)}):Play()
+end)
+
+SetClose.MouseButton1Click:Connect(function()
+    TweenService:Create(SettingsWrapper, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 300, 0, 0)}):Play()
+    task.delay(0.21, function() SettingsWrapper.Visible = false end)
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+
+    if isRebinding then
+        if input.UserInputType == Enum.UserInputType.Keyboard
+        and input.KeyCode ~= Enum.KeyCode.Unknown then
+            CONFIG.AttackKey = input.KeyCode
+            cancelRebind()
+        end
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.Keyboard
+    and input.KeyCode == CONFIG.AttackKey then
+        doManualAttack()
+    end
+end)
+
+local lastAura = 0
+
+RunService.Heartbeat:Connect(function()
+    if not isAuraActive or not CombatEvent then
+        previousTargets = {}
+        return
+    end
+
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+    local myHum = myChar:FindFirstChildOfClass("Humanoid")
+    if not myHum or myHum.Health <= 0 then return end
+
+    local now = os.clock()
+    local nearby = getNearbyPlayers()
+
+    local currentSet = {}
+    local newTargets = {}
+    for _, t in ipairs(nearby) do
+        local uid = t.player.UserId
+        currentSet[uid] = true
+        if not previousTargets[uid] then
+            table.insert(newTargets, t)
+        end
+    end
+
+    if #newTargets > 0 and now - lastAura >= CONFIG.InstantMinGap then
+        for _, t in ipairs(newTargets) do
+            CombatEvent:FireServer("Slipper")
+        end
+        lastAura = now
+        setStatus("⚡ ضرب فوري: " .. #newTargets .. " لاعب جديد", C.success)
+    elseif now - lastAura >= CONFIG.AttackSpeed then
+        lastAura = now
+        if #nearby > 0 then
+            for _, t in ipairs(nearby) do
+                CombatEvent:FireServer("Slipper")
+            end
+            setStatus("الهالة تضرب " .. #nearby .. " لاعب", C.accent2)
+        else
+            setStatus("الهالة: لا يوجد أحد بالقرب", C.textDim)
+        end
+    end
+
+    previousTargets = currentSet
+end)
+
+-- تطبيق الثيم الافتراضي
+applyTheme(1)
+updateKeyDisplay()
