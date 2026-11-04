@@ -1,0 +1,820 @@
+-- ══════════════════════════════════════════════════
+--   ⚡ كلبشة تلقائي - Pro Edition (10 متر) ⚡
+-- ══════════════════════════════════════════════════
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local LP = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+
+-- ══════════ إعدادات الكلبشة ══════════
+local CUFF_RANGE_CM   = 1000                           -- المسافة القصوى بالسنتيمتر (10 متر)
+local STUDS_PER_CM    = 1 / 28                         -- 1 stud ≈ 28 سم
+local CUFF_RANGE      = CUFF_RANGE_CM * STUDS_PER_CM   -- ≈ 35.7 studs
+local CUFF_COOLDOWN   = 0.15                           -- حماية بسيطة ضد الضغط المزدوج
+
+if _G._ChristmasCuff then pcall(function() _G._ChristmasCuff:Destroy() end) end
+
+-- ───────── Theme ─────────
+local T = {
+    BgTop     = Color3.fromRGB(18, 24, 36),
+    BgBottom  = Color3.fromRGB(38, 18, 28),
+    Header1   = Color3.fromRGB(200, 35, 50),
+    Header2   = Color3.fromRGB(130, 15, 30),
+    Gold      = Color3.fromRGB(255, 205, 85),
+    GoldSoft  = Color3.fromRGB(255, 235, 150),
+    Text      = Color3.fromRGB(240, 242, 250),
+    SubText   = Color3.fromRGB(150, 160, 180),
+    Success   = Color3.fromRGB(90, 220, 130),
+    Danger    = Color3.fromRGB(240, 90, 90),
+}
+
+local W, H, HDR = 220, 140, 36
+local EXPANDED  = UDim2.new(0, W, 0, H)
+local COLLAPSED = UDim2.new(0, W, 0, HDR)
+local START_POS = UDim2.new(0.5, -W/2, 0.22, 0)
+
+-- ───────── Root ─────────
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChristmasCuff"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 999
+gui.IgnoreGuiInset = true
+gui.Parent = LP:WaitForChild("PlayerGui")
+_G._ChristmasCuff = gui
+
+-- ───────── Shadow ─────────
+local shadow = Instance.new("Frame")
+shadow.Size = COLLAPSED
+shadow.Position = START_POS + UDim2.new(0, 0, 0, 6)
+shadow.BackgroundColor3 = Color3.new(0, 0, 0)
+shadow.BackgroundTransparency = 1
+shadow.BorderSizePixel = 0
+shadow.ZIndex = 1
+shadow.Parent = gui
+Instance.new("UICorner", shadow).CornerRadius = UDim.new(0, 12)
+
+-- ───────── Main ─────────
+local main = Instance.new("Frame")
+main.Size = COLLAPSED
+main.Position = START_POS
+main.BackgroundColor3 = T.BgTop
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Active = true
+main.ZIndex = 2
+main.Parent = gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+
+local bgGrad = Instance.new("UIGradient")
+bgGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, T.BgTop),
+    ColorSequenceKeypoint.new(1, T.BgBottom),
+}
+bgGrad.Rotation = 115
+bgGrad.Parent = main
+
+-- ───────── Overlay ─────────
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundTransparency = 1
+overlay.ZIndex = 10
+overlay.Parent = main
+Instance.new("UICorner", overlay).CornerRadius = UDim.new(0, 12)
+
+local glowStroke = Instance.new("UIStroke")
+glowStroke.Color = T.Gold
+glowStroke.Thickness = 1.3
+glowStroke.Transparency = 0.45
+glowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+glowStroke.Parent = overlay
+
+task.spawn(function()
+    while gui.Parent do
+        TweenService:Create(glowStroke, TweenInfo.new(1.4, Enum.EasingStyle.Sine), {Transparency = 0.85}):Play()
+        task.wait(1.4)
+        TweenService:Create(glowStroke, TweenInfo.new(1.4, Enum.EasingStyle.Sine), {Transparency = 0.45}):Play()
+        task.wait(1.4)
+    end
+end)
+
+-- ───────── Header ─────────
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, HDR)
+header.BackgroundColor3 = T.Header1
+header.BorderSizePixel = 0
+header.ZIndex = 3
+header.Parent = main
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+
+local headGrad = Instance.new("UIGradient")
+headGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, T.Header1),
+    ColorSequenceKeypoint.new(1, T.Header2),
+}
+headGrad.Rotation = 90
+headGrad.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -100, 1, 0)
+title.Position = UDim2.new(0, 12, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🎄 كلبشة تلقائي"
+title.TextColor3 = T.Text
+title.Font = Enum.Font.GothamBold
+title.TextSize = 13
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 4
+title.Parent = header
+
+local titleStroke = Instance.new("UIStroke")
+titleStroke.Color = T.GoldSoft
+titleStroke.Thickness = 1
+titleStroke.Transparency = 0.6
+titleStroke.Parent = title
+
+task.spawn(function()
+    while gui.Parent do
+        TweenService:Create(titleStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine), {Transparency = 0.9}):Play()
+        task.wait(1.5)
+        TweenService:Create(titleStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine), {Transparency = 0.6}):Play()
+        task.wait(1.5)
+    end
+end)
+
+-- Header buttons
+local hdrBtns = Instance.new("Frame")
+hdrBtns.Size = UDim2.new(0, 80, 0, 24)
+hdrBtns.Position = UDim2.new(1, -90, 0.5, -12)
+hdrBtns.BackgroundTransparency = 1
+hdrBtns.ZIndex = 4
+hdrBtns.Parent = header
+
+local settingsBtn = Instance.new("TextButton")
+settingsBtn.Size = UDim2.new(0, 24, 0, 24)
+settingsBtn.Position = UDim2.new(0, 0, 0, 0)
+settingsBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+settingsBtn.BackgroundTransparency = 0.85
+settingsBtn.Text = "⚙️"
+settingsBtn.TextColor3 = T.Text
+settingsBtn.Font = Enum.Font.GothamBold
+settingsBtn.TextSize = 14
+settingsBtn.AutoButtonColor = false
+settingsBtn.ZIndex = 5
+settingsBtn.Parent = hdrBtns
+Instance.new("UICorner", settingsBtn).CornerRadius = UDim.new(1, 0)
+
+local infoBtn = Instance.new("TextButton")
+infoBtn.Size = UDim2.new(0, 24, 0, 24)
+infoBtn.Position = UDim2.new(0, 28, 0, 0)
+infoBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+infoBtn.BackgroundTransparency = 0.85
+infoBtn.Text = "ℹ️"
+infoBtn.TextColor3 = T.Text
+infoBtn.Font = Enum.Font.GothamBold
+infoBtn.TextSize = 14
+infoBtn.AutoButtonColor = false
+infoBtn.ZIndex = 5
+infoBtn.Parent = hdrBtns
+Instance.new("UICorner", infoBtn).CornerRadius = UDim.new(1, 0)
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 24, 0, 24)
+minBtn.Position = UDim2.new(0, 56, 0, 0)
+minBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+minBtn.BackgroundTransparency = 0.85
+minBtn.Text = "-"
+minBtn.TextColor3 = T.Text
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 16
+minBtn.AutoButtonColor = false
+minBtn.ZIndex = 5
+minBtn.Parent = hdrBtns
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(1, 0)
+
+local function hoverBtn(b, baseTrans, hoverTrans)
+    b.MouseEnter:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = hoverTrans}):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundTransparency = baseTrans}):Play()
+    end)
+end
+hoverBtn(settingsBtn, 0.85, 0.6)
+hoverBtn(infoBtn, 0.85, 0.6)
+hoverBtn(minBtn, 0.85, 0.6)
+
+-- ───────── Content ─────────
+local content = Instance.new("Frame")
+content.Size = UDim2.new(1, 0, 1, -HDR)
+content.Position = UDim2.new(0, 0, 0, HDR)
+content.BackgroundTransparency = 1
+content.ZIndex = 3
+content.Parent = main
+Instance.new("UICorner", content).CornerRadius = UDim.new(0, 12)
+
+-- Snow particles
+for i = 1, 6 do
+    local flake = Instance.new("Frame")
+    flake.Size = UDim2.new(0, 2, 0, 2)
+    flake.BackgroundColor3 = Color3.new(1, 1, 1)
+    flake.BackgroundTransparency = 1
+    flake.BorderSizePixel = 0
+    flake.ZIndex = 4
+    flake.Parent = content
+    Instance.new("UICorner", flake).CornerRadius = UDim.new(1, 0)
+
+    task.spawn(function()
+        task.wait(math.random() * 2)
+        while flake.Parent and gui.Parent do
+            flake.Position = UDim2.new(math.random() * 0.95, 0, -0.05, 0)
+            flake.BackgroundTransparency = 0.4
+            local dur = 3 + math.random() * 3
+            TweenService:Create(flake, TweenInfo.new(dur, Enum.EasingStyle.Linear), {
+                Position = UDim2.new(flake.Position.X.Scale, 0, 1.05, 0),
+                BackgroundTransparency = 1
+            }):Play()
+            task.wait(dur)
+        end
+    end)
+end
+
+-- ───────── Cuff Button ─────────
+local btnBaseSize  = UDim2.new(1, -20, 0, 42)
+local btnBasePos   = UDim2.new(0, 10, 0, 10)
+local btnHoverSize = UDim2.new(1, -16, 0, 44)
+local btnHoverPos  = UDim2.new(0, 8, 0, 9)
+
+local cuffBtn = Instance.new("TextButton")
+cuffBtn.Size = btnBaseSize
+cuffBtn.Position = btnBasePos
+cuffBtn.BackgroundColor3 = T.Gold
+cuffBtn.Text = ""
+cuffBtn.AutoButtonColor = false
+cuffBtn.ClipsDescendants = true
+cuffBtn.ZIndex = 4
+cuffBtn.Parent = content
+Instance.new("UICorner", cuffBtn).CornerRadius = UDim.new(0, 10)
+
+local btnGrad = Instance.new("UIGradient")
+btnGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(235, 45, 65)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 12, 35)),
+}
+btnGrad.Rotation = 90
+btnGrad.Parent = cuffBtn
+
+local btnStroke = Instance.new("UIStroke")
+btnStroke.Color = T.Gold
+btnStroke.Thickness = 1.2
+btnStroke.Transparency = 0.3
+btnStroke.Parent = cuffBtn
+
+local btnIcon = Instance.new("TextLabel")
+btnIcon.Size = UDim2.new(0, 24, 1, 0)
+btnIcon.Position = UDim2.new(0, 8, 0, 0)
+btnIcon.BackgroundTransparency = 1
+btnIcon.Text = "🎁"
+btnIcon.TextSize = 18
+btnIcon.ZIndex = 5
+btnIcon.Parent = cuffBtn
+
+local btnText = Instance.new("TextLabel")
+btnText.Size = UDim2.new(1, -40, 1, 0)
+btnText.Position = UDim2.new(0, 34, 0, 0)
+btnText.BackgroundTransparency = 1
+btnText.Text = "كلبش الأقرب"
+btnText.TextColor3 = T.Text
+btnText.Font = Enum.Font.GothamBold
+btnText.TextSize = 13
+btnText.TextXAlignment = Enum.TextXAlignment.Left
+btnText.ZIndex = 5
+btnText.Parent = cuffBtn
+
+cuffBtn.MouseEnter:Connect(function()
+    TweenService:Create(cuffBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = btnHoverSize, Position = btnHoverPos
+    }):Play()
+    TweenService:Create(btnStroke, TweenInfo.new(0.18), {Transparency = 0}):Play()
+end)
+
+cuffBtn.MouseLeave:Connect(function()
+    TweenService:Create(cuffBtn, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = btnBaseSize, Position = btnBasePos
+    }):Play()
+    TweenService:Create(btnStroke, TweenInfo.new(0.18), {Transparency = 0.3}):Play()
+end)
+
+-- ───────── Status Bar ─────────
+local statusBar = Instance.new("Frame")
+statusBar.Size = UDim2.new(1, -20, 0, 24)
+statusBar.Position = UDim2.new(0, 10, 0, 60)
+statusBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+statusBar.BackgroundTransparency = 0.55
+statusBar.BorderSizePixel = 0
+statusBar.ZIndex = 3
+statusBar.Parent = content
+Instance.new("UICorner", statusBar).CornerRadius = UDim.new(0, 6)
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.new(0, 6, 0, 6)
+statusDot.Position = UDim2.new(0, 8, 0.5, -3)
+statusDot.BackgroundColor3 = T.Success
+statusDot.BorderSizePixel = 0
+statusDot.ZIndex = 5
+statusDot.Parent = statusBar
+Instance.new("UICorner", statusDot).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function()
+    while statusDot.Parent and gui.Parent do
+        TweenService:Create(statusDot, TweenInfo.new(0.9, Enum.EasingStyle.Sine), {BackgroundTransparency = 0.5}):Play()
+        task.wait(0.9)
+        TweenService:Create(statusDot, TweenInfo.new(0.9, Enum.EasingStyle.Sine), {BackgroundTransparency = 0}):Play()
+        task.wait(0.9)
+    end
+end)
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -28, 1, 0)
+statusText.Position = UDim2.new(0, 20, 0, 0)
+statusText.BackgroundTransparency = 1
+statusText.Text = "جاهز للكلبش"
+statusText.TextColor3 = T.SubText
+statusText.Font = Enum.Font.GothamMedium
+statusText.TextSize = 11
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.TextTruncate = Enum.TextTruncate.AtEnd
+statusText.ZIndex = 5
+statusText.Parent = statusBar
+
+local function setStatus(text, color, dotColor)
+    TweenService:Create(statusText, TweenInfo.new(0.12), {TextTransparency = 1}):Play()
+    task.wait(0.12)
+    statusText.Text = text
+    statusText.TextColor3 = color or T.SubText
+    if dotColor then statusDot.BackgroundColor3 = dotColor end
+    TweenService:Create(statusText, TweenInfo.new(0.12), {TextTransparency = 0}):Play()
+end
+
+-- ───────── Ripple ─────────
+local function ripple(btn, x, y)
+    local r = Instance.new("Frame")
+    r.BackgroundColor3 = Color3.new(1, 1, 1)
+    r.BackgroundTransparency = 0.65
+    r.BorderSizePixel = 0
+    r.Size = UDim2.new(0, 0, 0, 0)
+    r.Position = UDim2.new(0, x, 0, y)
+    r.ZIndex = 4
+    r.Parent = btn
+    Instance.new("UICorner", r).CornerRadius = UDim.new(1, 0)
+    TweenService:Create(r, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 180, 0, 180),
+        Position = UDim2.new(0, x - 90, 0, y - 90),
+        BackgroundTransparency = 1
+    }):Play()
+    task.delay(0.5, function() if r then r:Destroy() end end)
+end
+
+-- ───────── Drag ─────────
+local dragging = false
+local dragStart, startPos
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        local np = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        main.Position = np
+        shadow.Position = UDim2.new(np.X.Scale, np.X.Offset, np.Y.Scale, np.Y.Offset + 6)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- ───────── Minimize / Expand ─────────
+local collapsed = false
+minBtn.MouseButton1Click:Connect(function()
+    collapsed = not collapsed
+    if collapsed then
+        content.Visible = false
+        TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = COLLAPSED}):Play()
+        TweenService:Create(shadow, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = COLLAPSED}):Play()
+        minBtn.Text = "+"
+    else
+        TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = EXPANDED}):Play()
+        TweenService:Create(shadow, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = EXPANDED}):Play()
+        task.wait(0.2)
+        content.Visible = true
+        minBtn.Text = "-"
+    end
+end)
+
+-- ══════════════════════════════════════════════════
+--   📖 واجهة التعليمات
+-- ══════════════════════════════════════════════════
+local infoGui = Instance.new("Frame")
+infoGui.Size = UDim2.new(0, 0, 0, 0)
+infoGui.Position = UDim2.new(0.5, 0, 0.5, 0)
+infoGui.AnchorPoint = Vector2.new(0.5, 0.5)
+infoGui.BackgroundColor3 = T.BgTop
+infoGui.BorderSizePixel = 0
+infoGui.Visible = false
+infoGui.ZIndex = 50
+infoGui.Parent = gui
+Instance.new("UICorner", infoGui).CornerRadius = UDim.new(0, 10)
+
+local iGrad = Instance.new("UIGradient")
+iGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, T.BgTop),
+    ColorSequenceKeypoint.new(1, T.BgBottom),
+}
+iGrad.Rotation = 115
+iGrad.Parent = infoGui
+
+local iStroke = Instance.new("UIStroke")
+iStroke.Color = T.Gold
+iStroke.Thickness = 1.5
+iStroke.Transparency = 0.2
+iStroke.Parent = infoGui
+
+local iTitle = Instance.new("TextLabel")
+iTitle.Size = UDim2.new(1, 0, 0, 30)
+iTitle.BackgroundTransparency = 1
+iTitle.Text = "📖 تعليمات الاستخدام"
+iTitle.TextColor3 = T.Gold
+iTitle.Font = Enum.Font.GothamBold
+iTitle.TextSize = 14
+iTitle.ZIndex = 51
+iTitle.Parent = infoGui
+
+local iText = Instance.new("TextLabel")
+iText.Size = UDim2.new(1, -30, 1, -70)
+iText.Position = UDim2.new(0, 15, 0, 35)
+iText.BackgroundTransparency = 1
+iText.Text = "1️⃣ اضغط على زر 'كلبش الأقرب' أو استخدم اختصار الكيبورد.\n\n2️⃣ المسافة القصوى للكلبشة هي 10 متر.\n\n3️⃣ يمكنك سحب الواجهة من الشريط العلوي.\n\n4️⃣ من الإعدادات (⚙️) يمكنك تفعيل الإضاءة الحمراء للاعب الأقرب فقط وتغيير اختصار الكيبورد."
+iText.TextColor3 = T.Text
+iText.Font = Enum.Font.GothamMedium
+iText.TextSize = 11
+iText.TextXAlignment = Enum.TextXAlignment.Right
+iText.TextYAlignment = Enum.TextYAlignment.Top
+iText.TextWrapped = true
+iText.ZIndex = 51
+iText.Parent = infoGui
+
+local iClose = Instance.new("TextButton")
+iClose.Size = UDim2.new(1, -30, 0, 28)
+iClose.Position = UDim2.new(0, 15, 1, -35)
+iClose.BackgroundColor3 = T.Header1
+iClose.Text = "حسناً، فهمت"
+iClose.TextColor3 = T.Text
+iClose.Font = Enum.Font.GothamBold
+iClose.TextSize = 12
+iClose.AutoButtonColor = false
+iClose.ZIndex = 51
+iClose.Parent = infoGui
+Instance.new("UICorner", iClose).CornerRadius = UDim.new(0, 6)
+
+iClose.MouseEnter:Connect(function()
+    TweenService:Create(iClose, TweenInfo.new(0.15), {BackgroundColor3 = T.Header2}):Play()
+end)
+iClose.MouseLeave:Connect(function()
+    TweenService:Create(iClose, TweenInfo.new(0.15), {BackgroundColor3 = T.Header1}):Play()
+end)
+
+infoBtn.MouseButton1Click:Connect(function()
+    infoGui.Visible = true
+    infoGui.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(infoGui, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 260, 0, 220)
+    }):Play()
+end)
+
+iClose.MouseButton1Click:Connect(function()
+    TweenService:Create(infoGui, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    task.wait(0.2)
+    infoGui.Visible = false
+end)
+
+-- ══════════════════════════════════════════════════
+--   ⚙️ واجهة الإعدادات
+-- ══════════════════════════════════════════════════
+local settingsGui = Instance.new("Frame")
+settingsGui.Size = UDim2.new(0, 0, 0, 0)
+settingsGui.Position = UDim2.new(0.5, 0, 0.5, 0)
+settingsGui.AnchorPoint = Vector2.new(0.5, 0.5)
+settingsGui.BackgroundColor3 = T.BgTop
+settingsGui.BorderSizePixel = 0
+settingsGui.Visible = false
+settingsGui.ZIndex = 50
+settingsGui.Parent = gui
+Instance.new("UICorner", settingsGui).CornerRadius = UDim.new(0, 10)
+
+local sGrad = Instance.new("UIGradient")
+sGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, T.BgTop),
+    ColorSequenceKeypoint.new(1, T.BgBottom),
+}
+sGrad.Rotation = 115
+sGrad.Parent = settingsGui
+
+local sStroke = Instance.new("UIStroke")
+sStroke.Color = T.Gold
+sStroke.Thickness = 1.5
+sStroke.Transparency = 0.2
+sStroke.Parent = settingsGui
+
+local sTitle = Instance.new("TextLabel")
+sTitle.Size = UDim2.new(1, 0, 0, 30)
+sTitle.BackgroundTransparency = 1
+sTitle.Text = "⚙️ الإعدادات"
+sTitle.TextColor3 = T.Gold
+sTitle.Font = Enum.Font.GothamBold
+sTitle.TextSize = 14
+sTitle.ZIndex = 51
+sTitle.Parent = settingsGui
+
+-- خيار 1: الإضاءة الحمراء
+local hlFrame = Instance.new("Frame")
+hlFrame.Size = UDim2.new(1, -30, 0, 36)
+hlFrame.Position = UDim2.new(0, 15, 0, 40)
+hlFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+hlFrame.BackgroundTransparency = 0.3
+hlFrame.ZIndex = 51
+hlFrame.Parent = settingsGui
+Instance.new("UICorner", hlFrame).CornerRadius = UDim.new(0, 6)
+
+local hlLabel = Instance.new("TextLabel")
+hlLabel.Size = UDim2.new(1, -70, 1, 0)
+hlLabel.Position = UDim2.new(0, 10, 0, 0)
+hlLabel.BackgroundTransparency = 1
+hlLabel.Text = "إضاءة حمراء للاعب الأقرب"
+hlLabel.TextColor3 = T.Text
+hlLabel.Font = Enum.Font.GothamMedium
+hlLabel.TextSize = 11
+hlLabel.TextXAlignment = Enum.TextXAlignment.Right
+hlLabel.ZIndex = 52
+hlLabel.Parent = hlFrame
+
+local toggleBg = Instance.new("Frame")
+toggleBg.Size = UDim2.new(0, 36, 0, 20)
+toggleBg.Position = UDim2.new(0, 8, 0.5, -10)
+toggleBg.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
+toggleBg.ZIndex = 52
+toggleBg.Parent = hlFrame
+Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(1, 0)
+
+local toggleKnob = Instance.new("Frame")
+toggleKnob.Size = UDim2.new(0, 16, 0, 16)
+toggleKnob.Position = UDim2.new(0, 2, 0.5, -8)
+toggleKnob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+toggleKnob.ZIndex = 53
+toggleKnob.Parent = toggleBg
+Instance.new("UICorner", toggleKnob).CornerRadius = UDim.new(1, 0)
+
+-- خيار 2: اختصار الكيبورد
+local keyFrame = Instance.new("Frame")
+keyFrame.Size = UDim2.new(1, -30, 0, 36)
+keyFrame.Position = UDim2.new(0, 15, 0, 85)
+keyFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+keyFrame.BackgroundTransparency = 0.3
+keyFrame.ZIndex = 51
+keyFrame.Parent = settingsGui
+Instance.new("UICorner", keyFrame).CornerRadius = UDim.new(0, 6)
+
+local keyLabel = Instance.new("TextLabel")
+keyLabel.Size = UDim2.new(1, -80, 1, 0)
+keyLabel.Position = UDim2.new(0, 10, 0, 0)
+keyLabel.BackgroundTransparency = 1
+keyLabel.Text = "اختصار الكلبشة (كيبورد):"
+keyLabel.TextColor3 = T.Text
+keyLabel.Font = Enum.Font.GothamMedium
+keyLabel.TextSize = 11
+keyLabel.TextXAlignment = Enum.TextXAlignment.Right
+keyLabel.ZIndex = 52
+keyLabel.Parent = keyFrame
+
+local keyBtn = Instance.new("TextButton")
+keyBtn.Size = UDim2.new(0, 50, 0, 20)
+keyBtn.Position = UDim2.new(0, 8, 0.5, -10)
+keyBtn.BackgroundColor3 = T.Header1
+keyBtn.Text = "E"
+keyBtn.TextColor3 = T.Text
+keyBtn.Font = Enum.Font.GothamBold
+keyBtn.TextSize = 12
+keyBtn.AutoButtonColor = false
+keyBtn.ZIndex = 52
+keyBtn.Parent = keyFrame
+Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 4)
+local keyStroke = Instance.new("UIStroke", keyBtn)
+keyStroke.Color = T.Gold
+keyStroke.Thickness = 1
+
+local sClose = Instance.new("TextButton")
+sClose.Size = UDim2.new(1, -30, 0, 28)
+sClose.Position = UDim2.new(0, 15, 1, -35)
+sClose.BackgroundColor3 = T.Header1
+sClose.Text = "إغلاق"
+sClose.TextColor3 = T.Text
+sClose.Font = Enum.Font.GothamBold
+sClose.TextSize = 12
+sClose.AutoButtonColor = false
+sClose.ZIndex = 51
+sClose.Parent = settingsGui
+Instance.new("UICorner", sClose).CornerRadius = UDim.new(0, 6)
+
+sClose.MouseEnter:Connect(function()
+    TweenService:Create(sClose, TweenInfo.new(0.15), {BackgroundColor3 = T.Header2}):Play()
+end)
+sClose.MouseLeave:Connect(function()
+    TweenService:Create(sClose, TweenInfo.new(0.15), {BackgroundColor3 = T.Header1}):Play()
+end)
+
+settingsBtn.MouseButton1Click:Connect(function()
+    settingsGui.Visible = true
+    settingsGui.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(settingsGui, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 260, 0, 200)
+    }):Play()
+end)
+
+sClose.MouseButton1Click:Connect(function()
+    TweenService:Create(settingsGui, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    task.wait(0.2)
+    settingsGui.Visible = false
+end)
+
+-- ══════════════════════════════════════════════════
+--   🔴 منطق الإضاءة
+-- ══════════════════════════════════════════════════
+local highlightEnabled = false
+local activeHlPlayer = nil
+local activeHlObj = nil
+
+local function clearHighlight()
+    if activeHlObj then
+        activeHlObj:Destroy()
+        activeHlObj = nil
+        activeHlPlayer = nil
+    end
+end
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(1, 0, 1, 0)
+toggleBtn.BackgroundTransparency = 1
+toggleBtn.Text = ""
+toggleBtn.ZIndex = 54
+toggleBtn.Parent = toggleBg
+
+toggleBtn.MouseButton1Click:Connect(function()
+    highlightEnabled = not highlightEnabled
+    if highlightEnabled then
+        TweenService:Create(toggleBg, TweenInfo.new(0.2), {BackgroundColor3 = T.Success}):Play()
+        TweenService:Create(toggleKnob, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, -8)}):Play()
+    else
+        TweenService:Create(toggleBg, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 65, 75)}):Play()
+        TweenService:Create(toggleKnob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -8)}):Play()
+        clearHighlight()
+    end
+end)
+
+-- ══════════════════════════════════════════════════
+--   ⚙️ منطق الكلبشة
+-- ══════════════════════════════════════════════════
+
+local bindKey = Enum.KeyCode.E
+local isBinding = false
+local lastCuffTime = 0
+
+local function getClosestPlayer()
+    local closest, shortest = nil, CUFF_RANGE
+    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character then
+            local root = plr.Character:FindFirstChild("HumanoidRootPart")
+            local hum = plr.Character:FindFirstChild("Humanoid")
+            if root and hum and hum.Health > 0 then
+                local dist = (root.Position - myRoot.Position).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = plr
+                end
+            end
+        end
+    end
+    return closest
+end
+
+task.spawn(function()
+    while gui.Parent do
+        if highlightEnabled then
+            local target = getClosestPlayer()
+            if target then
+                if activeHlPlayer ~= target or not activeHlObj or not activeHlObj.Parent then
+                    clearHighlight()
+                    activeHlPlayer = target
+                    activeHlObj = Instance.new("Highlight")
+                    activeHlObj.FillColor = Color3.fromRGB(255, 40, 40)
+                    activeHlObj.OutlineColor = Color3.fromRGB(255, 0, 0)
+                    activeHlObj.FillTransparency = 0.4
+                    activeHlObj.OutlineTransparency = 0
+                    activeHlObj.Parent = target.Character
+                end
+            else
+                clearHighlight()
+            end
+        end
+        task.wait(0.1)
+    end
+end)
+
+local function executeCuff()
+    -- حماية ضد الضغط المزدوج (0.15 ثانية فقط)
+    local now = tick()
+    if now - lastCuffTime < CUFF_COOLDOWN then return end
+    lastCuffTime = now
+
+    local target = getClosestPlayer()
+    if not target then
+        setStatus("لا يوجد لاعب قريب (10 متر)", T.Danger, T.Danger)
+        task.delay(1, function()
+            setStatus("جاهز للكلبش", T.SubText, T.Success)
+        end)
+        return
+    end
+
+    -- ⚡⚡ إطلاق فوري أولاً (بدون أي تأخير) ⚡⚡
+    local ok = pcall(function()
+        local remote = RS.BetweenSides.Remotes.Events.CuffsHandler
+        if remote then
+            remote:FireServer("TOGGLE_CUFF", target.Character)
+        end
+    end)
+
+    -- ثم تحديث الحالة (لا يؤثر على السرعة)
+    if ok then
+        setStatus("✓ تم كلبش " .. target.Name, T.Success, T.Success)
+    else
+        setStatus("✕ فشل الكلبش", T.Danger, T.Danger)
+    end
+
+    task.delay(1.2, function()
+        setStatus("جاهز للكلبش", T.SubText, T.Success)
+    end)
+end
+
+cuffBtn.MouseButton1Click:Connect(function()
+    local mx = UserInputService:GetMouseLocation()
+    ripple(cuffBtn, mx.X - cuffBtn.AbsolutePosition.X, mx.Y - cuffBtn.AbsolutePosition.Y)
+    executeCuff()
+end)
+
+keyBtn.MouseButton1Click:Connect(function()
+    if isBinding then return end
+    isBinding = true
+    keyBtn.Text = "..."
+    keyBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    keyStroke.Color = T.SubText
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    if isBinding then
+        bindKey = input.KeyCode
+        keyBtn.Text = tostring(bindKey.Name)
+        keyBtn.BackgroundColor3 = T.Header1
+        keyStroke.Color = T.Gold
+        isBinding = false
+        return
+    end
+
+    if input.KeyCode == bindKey then
+        ripple(cuffBtn, cuffBtn.AbsoluteSize.X / 2, cuffBtn.AbsoluteSize.Y / 2)
+        executeCuff()
+    end
+end)
+
+-- ───────── Entrance ─────────
+task.wait(0.08)
+TweenService:Create(main, TweenInfo.new(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = EXPANDED}):Play()
+TweenService:Create(shadow, TweenInfo.new(0.55, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+    Size = EXPANDED, BackgroundTransparency = 0.55
+}):Play()
