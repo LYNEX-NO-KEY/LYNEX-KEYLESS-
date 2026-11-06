@@ -13,142 +13,253 @@ local guiName = "AdminSmartDetector"
 if CoreGui:FindFirstChild(guiName) then CoreGui:FindFirstChild(guiName):Destroy() end
 
 -- ==========================================
--- 1. الألوان والتصميم 
+-- 🎨 PREMIUM PALETTE
 -- ==========================================
-local ColorBg = Color3.fromRGB(13, 15, 23)         
-local ColorTitleBar = Color3.fromRGB(20, 24, 38)   
-local ColorAccent = Color3.fromRGB(0, 210, 255)    
-local ColorAccentDark = Color3.fromRGB(0, 150, 200)
-local ColorText = Color3.fromRGB(255, 255, 255)    
-local ColorTextDim = Color3.fromRGB(140, 150, 170) 
-local ColorCard = Color3.fromRGB(25, 30, 48)       
-local ColorBtnOff = Color3.fromRGB(35, 42, 60)     
-local ColorRed = Color3.fromRGB(255, 60, 90)       
+local ColorBg1 = Color3.fromRGB(10, 12, 22)
+local ColorBg2 = Color3.fromRGB(22, 18, 38)
+local ColorTitleBar1 = Color3.fromRGB(16, 20, 34)
+local ColorTitleBar2 = Color3.fromRGB(30, 24, 48)
+local ColorAccent = Color3.fromRGB(80, 200, 255)
+local ColorAccent2 = Color3.fromRGB(180, 100, 255)
+local ColorText = Color3.fromRGB(240, 245, 255)
+local ColorTextDim = Color3.fromRGB(120, 132, 160)
+local ColorCard = Color3.fromRGB(20, 24, 40)
+local ColorCardHover = Color3.fromRGB(30, 35, 56)
+local ColorBtnOff = Color3.fromRGB(36, 42, 62)
+local ColorBorder = Color3.fromRGB(48, 55, 82)
+local ColorRed = Color3.fromRGB(255, 85, 120)
+local ColorGreen = Color3.fromRGB(80, 230, 145)
+
+local function createGradient(parent, c1, c2, rotation)
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new(c1, c2)
+    grad.Rotation = rotation or 90
+    grad.Parent = parent
+    return grad
+end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = guiName
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = CoreGui
 
+-- ==========================================
+-- 💫 GLOW BEHIND MAIN FRAME
+-- ==========================================
+local GlowFrame = Instance.new("Frame")
+GlowFrame.Size = UDim2.new(0, 280, 0, 360)
+GlowFrame.Position = UDim2.new(0.5, -140, 0.5, -180)
+GlowFrame.BackgroundColor3 = ColorAccent2
+GlowFrame.BackgroundTransparency = 0.85
+GlowFrame.BorderSizePixel = 0
+GlowFrame.ZIndex = 0
+GlowFrame.Parent = ScreenGui
+local GlowCorner = Instance.new("UICorner")
+GlowCorner.CornerRadius = UDim.new(0, 24)
+GlowCorner.Parent = GlowFrame
+
+-- ==========================================
+-- 🪟 MAIN FRAME
+-- ==========================================
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 240, 0, 310) 
-MainFrame.Position = UDim2.new(0.5, -120, 0.5, -155) 
-MainFrame.BackgroundColor3 = ColorBg
+MainFrame.Size = UDim2.new(0, 260, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -170)
+MainFrame.BackgroundColor3 = ColorBg1
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.ClipsDescendants = true 
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
+createGradient(MainFrame, ColorBg1, ColorBg2, 135)
 
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Color = ColorAccent
-UIStroke.Thickness = 1
-UIStroke.Transparency = 0.6 
+UIStroke.Thickness = 1.5
+UIStroke.Transparency = 0.2
 UIStroke.Parent = MainFrame
+createGradient(UIStroke, ColorAccent, ColorAccent2, 45)
+
+MainFrame:GetPropertyChangedSignal("Position"):Connect(function()
+    GlowFrame.Position = MainFrame.Position + UDim2.new(0, -10, 0, -10)
+end)
+MainFrame:GetPropertyChangedSignal("Size"):Connect(function()
+    GlowFrame.Size = MainFrame.Size + UDim2.new(0, 20, 0, 20)
+end)
 
 -- ==========================================
--- 2. الشريط العلوي
+-- 🏷️ TITLE BAR
 -- ==========================================
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 35)
-TitleBar.BackgroundColor3 = ColorTitleBar
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = ColorTitleBar1
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.CornerRadius = UDim.new(0, 14)
 TitleCorner.Parent = TitleBar
 
-local TitleGradient = Instance.new("UIGradient")
-TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, ColorTitleBar),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 35, 55))
-})
-TitleGradient.Parent = TitleBar
-
 local BottomCover = Instance.new("Frame")
-BottomCover.Size = UDim2.new(1, 0, 0, 10)
-BottomCover.Position = UDim2.new(0, 0, 1, -10)
-BottomCover.BackgroundColor3 = ColorTitleBar
+BottomCover.Size = UDim2.new(1, 0, 0, 14)
+BottomCover.Position = UDim2.new(0, 0, 1, -14)
+BottomCover.BackgroundColor3 = ColorTitleBar2
 BottomCover.BorderSizePixel = 0
 BottomCover.Parent = TitleBar
 
-local BottomCoverGradient = Instance.new("UIGradient")
-BottomCoverGradient.Color = TitleGradient.Color
-BottomCoverGradient.Parent = BottomCover
+local TitleGrad = createGradient(TitleBar, ColorTitleBar1, ColorTitleBar2, 90)
 
+task.spawn(function()
+    while TitleBar.Parent do
+        TitleGrad.Offset = TitleGrad.Offset + Vector2.new(0.003, 0)
+        task.wait(0.05)
+    end
+end)
+
+-- Logo
+local LogoFrame = Instance.new("Frame")
+LogoFrame.Size = UDim2.new(0, 26, 0, 26)
+LogoFrame.Position = UDim2.new(0, 8, 0.5, -13)
+LogoFrame.BackgroundColor3 = ColorAccent
+LogoFrame.BackgroundTransparency = 0.85
+LogoFrame.BorderSizePixel = 0
+LogoFrame.Parent = TitleBar
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(0, 8)
+LogoCorner.Parent = LogoFrame
+local LogoStroke = Instance.new("UIStroke")
+LogoStroke.Thickness = 1
+LogoStroke.Transparency = 0.3
+LogoStroke.Parent = LogoFrame
+createGradient(LogoStroke, ColorAccent, ColorAccent2, 45)
+
+local LogoIcon = Instance.new("TextLabel")
+LogoIcon.Size = UDim2.new(1, 0, 1, 0)
+LogoIcon.BackgroundTransparency = 1
+LogoIcon.Text = "🛡"
+LogoIcon.TextSize = 14
+LogoIcon.Parent = LogoFrame
+
+-- Title
 local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-TitleLabel.Position = UDim2.new(0, 12, 0, 0)
+TitleLabel.Size = UDim2.new(1, -130, 1, 0)
+TitleLabel.Position = UDim2.new(0, 42, 0, 0)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "🛡️ كاشف الادمن"
-TitleLabel.TextColor3 = ColorAccent
+TitleLabel.Text = "كاشف الادمن"
+TitleLabel.TextColor3 = ColorText
 TitleLabel.TextSize = 13
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TitleLabel.ZIndex = 2
 TitleLabel.Parent = TitleBar
 
+-- Count badge
+local CountBadge = Instance.new("Frame")
+CountBadge.Size = UDim2.new(0, 26, 0, 18)
+CountBadge.Position = UDim2.new(0, 128, 0.5, -9)
+CountBadge.BackgroundColor3 = ColorAccent
+CountBadge.BackgroundTransparency = 0.8
+CountBadge.BorderSizePixel = 0
+CountBadge.ZIndex = 2
+CountBadge.Parent = TitleBar
+local CountCorner = Instance.new("UICorner")
+CountCorner.CornerRadius = UDim.new(1, 0)
+CountCorner.Parent = CountBadge
+
+local CountLabel = Instance.new("TextLabel")
+CountLabel.Size = UDim2.new(1, 0, 1, 0)
+CountLabel.BackgroundTransparency = 1
+CountLabel.Text = "0"
+CountLabel.TextColor3 = ColorAccent
+CountLabel.TextSize = 11
+CountLabel.Font = Enum.Font.GothamBold
+CountLabel.ZIndex = 3
+CountLabel.Parent = CountBadge
+
+-- Minimize
 local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 22, 0, 22)
-MinimizeBtn.Position = UDim2.new(1, -28, 0, 6)
+MinimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+MinimizeBtn.Position = UDim2.new(1, -30, 0.5, -12)
 MinimizeBtn.BackgroundColor3 = ColorBtnOff
 MinimizeBtn.Text = "−"
 MinimizeBtn.TextColor3 = ColorText
 MinimizeBtn.TextSize = 16
 MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.BorderSizePixel = 0
-MinimizeBtn.ZIndex = 2
+MinimizeBtn.ZIndex = 3
 MinimizeBtn.Parent = TitleBar
-local MinCorner = Instance.new("UICorner") MinCorner.CornerRadius = UDim.new(0, 6) MinCorner.Parent = MinimizeBtn
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 8)
+MinCorner.Parent = MinimizeBtn
+
+MinimizeBtn.MouseEnter:Connect(function()
+    TweenService:Create(MinimizeBtn, TweenInfo.new(0.15), {BackgroundColor3 = ColorRed}):Play()
+end)
+MinimizeBtn.MouseLeave:Connect(function()
+    TweenService:Create(MinimizeBtn, TweenInfo.new(0.15), {BackgroundColor3 = ColorBtnOff}):Play()
+end)
 
 -- ==========================================
--- 3. شريط التبويبات (Tabs)
+-- 🎯 TABS (Sliding Pill)
 -- ==========================================
 local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1, 0, 0, 30)
-TabBar.Position = UDim2.new(0, 0, 0, 35)
-TabBar.BackgroundColor3 = ColorTitleBar
+TabBar.Size = UDim2.new(1, -16, 0, 32)
+TabBar.Position = UDim2.new(0, 8, 0, 44)
+TabBar.BackgroundColor3 = ColorCard
+TabBar.BackgroundTransparency = 0.4
 TabBar.BorderSizePixel = 0
 TabBar.Parent = MainFrame
+local TabBarCorner = Instance.new("UICorner")
+TabBarCorner.CornerRadius = UDim.new(0, 10)
+TabBarCorner.Parent = TabBar
 
-local TabLine = Instance.new("Frame") 
-TabLine.Size = UDim2.new(0.5, 0, 0, 2)
-TabLine.Position = UDim2.new(0, 0, 1, -2)
-TabLine.BackgroundColor3 = ColorAccent
-TabLine.BorderSizePixel = 0
-TabLine.Parent = TabBar
+local TabIndicator = Instance.new("Frame")
+TabIndicator.Size = UDim2.new(0.5, -6, 1, -6)
+TabIndicator.Position = UDim2.new(0, 3, 0, 3)
+TabIndicator.BackgroundColor3 = ColorAccent
+TabIndicator.BorderSizePixel = 0
+TabIndicator.ZIndex = 1
+TabIndicator.Parent = TabBar
+local IndCorner = Instance.new("UICorner")
+IndCorner.CornerRadius = UDim.new(0, 8)
+IndCorner.Parent = TabIndicator
+local IndGrad = createGradient(TabIndicator, ColorAccent, ColorAccent2, 45)
+IndGrad.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.3),
+    NumberSequenceKeypoint.new(1, 0.3),
+})
 
 local Tab1Btn = Instance.new("TextButton")
 Tab1Btn.Size = UDim2.new(0.5, 0, 1, 0)
 Tab1Btn.BackgroundTransparency = 1
-Tab1Btn.Text = "أدوات الكشف"
-Tab1Btn.TextColor3 = ColorAccent
+Tab1Btn.Text = "🎯 أدوات الكشف"
+Tab1Btn.TextColor3 = ColorText
 Tab1Btn.Font = Enum.Font.GothamBold
-Tab1Btn.TextSize = 12
+Tab1Btn.TextSize = 11
+Tab1Btn.ZIndex = 2
 Tab1Btn.Parent = TabBar
 
 local Tab2Btn = Instance.new("TextButton")
 Tab2Btn.Size = UDim2.new(0.5, 0, 1, 0)
 Tab2Btn.Position = UDim2.new(0.5, 0, 0, 0)
 Tab2Btn.BackgroundTransparency = 1
-Tab2Btn.Text = "بيانات الإدارة"
+Tab2Btn.Text = "👥 بيانات الإدارة"
 Tab2Btn.TextColor3 = ColorTextDim
 Tab2Btn.Font = Enum.Font.GothamBold
-Tab2Btn.TextSize = 12
+Tab2Btn.TextSize = 11
+Tab2Btn.ZIndex = 2
 Tab2Btn.Parent = TabBar
 
 local ContentFrame = Instance.new("Frame")
-ContentFrame.Size = UDim2.new(1, 0, 1, -65)
-ContentFrame.Position = UDim2.new(0, 0, 0, 65)
+ContentFrame.Size = UDim2.new(1, 0, 1, -84)
+ContentFrame.Position = UDim2.new(0, 0, 0, 84)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
 -- ==========================================
--- 4. تبويب أدوات الكشف (ESP)
+-- 🎛️ ESP TAB (Toggle Switches)
 -- ==========================================
 local ESPFrame = Instance.new("Frame")
 ESPFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -156,29 +267,110 @@ ESPFrame.BackgroundTransparency = 1
 ESPFrame.Visible = true
 ESPFrame.Parent = ContentFrame
 
-local function createToggleButton(text, yPos)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.9, 0, 0, 35)
-    btn.Position = UDim2.new(0.5, 0, 0, yPos)
-    btn.BackgroundColor3 = ColorBtnOff
-    btn.Text = text .. ": OFF"
-    btn.TextColor3 = ColorTextDim
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.BorderSizePixel = 0
-    btn.AnchorPoint = Vector2.new(0.5, 0)
-    btn.Parent = ESPFrame
-    local corner = Instance.new("UICorner") corner.CornerRadius = UDim.new(0, 8) corner.Parent = btn
-    local stroke = Instance.new("UIStroke") stroke.Color = Color3.fromRGB(60, 60, 70) stroke.Thickness = 1 stroke.Parent = btn
-    return btn, stroke
+local function createToggle(icon, label, yPos)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0.92, 0, 0, 46)
+    container.Position = UDim2.new(0.5, 0, 0, yPos)
+    container.AnchorPoint = Vector2.new(0.5, 0)
+    container.BackgroundColor3 = ColorCard
+    container.BorderSizePixel = 0
+    container.Parent = ESPFrame
+    local cCorner = Instance.new("UICorner")
+    cCorner.CornerRadius = UDim.new(0, 10)
+    cCorner.Parent = container
+    local cStroke = Instance.new("UIStroke")
+    cStroke.Color = ColorBorder
+    cStroke.Thickness = 1
+    cStroke.Transparency = 0.5
+    cStroke.Parent = container
+
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(0, 30, 1, 0)
+    iconLabel.Position = UDim2.new(0, 10, 0, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon
+    iconLabel.TextSize = 16
+    iconLabel.Parent = container
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, -100, 1, 0)
+    txt.Position = UDim2.new(0, 44, 0, 0)
+    txt.BackgroundTransparency = 1
+    txt.Text = label
+    txt.TextColor3 = ColorText
+    txt.TextSize = 12
+    txt.Font = Enum.Font.GothamMedium
+    txt.TextXAlignment = Enum.TextXAlignment.Left
+    txt.Parent = container
+
+    local track = Instance.new("Frame")
+    track.Size = UDim2.new(0, 38, 0, 22)
+    track.Position = UDim2.new(1, -48, 0.5, -11)
+    track.BackgroundColor3 = ColorBtnOff
+    track.BorderSizePixel = 0
+    track.Parent = container
+    local trackCorner = Instance.new("UICorner")
+    trackCorner.CornerRadius = UDim.new(1, 0)
+    trackCorner.Parent = track
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 18, 0, 18)
+    knob.Position = UDim2.new(0, 2, 0.5, -9)
+    knob.BackgroundColor3 = ColorTextDim
+    knob.BorderSizePixel = 0
+    knob.Parent = track
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = knob
+
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.Parent = container
+
+    local toggle = {container = container, state = false}
+
+    function toggle.setState(on)
+        toggle.state = on
+        if on then
+            TweenService:Create(track, TweenInfo.new(0.2), {BackgroundColor3 = ColorAccent}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -20, 0.5, -9), BackgroundColor3 = ColorText}):Play()
+            TweenService:Create(cStroke, TweenInfo.new(0.2), {Color = ColorAccent, Transparency = 0.3}):Play()
+        else
+            TweenService:Create(track, TweenInfo.new(0.2), {BackgroundColor3 = ColorBtnOff}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -9), BackgroundColor3 = ColorTextDim}):Play()
+            TweenService:Create(cStroke, TweenInfo.new(0.2), {Color = ColorBorder, Transparency = 0.5}):Play()
+        end
+    end
+
+    clickBtn.MouseEnter:Connect(function()
+        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundColor3 = ColorCardHover}):Play()
+    end)
+    clickBtn.MouseLeave:Connect(function()
+        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundColor3 = ColorCard}):Play()
+    end)
+
+    return toggle, clickBtn
 end
 
-local HighlightBtn, HLStroke = createToggleButton("التحديد الأحمر", 15)
-local TextBtn, TextStroke = createToggleButton("كلمة (أدمن)", 60)
-local LineBtn, LineStroke = createToggleButton("خط الكشف", 105)
+local HighlightToggle, HighlightClick = createToggle("🔴", "التحديد الأحمر", 10)
+local TextToggle, TextClick = createToggle("👑", "كلمة (أدمن)", 64)
+local LineToggle, LineClick = createToggle("📏", "خط الكشف", 118)
+
+local hintLabel = Instance.new("TextLabel")
+hintLabel.Size = UDim2.new(0.92, 0, 0, 18)
+hintLabel.Position = UDim2.new(0.5, 0, 0, 172)
+hintLabel.AnchorPoint = Vector2.new(0.5, 0)
+hintLabel.BackgroundTransparency = 1
+hintLabel.Text = "فعّل أي ميزة بضغطة واحدة"
+hintLabel.TextColor3 = ColorTextDim
+hintLabel.TextSize = 10
+hintLabel.Font = Enum.Font.Gotham
+hintLabel.Parent = ESPFrame
 
 -- ==========================================
--- 5. تبويب بيانات الإدارة
+-- 👥 INFO TAB
 -- ==========================================
 local InfoFrame = Instance.new("Frame")
 InfoFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -189,69 +381,208 @@ InfoFrame.Parent = ContentFrame
 local ListFrame = Instance.new("ScrollingFrame")
 ListFrame.Size = UDim2.new(1, -16, 1, -16)
 ListFrame.Position = UDim2.new(0, 8, 0, 8)
-ListFrame.BackgroundColor3 = ColorBg
+ListFrame.BackgroundColor3 = ColorCard
+ListFrame.BackgroundTransparency = 0.5
 ListFrame.BorderSizePixel = 0
 ListFrame.ScrollBarThickness = 3
 ListFrame.ScrollBarImageColor3 = ColorAccent
+ListFrame.ScrollBarImageTransparency = 0.3
 ListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 ListFrame.Parent = InfoFrame
-local ListCorner = Instance.new("UICorner") ListCorner.CornerRadius = UDim.new(0, 6) ListCorner.Parent = ListFrame
+local ListCorner = Instance.new("UICorner")
+ListCorner.CornerRadius = UDim.new(0, 10)
+ListCorner.Parent = ListFrame
 
 local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ListFrame
 
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 6)
+UIPadding.PaddingLeft = UDim.new(0, 6)
+UIPadding.PaddingRight = UDim.new(0, 6)
+UIPadding.Parent = ListFrame
+
 -- ==========================================
--- 6. منطق التبويبات
+-- 🔀 TAB SWITCHING
 -- ==========================================
-local function switchTab(tabNum)
-    if tabNum == 1 then
+local function switchTab(n)
+    if n == 1 then
         ESPFrame.Visible = true
         InfoFrame.Visible = false
-        TweenService:Create(TabLine, TweenInfo.new(0.3), {Position = UDim2.new(0, 0, 1, -2)}):Play()
-        Tab1Btn.TextColor3 = ColorAccent
+        TweenService:Create(TabIndicator, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Position = UDim2.new(0, 3, 0, 3)}):Play()
+        Tab1Btn.TextColor3 = ColorText
         Tab2Btn.TextColor3 = ColorTextDim
     else
         ESPFrame.Visible = false
         InfoFrame.Visible = true
-        TweenService:Create(TabLine, TweenInfo.new(0.3), {Position = UDim2.new(0.5, 0, 1, -2)}):Play()
+        TweenService:Create(TabIndicator, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 3, 0, 3)}):Play()
         Tab1Btn.TextColor3 = ColorTextDim
-        Tab2Btn.TextColor3 = ColorAccent
+        Tab2Btn.TextColor3 = ColorText
     end
 end
 
 Tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
 Tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 
--- التصغير
+-- ==========================================
+-- 🔽 MINIMIZE
+-- ==========================================
 local isMinimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     if isMinimized then
         TabBar.Visible = false
         ContentFrame.Visible = false
-        BottomCover.Visible = false 
-        MainFrame:TweenSize(UDim2.new(0, 240, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        BottomCover.Visible = false
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
         MinimizeBtn.Text = "+"
     else
-        MainFrame:TweenSize(UDim2.new(0, 240, 0, 310), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
-        task.wait(0.1) 
+        MainFrame:TweenSize(UDim2.new(0, 260, 0, 340), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        task.wait(0.1)
         TabBar.Visible = true
         ContentFrame.Visible = true
-        BottomCover.Visible = true 
+        BottomCover.Visible = true
         MinimizeBtn.Text = "−"
     end
 end)
 
 -- ==========================================
--- 7. منطق الكشف الذكي (أدوات + السيرفر)
+-- 🔔 NOTIFICATIONS
 -- ==========================================
-local detectedAdmins = {} 
+local notifContainer = Instance.new("Frame")
+notifContainer.Size = UDim2.new(0, 240, 0, 600)
+notifContainer.Position = UDim2.new(1, -250, 1, -10)
+notifContainer.AnchorPoint = Vector2.new(0, 1)
+notifContainer.BackgroundTransparency = 1
+notifContainer.Parent = ScreenGui
+
+local notifCards = {}
+
+local function refreshNotifs(skipIndex)
+    for i, card in ipairs(notifCards) do
+        if card and card.Parent then
+            local fb = #notifCards - i + 1
+            local targetY = -fb * 64
+            if i == skipIndex then
+                TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Position = UDim2.new(0, 0, 1, targetY)}):Play()
+            else
+                TweenService:Create(card, TweenInfo.new(0.3), {Position = UDim2.new(0, 0, 1, targetY)}):Play()
+            end
+        end
+    end
+end
+
+local function showNotification(icon, title, subtitle, color)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, 0, 0, 58)
+    card.BackgroundColor3 = ColorCard
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Parent = notifContainer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = card
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Transparency = 0.2
+    stroke.Parent = card
+    createGradient(stroke, color, ColorAccent2, 45)
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(0, 4, 1, -12)
+    bar.Position = UDim2.new(0, 6, 0, 6)
+    bar.BackgroundColor3 = color
+    bar.BorderSizePixel = 0
+    bar.Parent = card
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(1, 0)
+    barCorner.Parent = bar
+
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(0, 34, 1, 0)
+    iconLabel.Position = UDim2.new(0, 14, 0, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon
+    iconLabel.TextSize = 20
+    iconLabel.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -56, 0, 22)
+    titleLabel.Position = UDim2.new(0, 48, 0, 6)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = color
+    titleLabel.TextSize = 12
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = card
+
+    local subLabel = Instance.new("TextLabel")
+    subLabel.Size = UDim2.new(1, -56, 0, 18)
+    subLabel.Position = UDim2.new(0, 48, 0, 27)
+    subLabel.BackgroundTransparency = 1
+    subLabel.Text = subtitle
+    subLabel.TextColor3 = ColorTextDim
+    subLabel.TextSize = 10
+    subLabel.Font = Enum.Font.Gotham
+    subLabel.TextXAlignment = Enum.TextXAlignment.Left
+    subLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    subLabel.Parent = card
+
+    local progressBg = Instance.new("Frame")
+    progressBg.Size = UDim2.new(1, -12, 0, 2)
+    progressBg.Position = UDim2.new(0, 6, 1, -5)
+    progressBg.BackgroundColor3 = ColorBtnOff
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = card
+    local pbCorner = Instance.new("UICorner")
+    pbCorner.CornerRadius = UDim.new(1, 0)
+    pbCorner.Parent = progressBg
+
+    local progress = Instance.new("Frame")
+    progress.Size = UDim2.new(1, 0, 1, 0)
+    progress.BackgroundColor3 = color
+    progress.BorderSizePixel = 0
+    progress.Parent = progressBg
+    local pCorner = Instance.new("UICorner")
+    pCorner.CornerRadius = UDim.new(1, 0)
+    pCorner.Parent = progress
+
+    TweenService:Create(progress, TweenInfo.new(3.5, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
+
+    table.insert(notifCards, card)
+    local idx = #notifCards
+    card.Position = UDim2.new(1, 300, 1, -idx * 64)
+    refreshNotifs(idx)
+
+    task.delay(3.5, function()
+        if not card or not card.Parent then return end
+        local outTween = TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
+            {Position = UDim2.new(1, 300, card.Position.Y.Scale, card.Position.Y.Offset)})
+        outTween.Completed:Connect(function()
+            for i, c in ipairs(notifCards) do
+                if c == card then table.remove(notifCards, i) break end
+            end
+            if card then card:Destroy() end
+            refreshNotifs()
+        end)
+        outTween:Play()
+    end)
+end
+
+-- ==========================================
+-- 🧠 DETECTION LOGIC (نفس الوظائف)
+-- ==========================================
+local detectedAdmins = {}
 local activeHighlights = {}
 local activeBillboards = {}
-local activeLines = {} 
-local adminCards = {} 
+local activeLines = {}
+local adminCards = {}
+local cardDistanceLabels = {}
+local trackedCharacters = {}
 
 local isHighlightActive = false
 local isTextActive = false
@@ -289,49 +620,84 @@ end
 
 local function createAdminCard(plr)
     if adminCards[plr] then return end
-    
+
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 50)
+    card.Size = UDim2.new(1, 0, 0, 62)
     card.BackgroundColor3 = ColorCard
     card.BorderSizePixel = 0
     card.Parent = ListFrame
-    local cardCorner = Instance.new("UICorner") cardCorner.CornerRadius = UDim.new(0, 6) cardCorner.Parent = card
-    local cardStroke = Instance.new("UIStroke") cardStroke.Color = ColorAccent cardStroke.Thickness = 1 cardStroke.Transparency = 0.8 cardStroke.Parent = card
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 8)
+    cardCorner.Parent = card
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Thickness = 1
+    cardStroke.Transparency = 0.6
+    cardStroke.Parent = card
+    createGradient(cardStroke, ColorAccent, ColorAccent2, 45)
 
     local avatar = Instance.new("ImageLabel")
-    avatar.Size = UDim2.new(0, 40, 0, 40)
-    avatar.Position = UDim2.new(0, 5, 0, 5) 
-    avatar.BackgroundColor3 = ColorBg
+    avatar.Size = UDim2.new(0, 48, 0, 48)
+    avatar.Position = UDim2.new(0, 7, 0.5, -24)
+    avatar.BackgroundColor3 = ColorBg1
     avatar.BorderSizePixel = 0
     avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. plr.UserId .. "&w=150&h=150"
     avatar.Parent = card
-    local avatarCorner = Instance.new("UICorner") avatarCorner.CornerRadius = UDim.new(1, 0) avatarCorner.Parent = avatar
+    local avatarCorner = Instance.new("UICorner")
+    avatarCorner.CornerRadius = UDim.new(1, 0)
+    avatarCorner.Parent = avatar
+    local avatarStroke = Instance.new("UIStroke")
+    avatarStroke.Thickness = 2
+    avatarStroke.Parent = avatar
+    createGradient(avatarStroke, ColorAccent, ColorAccent2, 45)
 
     local displayName = Instance.new("TextLabel")
-    displayName.Size = UDim2.new(1, -55, 0, 15)
-    displayName.Position = UDim2.new(0, 50, 0, 5) 
+    displayName.Size = UDim2.new(1, -140, 0, 16)
+    displayName.Position = UDim2.new(0, 62, 0, 8)
     displayName.BackgroundTransparency = 1
     displayName.Text = plr.DisplayName
     displayName.TextColor3 = ColorText
-    displayName.TextSize = 11
+    displayName.TextSize = 12
     displayName.Font = Enum.Font.GothamBold
     displayName.TextXAlignment = Enum.TextXAlignment.Left
+    displayName.TextTruncate = Enum.TextTruncate.AtEnd
     displayName.Parent = card
 
+    local distBadge = Instance.new("Frame")
+    distBadge.Size = UDim2.new(0, 56, 0, 16)
+    distBadge.Position = UDim2.new(1, -62, 0, 8)
+    distBadge.BackgroundColor3 = ColorAccent
+    distBadge.BackgroundTransparency = 0.85
+    distBadge.BorderSizePixel = 0
+    distBadge.Parent = card
+    local dbCorner = Instance.new("UICorner")
+    dbCorner.CornerRadius = UDim.new(1, 0)
+    dbCorner.Parent = distBadge
+
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Size = UDim2.new(1, 0, 1, 0)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Text = "—"
+    distanceLabel.TextColor3 = ColorAccent
+    distanceLabel.TextSize = 10
+    distanceLabel.Font = Enum.Font.GothamBold
+    distanceLabel.Parent = distBadge
+    cardDistanceLabels[plr] = distanceLabel
+
     local username = Instance.new("TextLabel")
-    username.Size = UDim2.new(1, -55, 0, 15)
-    username.Position = UDim2.new(0, 50, 0, 18)
+    username.Size = UDim2.new(1, -70, 0, 14)
+    username.Position = UDim2.new(0, 62, 0, 26)
     username.BackgroundTransparency = 1
     username.Text = "@" .. plr.Name
     username.TextColor3 = ColorAccent
     username.TextSize = 10
-    username.Font = Enum.Font.Gotham
+    username.Font = Enum.Font.GothamMedium
     username.TextXAlignment = Enum.TextXAlignment.Left
+    username.TextTruncate = Enum.TextTruncate.AtEnd
     username.Parent = card
 
     local idLabel = Instance.new("TextLabel")
-    idLabel.Size = UDim2.new(1, -55, 0, 15)
-    idLabel.Position = UDim2.new(0, 50, 0, 31)
+    idLabel.Size = UDim2.new(1, -70, 0, 14)
+    idLabel.Position = UDim2.new(0, 62, 0, 42)
     idLabel.BackgroundTransparency = 1
     idLabel.Text = "ID: " .. plr.UserId
     idLabel.TextColor3 = ColorTextDim
@@ -340,24 +706,38 @@ local function createAdminCard(plr)
     idLabel.TextXAlignment = Enum.TextXAlignment.Left
     idLabel.Parent = card
 
+    card.MouseEnter:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = ColorCardHover}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
+    end)
+    card.MouseLeave:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.15), {BackgroundColor3 = ColorCard}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.15), {Transparency = 0.6}):Play()
+    end)
+
+    card.Size = UDim2.new(1, 0, 0, 0)
+    TweenService:Create(card, TweenInfo.new(0.3, Enum.EasingStyle.Back), {Size = UDim2.new(1, 0, 0, 62)}):Play()
+
     adminCards[plr] = card
 end
 
 local function removeAdminCard(plr)
     if adminCards[plr] then adminCards[plr]:Destroy() adminCards[plr] = nil end
+    if cardDistanceLabels[plr] then cardDistanceLabels[plr] = nil end
 end
 
 local function applyHighlight(plr)
     if not plr.Character or activeHighlights[plr] then return end
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = plr.Character
-    highlight.FillColor = ColorRed
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = CoreGui
-    activeHighlights[plr] = highlight
+    local h = Instance.new("Highlight")
+    h.Adornee = plr.Character
+    h.FillColor = ColorRed
+    h.OutlineColor = ColorAccent
+    h.FillTransparency = 0.5
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = CoreGui
+    activeHighlights[plr] = h
 end
+
 local function removeHighlight(plr)
     if activeHighlights[plr] then activeHighlights[plr]:Destroy() activeHighlights[plr] = nil end
 end
@@ -366,24 +746,24 @@ local function applyText(plr)
     if not plr.Character or activeBillboards[plr] then return end
     local head = plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
     if not head then return end
-    local billboard = Instance.new("BillboardGui")
-    billboard.Size = UDim2.new(0, 120, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = head
-    billboard.Parent = CoreGui
-    local txt = Instance.new("TextLabel")
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    -- ⚠️ هنا التعديل: غيرنا النص إلى "ادمن" فقط
-    txt.Text = "👑 ادمن 👑" 
-    txt.TextColor3 = ColorAccent
-    txt.TextStrokeTransparency = 0
-    txt.Font = Enum.Font.GothamBold
-    txt.TextSize = 14
-    txt.Parent = billboard
-    activeBillboards[plr] = billboard
+    local bb = Instance.new("BillboardGui")
+    bb.Size = UDim2.new(0, 120, 0, 30)
+    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+    bb.AlwaysOnTop = true
+    bb.Adornee = head
+    bb.Parent = CoreGui
+    local t = Instance.new("TextLabel")
+    t.Size = UDim2.new(1, 0, 1, 0)
+    t.BackgroundTransparency = 1
+    t.Text = "👑 ادمن 👑"
+    t.TextColor3 = ColorAccent
+    t.TextStrokeTransparency = 0
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 14
+    t.Parent = bb
+    activeBillboards[plr] = bb
 end
+
 local function removeText(plr)
     if activeBillboards[plr] then activeBillboards[plr]:Destroy() activeBillboards[plr] = nil end
 end
@@ -391,28 +771,29 @@ end
 local function applyLine(plr)
     if not plr.Character or activeLines[plr] then return end
     if Drawing then
-        local line = Drawing.new("Line")
-        line.Visible = false
-        line.Thickness = 2
-        line.Color = ColorAccent
-        line.Transparency = 0.6
-        activeLines[plr] = line
+        local l = Drawing.new("Line")
+        l.Visible = false
+        l.Thickness = 2
+        l.Color = ColorAccent
+        l.Transparency = 0.6
+        activeLines[plr] = l
     end
 end
+
 local function removeLine(plr)
     if activeLines[plr] then activeLines[plr]:Remove() activeLines[plr] = nil end
 end
 
 RunService.RenderStepped:Connect(function()
     if not isLineActive then return end
-    local screenSize = camera.ViewportSize
-    local startPos = Vector2.new(screenSize.X / 2, screenSize.Y)
+    local ss = camera.ViewportSize
+    local startPos = Vector2.new(ss.X / 2, ss.Y)
     for plr, line in pairs(activeLines) do
         if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local screenPos, onScreen = camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-            if onScreen then
+            local sp, onS = camera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if onS then
                 line.From = startPos
-                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                line.To = Vector2.new(sp.X, sp.Y)
                 line.Visible = true
             else
                 line.Visible = false
@@ -423,113 +804,155 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+local pulseConn = nil
+local function startPulse()
+    if pulseConn then return end
+    pulseConn = RunService.Heartbeat:Connect(function()
+        local a = (math.sin(tick() * 3) + 1) / 2
+        local tr = 0.25 + a * 0.45
+        for _, h in pairs(activeHighlights) do
+            if h and h.Parent then h.FillTransparency = tr end
+        end
+    end)
+end
+
+local function stopPulse()
+    if pulseConn then pulseConn:Disconnect() pulseConn = nil end
+    for _, h in pairs(activeHighlights) do
+        if h and h.Parent then h.FillTransparency = 0.5 end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        local myPos
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            myPos = player.Character.HumanoidRootPart.Position
+        end
+        for plr, lbl in pairs(cardDistanceLabels) do
+            if lbl and lbl.Parent then
+                if myPos and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local d = math.floor((plr.Character.HumanoidRootPart.Position - myPos).Magnitude)
+                    lbl.Text = d .. "m"
+                else
+                    lbl.Text = "—"
+                end
+            end
+        end
+    end
+end)
+
 local function scanLoop()
-    while task.wait(1.5) do 
+    while task.wait(1.5) do
         local currentAdmins = {}
-        
-        -- 1. فحص الكلبشة الحقيقية
+
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= player and hasAdminHandcuffs(plr) then
                 currentAdmins[plr] = true
             end
         end
-        
-        -- 2. جلب الأدمن من السيرفر (الرموت)
-        local serverAdmins = fetchServerAdmins()
-        if type(serverAdmins) == "table" then
-            for _, adminName in pairs(serverAdmins) do
-                local targetPlr = Players:FindFirstChild(tostring(adminName))
-                if targetPlr then
-                    currentAdmins[targetPlr] = true
-                end
+
+        local srvAdmins = fetchServerAdmins()
+        if type(srvAdmins) == "table" then
+            for _, aName in pairs(srvAdmins) do
+                local t = Players:FindFirstChild(tostring(aName))
+                if t then currentAdmins[t] = true end
             end
         end
-        
-        -- 3. تطبيق التحديدات
+
         for plr in pairs(currentAdmins) do
+            local isNew = not detectedAdmins[plr]
             detectedAdmins[plr] = true
             createAdminCard(plr)
+
+            if trackedCharacters[plr] ~= plr.Character then
+                trackedCharacters[plr] = plr.Character
+                removeHighlight(plr) removeText(plr) removeLine(plr)
+            end
+
+            if isNew then
+                local n = plr.DisplayName or plr.Name or "أدمن"
+                showNotification("👑", "أدمن جديد", n .. " دخل الكشف", ColorAccent)
+            end
+
             if isHighlightActive then applyHighlight(plr) end
             if isTextActive then applyText(plr) end
             if isLineActive then applyLine(plr) end
         end
-        
-        -- 4. تنظيف اللي خرجوا
+
         for plr in pairs(detectedAdmins) do
             if not currentAdmins[plr] then
-                detectedAdmins[plr] = nil
-                removeAdminCard(plr)
-                removeHighlight(plr)
-                removeText(plr)
-                removeLine(plr)
+                local alive = plr.Parent ~= nil and plr.Character
+                    and plr.Character:FindFirstChild("Humanoid")
+                    and plr.Character.Humanoid.Health > 0
+                if alive then
+                    local n = plr.DisplayName or plr.Name or "أدمن"
+                    detectedAdmins[plr] = nil
+                    trackedCharacters[plr] = nil
+                    removeAdminCard(plr) removeHighlight(plr) removeText(plr) removeLine(plr)
+                    showNotification("🚪", "خرج من الكشف", n .. " لم يعد أدمن", ColorRed)
+                end
             end
         end
-        
+
+        local count = 0
+        for _ in pairs(detectedAdmins) do count = count + 1 end
+        CountLabel.Text = tostring(count)
+
         ListFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
     end
 end
 task.spawn(scanLoop)
 
-HighlightBtn.MouseButton1Click:Connect(function()
+-- ==========================================
+-- 🎛️ TOGGLE HANDLERS
+-- ==========================================
+HighlightClick.MouseButton1Click:Connect(function()
     isHighlightActive = not isHighlightActive
+    HighlightToggle.setState(isHighlightActive)
     if isHighlightActive then
-        HighlightBtn.Text = "التحديد الأحمر: ON"
-        HighlightBtn.BackgroundColor3 = ColorAccentDark
-        HighlightBtn.TextColor3 = ColorText
-        HLStroke.Color = ColorAccent
         for plr in pairs(detectedAdmins) do applyHighlight(plr) end
+        startPulse()
     else
-        HighlightBtn.Text = "التحديد الأحمر: OFF"
-        HighlightBtn.BackgroundColor3 = ColorBtnOff
-        HighlightBtn.TextColor3 = ColorTextDim
-        HLStroke.Color = Color3.fromRGB(60, 60, 70)
+        stopPulse()
         for plr in pairs(activeHighlights) do removeHighlight(plr) end
     end
 end)
 
-TextBtn.MouseButton1Click:Connect(function()
+TextClick.MouseButton1Click:Connect(function()
     isTextActive = not isTextActive
+    TextToggle.setState(isTextActive)
     if isTextActive then
-        TextBtn.Text = "كلمة (أدمن): ON"
-        TextBtn.BackgroundColor3 = ColorAccentDark
-        TextBtn.TextColor3 = ColorText
-        TextStroke.Color = ColorAccent
         for plr in pairs(detectedAdmins) do applyText(plr) end
     else
-        TextBtn.Text = "كلمة (أدمن): OFF"
-        TextBtn.BackgroundColor3 = ColorBtnOff
-        TextBtn.TextColor3 = ColorTextDim
-        TextStroke.Color = Color3.fromRGB(60, 60, 70)
         for plr in pairs(activeBillboards) do removeText(plr) end
     end
 end)
 
-LineBtn.MouseButton1Click:Connect(function()
+LineClick.MouseButton1Click:Connect(function()
     isLineActive = not isLineActive
+    LineToggle.setState(isLineActive)
     if isLineActive then
-        LineBtn.Text = "خط الكشف: ON"
-        LineBtn.BackgroundColor3 = ColorAccentDark
-        LineBtn.TextColor3 = ColorText
-        LineStroke.Color = ColorAccent
         for plr in pairs(detectedAdmins) do applyLine(plr) end
     else
-        LineBtn.Text = "خط الكشف: OFF"
-        LineBtn.BackgroundColor3 = ColorBtnOff
-        LineBtn.TextColor3 = ColorTextDim
-        LineStroke.Color = Color3.fromRGB(60, 60, 70)
         for plr in pairs(activeLines) do removeLine(plr) end
     end
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
+    if detectedAdmins[plr] then
+        local n = plr.DisplayName or plr.Name or "أدمن"
+        showNotification("👋", "غادر السيرفر", n, ColorRed)
+    end
     detectedAdmins[plr] = nil
-    removeAdminCard(plr)
-    removeHighlight(plr)
-    removeText(plr)
-    removeLine(plr)
+    trackedCharacters[plr] = nil
+    removeAdminCard(plr) removeHighlight(plr) removeText(plr) removeLine(plr)
 end)
 
--- السحب
+-- ==========================================
+-- 🖱️ DRAG
+-- ==========================================
 local dragging, dragInput, dragStart, startPos
 TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -548,7 +971,7 @@ TitleBar.InputChanged:Connect(function(input)
 end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        local d = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
     end
 end)
