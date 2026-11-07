@@ -9,6 +9,20 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+-- ═══════════════ إيقاف النسخة القديمة ═══════════════
+
+local env = (getgenv and getgenv()) or _G
+if env.FlyPC_Cleanup then
+    pcall(env.FlyPC_Cleanup)
+    env.FlyPC_Cleanup = nil
+end
+
+local connections = {}
+local function track(conn)
+    table.insert(connections, conn)
+    return conn
+end
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -411,13 +425,45 @@ end
 -- ═══════════════ نظام الطيران ═══════════════
 
 local function cleanupFly()
-    if bv then bv:Destroy() bv = nil end
-    if bg then bg:Destroy() bg = nil end
+    if bv then pcall(function() bv:Destroy() end) bv = nil end
+    if bg then pcall(function() bg:Destroy() end) bg = nil end
+end
+
+-- ينشئ الأجسام، أو يعيد إنشاءها إذا اللعبة حذفتها
+local function ensureBodies()
+    if not hrp or not hrp.Parent then return false end
+
+    if not bv or not bv.Parent then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "FlyVelocity"
+        bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+        bv.P = 1250
+        bv.Velocity = Vector3.zero
+        bv.Parent = hrp
+    end
+
+    if not bg or not bg.Parent then
+        bg = Instance.new("BodyGyro")
+        bg.Name = "FlyGyro"
+        bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+        bg.P = 9000
+        bg.D = 500
+        bg.CFrame = workspace.CurrentCamera.CFrame
+        bg.Parent = hrp
+    end
+
+    return true
 end
 
 local function stopFly()
     flying = false
     cleanupFly()
+
+    if character then
+        local hum = character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = false end
+    end
+
     toggleBtn.Text = "تشغيل الطيران"
     TweenService:Create(toggleBtn, TweenInfo.new(0.2), {
         BackgroundColor3 = Color3.fromRGB(55, 170, 90)
@@ -428,30 +474,30 @@ end
 local function startFly()
     if flying then return end
     local hum = refreshChar()
-    if not hum or hum.Health <= 0 then return end
+    if not hum or hum.Health <= 0 then
+        print("[Fly PC] الشخصية غير جاهزة")
+        return
+    end
     cleanupFly()
 
-    bv = Instance.new("BodyVelocity")
-    bv.Name = "FlyVelocity"
-    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
-    bv.P = 1250
-    bv.Velocity = Vector3.zero
-    bv.Parent = hrp
-
-    bg = Instance.new("BodyGyro")
-    bg.Name = "FlyGyro"
-    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-    bg.P = 9000
-    bg.D = 500
-    bg.CFrame = workspace.CurrentCamera.CFrame
-    bg.Parent = hrp
-
     flying = true
+    ensureBodies()
+    hum.PlatformStand = true
+
     toggleBtn.Text = "إيقاف الطيران"
     TweenService:Create(toggleBtn, TweenInfo.new(0.2), {
         BackgroundColor3 = Color3.fromRGB(200, 65, 65)
     }):Play()
     toggleStroke.Color = Color3.fromRGB(240, 90, 90)
+end
+
+local function toggleFly()
+    local ok, err = pcall(function()
+        if flying then stopFly() else startFly() end
+    end)
+    if not ok then
+        warn("[Fly PC] error: " .. tostring(err))
+    end
 end
 
 -- ═══════════════ نظام سرعة المشي ═══════════════
@@ -513,7 +559,7 @@ end
 
 refreshChar()
 
-player.CharacterAdded:Connect(function(c)
+track(player.CharacterAdded:Connect(function(c)
     stopFly()
     speedBoostActive = false
     setSpeedBoostVisual(false)
@@ -529,7 +575,7 @@ player.CharacterAdded:Connect(function(c)
         speedBoostActive = false
         setSpeedBoostVisual(false)
     end)
-end)
+end))
 
 if character then
     local hum = character:FindFirstChildOfClass("Humanoid")
@@ -542,19 +588,17 @@ if character then
     end
 end
 
-player.CharacterRemoving:Connect(function()
+track(player.CharacterRemoving:Connect(function()
     stopFly()
     speedBoostActive = false
     setSpeedBoostVisual(false)
     character = nil
     hrp = nil
-end)
+end))
 
 -- ═══════════════ أزرار الواجهة ═══════════════
 
-toggleBtn.MouseButton1Click:Connect(function()
-    if flying then stopFly() else startFly() end
-end)
+toggleBtn.MouseButton1Click:Connect(toggleFly)
 
 toggleBtn.MouseEnter:Connect(function()
     local c = flying and Color3.fromRGB(220, 80, 80)
@@ -613,27 +657,23 @@ infJumpBtn.MouseLeave:Connect(function()
     end
 end)
 
-RunService.Stepped:Connect(function()
+-- القفز يحدث فقط لما يكون مفعّل، وبيتوقف فورًا لما تعطّله
+track(UIS.JumpRequest:Connect(function()
     if not infJump or flying then return end
     if not character or not character.Parent then return end
 
-    if UIS:IsKeyDown(Enum.KeyCode.Space) then
-        local hum = character:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health > 0 then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then
+        hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
-end)
+end))
 
 -- ═══════════════ حركة الطيران ═══════════════
 
-RunService.RenderStepped:Connect(function()
+track(RunService.RenderStepped:Connect(function()
     if not flying then return end
 
-    if not character or not character.Parent
-        or not hrp or not hrp.Parent
-        or not bv or not bv.Parent
-        or not bg or not bg.Parent then
+    if not character or not character.Parent or not hrp or not hrp.Parent then
         stopFly()
         return
     end
@@ -646,6 +686,9 @@ RunService.RenderStepped:Connect(function()
 
     local cam = workspace.CurrentCamera
     if not cam then return end
+
+    -- إعادة إنشاء الأجسام إذا اللعبة حذفتها
+    ensureBodies()
 
     local dir = Vector3.zero
 
@@ -660,18 +703,33 @@ RunService.RenderStepped:Connect(function()
         dir = dir.Unit
     end
 
-    bv.Velocity = dir * flySpeed
-    bg.CFrame = cam.CFrame
-end)
+    local vel = dir * flySpeed
+
+    if bv and bv.Parent then bv.Velocity = vel end
+    if bg and bg.Parent then bg.CFrame = cam.CFrame end
+
+    -- طريقة احتياط بحال اللعبة منعت الأجسام
+    hrp.AssemblyLinearVelocity = vel
+end))
 
 -- ═══════════════ اختصارات لوحة المفاتيح ═══════════════
 
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
+track(UIS.InputBegan:Connect(function(input, gp)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    -- إذا كنت مركّز على خانة من خانات السكربت، نفك التركيز بدل ما نتجاهل المفتاح
+    local focused = UIS:GetFocusedTextBox()
+    if focused then
+        if focused == speedBox or focused == walkBox then
+            focused:ReleaseFocus()
+        else
+            return
+        end
+    end
 
     -- F: طيران
     if input.KeyCode == Enum.KeyCode.F then
-        if flying then stopFly() else startFly() end
+        toggleFly()
 
     -- G: قفز لانهائي
     elseif input.KeyCode == Enum.KeyCode.G then
@@ -690,7 +748,7 @@ UIS.InputBegan:Connect(function(input, gp)
             deactivateSpeedBoost()
         end
     end
-end)
+end))
 
 -- ═══════════════ حقول السرعة ═══════════════
 
@@ -828,7 +886,7 @@ titleBar.InputBegan:Connect(function(input)
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
+track(UIS.InputChanged:Connect(function(input)
     if not dragging then return end
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
@@ -845,14 +903,39 @@ UIS.InputChanged:Connect(function(input)
 
         main.Position = UDim2.new(0, newX, 0, newY)
     end
-end)
+end))
 
-UIS.InputEnded:Connect(function(input)
+track(UIS.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
     end
-end)
+end))
+
+-- ═══════════════ تنظيف عند إعادة التشغيل ═══════════════
+
+env.FlyPC_Cleanup = function()
+    for _, c in ipairs(connections) do
+        pcall(function() c:Disconnect() end)
+    end
+    connections = {}
+
+    infJump = false
+    flying = false
+    cleanupFly()
+
+    if character then
+        local hum = character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+            if speedBoostActive then
+                hum.WalkSpeed = originalWalkSpeed
+            end
+        end
+    end
+
+    if gui then gui:Destroy() end
+end
 
 -- ═══════════════ رسالة التحميل ═══════════════
 
