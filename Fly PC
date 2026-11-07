@@ -1,20 +1,23 @@
+
 -- ══════════════════════════════════════════
 --   [ Fly PC + Infinite Jump + Info Popup ]
 --   Fly: F | Up: Q | Down: E | Infinite Jump: G
+--   Improved Flight System
 -- ══════════════════════════════════════════
 
-local Players      = game:GetService("Players")
-local UIS          = game:GetService("UserInputService")
-local RunService   = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
-local player    = Players.LocalPlayer
+local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local old = playerGui:FindFirstChild("FlyPCGui")
 if old then old:Destroy() end
 
 -- ═══════════════ الواجهة الرئيسية ═══════════════
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "FlyPCGui"
 gui.ResetOnSpawn = false
@@ -193,6 +196,7 @@ infoStroke.Transparency = 0.35
 infoStroke.Parent = infoBtn
 
 -- ═══════════════ نافذة المعلومات ═══════════════
+
 local popup = Instance.new("Frame")
 popup.Name = "InfoPopup"
 popup.Size = UDim2.new(0, 340, 0, 360)
@@ -244,7 +248,7 @@ closeBtn.TextSize = 14
 closeBtn.BorderSizePixel = 0
 closeBtn.AutoButtonColor = false
 closeBtn.ZIndex = 22
-closeBtn.Parent = popupTitleBar
+closeBtn.Parent = popup
 
 local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 6)
@@ -262,7 +266,6 @@ instrTitle.TextSize = 14
 instrTitle.ZIndex = 21
 instrTitle.Parent = popup
 
--- ✅ التعليمات محدّثة بمفاتيح Q / E
 local instrContent = Instance.new("TextLabel")
 instrContent.Size = UDim2.new(1, -24, 0, 130)
 instrContent.Position = UDim2.new(0, 12, 0, 72)
@@ -275,7 +278,7 @@ instrContent.Text = [[
 • E ← الهبوط (تحت)
 • Space ← قفز لانهائي (وضع G)
 • اسحب الواجهة من شريط العنوان
-• زر  −  تصغير  /  +  تكبير]]
+• زر − تصغير / + تكبير]]
 instrContent.TextColor3 = Color3.fromRGB(210, 210, 230)
 instrContent.TextXAlignment = Enum.TextXAlignment.Left
 instrContent.TextYAlignment = Enum.TextYAlignment.Top
@@ -326,7 +329,7 @@ local impContent = Instance.new("TextLabel")
 impContent.Size = UDim2.new(1, -16, 0, 84)
 impContent.Position = UDim2.new(0, 8, 0, 32)
 impContent.BackgroundTransparency = 1
-impContent.Text = "هذا السكربت (الطيران والقفز اللانهائي) مخصص للكمبيوتر (PC) فقط، ولا يعمل على الجوال أو الأجهزة اللوحية."
+impContent.Text = "هذا السكربت مخصص للكمبيوتر (PC) فقط، ولا يعمل على الجوال أو الأجهزة اللوحية."
 impContent.TextColor3 = Color3.fromRGB(255, 200, 200)
 impContent.TextXAlignment = Enum.TextXAlignment.Left
 impContent.TextYAlignment = Enum.TextYAlignment.Top
@@ -336,75 +339,163 @@ impContent.TextWrapped = true
 impContent.ZIndex = 22
 impContent.Parent = importantBox
 
--- ═══════════════ منطق الطيران ═══════════════
-local flying, flySpeed, infJump = false, 80, false
+-- ═══════════════ نظام الطيران المحسّن ═══════════════
+
+local flying = false
+local flySpeed = 80
+local infJump = false
+
 local bv, bg
 local character, hrp
 
 local function refreshChar()
     character = player.Character or player.CharacterAdded:Wait()
+
+    local hum = character:WaitForChild("Humanoid")
     hrp = character:WaitForChild("HumanoidRootPart")
+
+    return hum
 end
-refreshChar()
 
-player.CharacterAdded:Connect(function(c)
-    character = c
-    hrp = c:WaitForChild("HumanoidRootPart")
-    if flying then
-        flying = false
-        bv = nil; bg = nil
-        toggleBtn.Text = "تشغيل الطيران"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(55, 170, 90)
-        toggleStroke.Color = Color3.fromRGB(90, 220, 130)
+local function cleanupFly()
+    if bv then
+        bv:Destroy()
+        bv = nil
     end
-end)
 
-local function startFly()
-    if not hrp or not hrp.Parent then refreshChar() end
-    flying = true
-    bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bv.Parent = hrp
-    bg = Instance.new("BodyGyro")
-    bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-    bg.Parent = hrp
-    toggleBtn.Text = "إيقاف الطيران"
-    TweenService:Create(toggleBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(200, 65, 65) }):Play()
-    toggleStroke.Color = Color3.fromRGB(240, 90, 90)
+    if bg then
+        bg:Destroy()
+        bg = nil
+    end
 end
 
 local function stopFly()
     flying = false
-    if bv then bv:Destroy(); bv = nil end
-    if bg then bg:Destroy(); bg = nil end
+    cleanupFly()
+
     toggleBtn.Text = "تشغيل الطيران"
-    TweenService:Create(toggleBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(55, 170, 90) }):Play()
+
+    TweenService:Create(toggleBtn, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(55, 170, 90)
+    }):Play()
+
     toggleStroke.Color = Color3.fromRGB(90, 220, 130)
 end
 
+local function startFly()
+    if flying then return end
+
+    local hum = refreshChar()
+
+    if not hum or hum.Health <= 0 then
+        return
+    end
+
+    cleanupFly()
+
+    bv = Instance.new("BodyVelocity")
+    bv.Name = "FlyVelocity"
+    bv.MaxForce = Vector3.new(1e6, 1e6, 1e6)
+    bv.P = 1250
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
+
+    bg = Instance.new("BodyGyro")
+    bg.Name = "FlyGyro"
+    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+    bg.P = 9000
+    bg.D = 500
+    bg.CFrame = workspace.CurrentCamera.CFrame
+    bg.Parent = hrp
+
+    flying = true
+
+    toggleBtn.Text = "إيقاف الطيران"
+
+    TweenService:Create(toggleBtn, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(200, 65, 65)
+    }):Play()
+
+    toggleStroke.Color = Color3.fromRGB(240, 90, 90)
+end
+
+refreshChar()
+
+player.CharacterAdded:Connect(function(c)
+    stopFly()
+
+    character = c
+    hrp = nil
+
+    local hum = c:WaitForChild("Humanoid")
+    hrp = c:WaitForChild("HumanoidRootPart")
+
+    hum.Died:Connect(function()
+        stopFly()
+    end)
+end)
+
+if character then
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Died:Connect(function()
+            stopFly()
+        end)
+    end
+end
+
+player.CharacterRemoving:Connect(function()
+    stopFly()
+    character = nil
+    hrp = nil
+end)
+
 toggleBtn.MouseButton1Click:Connect(function()
-    if flying then stopFly() else startFly() end
+    if flying then
+        stopFly()
+    else
+        startFly()
+    end
 end)
 
 toggleBtn.MouseEnter:Connect(function()
-    local c = flying and Color3.fromRGB(220, 80, 80) or Color3.fromRGB(70, 195, 110)
-    TweenService:Create(toggleBtn, TweenInfo.new(0.15), { BackgroundColor3 = c }):Play()
+    local c = flying and Color3.fromRGB(220, 80, 80)
+        or Color3.fromRGB(70, 195, 110)
+
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = c
+    }):Play()
 end)
+
 toggleBtn.MouseLeave:Connect(function()
-    local c = flying and Color3.fromRGB(200, 65, 65) or Color3.fromRGB(55, 170, 90)
-    TweenService:Create(toggleBtn, TweenInfo.new(0.15), { BackgroundColor3 = c }):Play()
+    local c = flying and Color3.fromRGB(200, 65, 65)
+        or Color3.fromRGB(55, 170, 90)
+
+    TweenService:Create(toggleBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = c
+    }):Play()
 end)
+
+-- ═══════════════ القفز اللانهائي ═══════════════
 
 local function updateInfJumpBtn()
     if infJump then
         infJumpBtn.Text = "قفز لانهائي: مفعل"
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(55, 170, 90) }):Play()
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
+
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(55, 170, 90),
+            TextColor3 = Color3.fromRGB(255, 255, 255)
+        }):Play()
+
         infJumpStroke.Color = Color3.fromRGB(90, 220, 130)
     else
         infJumpBtn.Text = "قفز لانهائي: معطل"
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(45, 55, 75) }):Play()
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), { TextColor3 = Color3.fromRGB(200, 200, 220) }):Play()
+
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(45, 55, 75),
+            TextColor3 = Color3.fromRGB(200, 200, 220)
+        }):Play()
+
         infJumpStroke.Color = Color3.fromRGB(80, 90, 120)
     end
 end
@@ -416,60 +507,133 @@ end)
 
 infJumpBtn.MouseEnter:Connect(function()
     if not infJump then
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(60, 75, 100) }):Play()
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), {
+            BackgroundColor3 = Color3.fromRGB(60, 75, 100)
+        }):Play()
     end
 end)
+
 infJumpBtn.MouseLeave:Connect(function()
     if not infJump then
-        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(45, 55, 75) }):Play()
+        TweenService:Create(infJumpBtn, TweenInfo.new(0.15), {
+            BackgroundColor3 = Color3.fromRGB(45, 55, 75)
+        }):Play()
     end
 end)
 
 RunService.Stepped:Connect(function()
     if not infJump or flying then return end
     if not character or not character.Parent then return end
+
     if UIS:IsKeyDown(Enum.KeyCode.Space) then
         local hum = character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+
+        if hum and hum.Health > 0 then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
     end
 end)
 
--- ═══════════ حلقة حركة الطيران (Q = فوق / E = تحت) ═══════════
+-- ═══════════════ حركة الطيران ═══════════════
+
 RunService.RenderStepped:Connect(function()
-    if not flying or not bv or not bg or not hrp or not hrp.Parent then return end
+    if not flying then return end
+
+    if not character or not character.Parent
+        or not hrp or not hrp.Parent
+        or not bv or not bv.Parent
+        or not bg or not bg.Parent then
+
+        stopFly()
+        return
+    end
+
+    local hum = character:FindFirstChildOfClass("Humanoid")
+
+    if not hum or hum.Health <= 0 then
+        stopFly()
+        return
+    end
+
     local cam = workspace.CurrentCamera
+    if not cam then return end
+
     local dir = Vector3.zero
-    if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
-    if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
-    if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
-    if UIS:IsKeyDown(Enum.KeyCode.Q) then dir += Vector3.new(0, 1, 0) end   -- ✅ Q صعود
-    if UIS:IsKeyDown(Enum.KeyCode.E) then dir -= Vector3.new(0, 1, 0) end   -- ✅ E هبوط
+
+    if UIS:IsKeyDown(Enum.KeyCode.W) then
+        dir += cam.CFrame.LookVector
+    end
+
+    if UIS:IsKeyDown(Enum.KeyCode.S) then
+        dir -= cam.CFrame.LookVector
+    end
+
+    if UIS:IsKeyDown(Enum.KeyCode.A) then
+        dir -= cam.CFrame.RightVector
+    end
+
+    if UIS:IsKeyDown(Enum.KeyCode.D) then
+        dir += cam.CFrame.RightVector
+    end
+
+    if UIS:IsKeyDown(Enum.KeyCode.Q) then
+        dir += Vector3.new(0, 1, 0)
+    end
+
+    if UIS:IsKeyDown(Enum.KeyCode.E) then
+        dir -= Vector3.new(0, 1, 0)
+    end
+
+    if dir.Magnitude > 0 then
+        dir = dir.Unit
+    end
+
     bv.Velocity = dir * flySpeed
     bg.CFrame = cam.CFrame
 end)
 
+-- ═══════════════ اختصارات لوحة المفاتيح ═══════════════
+
 UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
+
     if input.KeyCode == Enum.KeyCode.F then
-        if flying then stopFly() else startFly() end
+        if flying then
+            stopFly()
+        else
+            startFly()
+        end
+
     elseif input.KeyCode == Enum.KeyCode.G then
         infJump = not infJump
         updateInfJumpBtn()
     end
 end)
 
+-- ═══════════════ التحكم بالسرعة ═══════════════
+
 speedBox.FocusLost:Connect(function()
     local n = tonumber(speedBox.Text)
-    if n and n > 0 and n <= 1000 then flySpeed = n
-    else speedBox.Text = tostring(flySpeed) end
+
+    if n and n > 0 and n <= 1000 then
+        flySpeed = n
+    else
+        speedBox.Text = tostring(flySpeed)
+    end
 end)
 
+-- ═══════════════ نافذة المعلومات ═══════════════
+
 infoBtn.MouseEnter:Connect(function()
-    TweenService:Create(infoBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(75, 100, 150) }):Play()
+    TweenService:Create(infoBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(75, 100, 150)
+    }):Play()
 end)
+
 infoBtn.MouseLeave:Connect(function()
-    TweenService:Create(infoBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 75, 120) }):Play()
+    TweenService:Create(infoBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(55, 75, 120)
+    }):Play()
 end)
 
 infoBtn.MouseButton1Click:Connect(function()
@@ -478,28 +642,45 @@ infoBtn.MouseButton1Click:Connect(function()
     else
         popup.Visible = true
         popup.Size = UDim2.new(0, 300, 0, 320)
-        TweenService:Create(popup, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 340, 0, 360) }):Play()
+
+        TweenService:Create(
+            popup,
+            TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0, 340, 0, 360)}
+        ):Play()
     end
 end)
 
 closeBtn.MouseEnter:Connect(function()
-    TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(220, 80, 80) }):Play()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(220, 80, 80)
+    }):Play()
 end)
+
 closeBtn.MouseLeave:Connect(function()
-    TweenService:Create(closeBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(180, 60, 60) }):Play()
+    TweenService:Create(closeBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+    }):Play()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     popup.Visible = false
 end)
 
+-- ═══════════════ تصغير وتكبير الواجهة ═══════════════
+
 local minimized = false
+
 minBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
+
     if minimized then
-        TweenService:Create(main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 210, 0, 34) }):Play()
+        TweenService:Create(
+            main,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0, 210, 0, 34)}
+        ):Play()
+
         minBtn.Text = "+"
         toggleBtn.Visible = false
         infJumpBtn.Visible = false
@@ -507,8 +688,12 @@ minBtn.MouseButton1Click:Connect(function()
         infoBtn.Visible = false
         popup.Visible = false
     else
-        TweenService:Create(main, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            { Size = UDim2.new(0, 210, 0, 182) }):Play()
+        TweenService:Create(
+            main,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.new(0, 210, 0, 182)}
+        ):Play()
+
         minBtn.Text = "−"
         toggleBtn.Visible = true
         infJumpBtn.Visible = true
@@ -518,18 +703,26 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 
 minBtn.MouseEnter:Connect(function()
-    TweenService:Create(minBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(70, 70, 95) }):Play()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(70, 70, 95)
+    }):Play()
 end)
+
 minBtn.MouseLeave:Connect(function()
-    TweenService:Create(minBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(50, 50, 68) }):Play()
+    TweenService:Create(minBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(50, 50, 68)
+    }):Play()
 end)
+
+-- ═══════════════ سحب الواجهة ═══════════════
 
 local dragging = false
 local dragStart, startPos
 
 titleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or
-       input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
         dragging = true
         dragStart = input.Position
         startPos = main.Position
@@ -538,24 +731,33 @@ end)
 
 UIS.InputChanged:Connect(function(input)
     if not dragging then return end
-    if input.UserInputType == Enum.UserInputType.MouseMovement or
-       input.UserInputType == Enum.UserInputType.Touch then
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
         local delta = input.Position - dragStart
+
         local newX = startPos.X.Offset + delta.X
         local newY = startPos.Y.Offset + delta.Y
+
         local vp = workspace.CurrentCamera.ViewportSize
         local w, h = main.AbsoluteSize.X, main.AbsoluteSize.Y
+
         newX = math.clamp(newX, -w + 60, vp.X - 60)
         newY = math.clamp(newY, 0, vp.Y - 35)
+
         main.Position = UDim2.new(0, newX, 0, newY)
     end
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or
-       input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
         dragging = false
     end
 end)
+
+-- ═══════════════ رسالة التحميل ═══════════════
 
 print("[Fly PC] تم التحميل ✓ | F=طيران | Q=صعود | E=هبوط | G=قفز لانهائي")
