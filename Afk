@@ -1,0 +1,619 @@
+-- Services
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Settings
+local ROTATION_SPEED = 25
+local AFK_THRESHOLD = 1200
+local MOVE_STUDS = 1.2
+local MOVE_DURATION = 0.35
+
+-- Palette
+local C = {
+    bg1 = Color3.fromRGB(28, 28, 44),
+    bg2 = Color3.fromRGB(16, 16, 28),
+    card = Color3.fromRGB(38, 38, 58),
+    cardBg = Color3.fromRGB(30, 30, 48),
+    accent1 = Color3.fromRGB(139, 92, 246),
+    accent2 = Color3.fromRGB(59, 130, 246),
+    green = Color3.fromRGB(34, 197, 94),
+    yellow = Color3.fromRGB(250, 204, 21),
+    red = Color3.fromRGB(239, 68, 68),
+    text = Color3.fromRGB(248, 250, 252),
+    dim = Color3.fromRGB(148, 163, 184),
+    stroke = Color3.fromRGB(100, 100, 140),
+}
+
+-- Helpers
+local function make(class, props)
+    local o = Instance.new(class)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then o[k] = v end
+    end
+    if props.Parent then o.Parent = props.Parent end
+    return o
+end
+
+local function round(parent, r)
+    return make("UICorner", {CornerRadius = UDim.new(0, r or 8), Parent = parent})
+end
+
+local function tw(obj, props, dur)
+    TweenService:Create(obj, TweenInfo.new(dur or 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+end
+
+local function fmt(sec)
+    sec = math.floor(sec)
+    local h = math.floor(sec / 3600)
+    local m = math.floor((sec % 3600) / 60)
+    local s = sec % 60
+    return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+-- ============ UI BUILD ============
+local ScreenGui = make("ScreenGui", {
+    Name = "AntiAFK_Premium",
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    Parent = PlayerGui,
+})
+
+local shadow = make("Frame", {
+    Size = UDim2.new(0, 280, 0, 440),
+    Position = UDim2.new(0.5, -136, 0.5, -214),
+    BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+    BackgroundTransparency = 0.55,
+    BorderSizePixel = 0,
+    ZIndex = 1,
+    Parent = ScreenGui,
+})
+round(shadow, 16)
+
+local MainFrame = make("Frame", {
+    Name = "MainFrame",
+    Size = UDim2.new(0, 280, 0, 440),
+    Position = UDim2.new(0.5, -140, 0.5, -220),
+    BackgroundColor3 = C.bg1,
+    BorderSizePixel = 0,
+    Active = true,
+    Draggable = true,
+    ClipsDescendants = true,
+    ZIndex = 2,
+    Parent = ScreenGui,
+})
+round(MainFrame, 16)
+
+make("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.bg1),
+        ColorSequenceKeypoint.new(1, C.bg2),
+    }),
+    Rotation = 135,
+    Parent = MainFrame,
+})
+
+make("UIStroke", {
+    Color = C.stroke,
+    Thickness = 1,
+    Transparency = 0.5,
+    Parent = MainFrame,
+})
+
+-- Header
+local Header = make("Frame", {
+    Size = UDim2.new(1, 0, 0, 48),
+    BackgroundTransparency = 1,
+    ZIndex = 3,
+    Parent = MainFrame,
+})
+
+local accentBar = make("Frame", {
+    Size = UDim2.new(0, 4, 0, 24),
+    Position = UDim2.new(0, 14, 0, 12),
+    BackgroundColor3 = C.accent1,
+    BorderSizePixel = 0,
+    ZIndex = 4,
+    Parent = Header,
+})
+round(accentBar, 2)
+make("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.accent1),
+        ColorSequenceKeypoint.new(1, C.accent2),
+    }),
+    Rotation = 90,
+    Parent = accentBar,
+})
+
+make("TextLabel", {
+    Size = UDim2.new(0, 20, 0, 24),
+    Position = UDim2.new(0, 28, 0, 12),
+    BackgroundTransparency = 1,
+    Text = "⚡",
+    TextSize = 16,
+    ZIndex = 4,
+    Parent = Header,
+})
+
+make("TextLabel", {
+    Size = UDim2.new(1, -130, 0, 24),
+    Position = UDim2.new(0, 52, 0, 12),
+    BackgroundTransparency = 1,
+    Text = "Anti-AFK",
+    TextColor3 = C.text,
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 4,
+    Parent = Header,
+})
+
+local minBtn = make("TextButton", {
+    Size = UDim2.new(0, 26, 0, 26),
+    Position = UDim2.new(1, -62, 0, 11),
+    BackgroundColor3 = Color3.fromRGB(50, 50, 75),
+    Text = "–",
+    TextColor3 = C.text,
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    AutoButtonColor = false,
+    ZIndex = 4,
+    Parent = Header,
+})
+round(minBtn, 6)
+
+local closeBtn = make("TextButton", {
+    Size = UDim2.new(0, 26, 0, 26),
+    Position = UDim2.new(1, -32, 0, 11),
+    BackgroundColor3 = Color3.fromRGB(60, 30, 40),
+    Text = "✕",
+    TextColor3 = Color3.fromRGB(255, 150, 150),
+    TextSize = 13,
+    Font = Enum.Font.GothamBold,
+    AutoButtonColor = false,
+    ZIndex = 4,
+    Parent = Header,
+})
+round(closeBtn, 6)
+
+make("Frame", {
+    Size = UDim2.new(1, -28, 0, 1),
+    Position = UDim2.new(0, 14, 0, 48),
+    BackgroundColor3 = C.stroke,
+    BackgroundTransparency = 0.6,
+    BorderSizePixel = 0,
+    ZIndex = 3,
+    Parent = MainFrame,
+})
+
+-- Content
+local Content = make("Frame", {
+    Size = UDim2.new(1, 0, 1, -48),
+    Position = UDim2.new(0, 0, 0, 48),
+    BackgroundTransparency = 1,
+    ZIndex = 3,
+    Parent = MainFrame,
+})
+
+-- Toggle Button
+local btn = make("TextButton", {
+    Size = UDim2.new(1, -28, 0, 52),
+    Position = UDim2.new(0, 14, 0, 14),
+    BackgroundColor3 = C.accent1,
+    Text = "",
+    AutoButtonColor = false,
+    ZIndex = 4,
+    Parent = Content,
+})
+round(btn, 10)
+
+local btnGrad = make("UIGradient", {
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, C.accent1),
+        ColorSequenceKeypoint.new(1, C.accent2),
+    }),
+    Rotation = 0,
+    Parent = btn,
+})
+
+local btnStroke = make("UIStroke", {
+    Color = Color3.fromRGB(255, 255, 255),
+    Thickness = 1,
+    Transparency = 0.85,
+    Parent = btn,
+})
+
+local btnIcon = make("TextLabel", {
+    Size = UDim2.new(0, 30, 1, 0),
+    Position = UDim2.new(0, 14, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "▶",
+    TextColor3 = C.text,
+    TextSize = 16,
+    Font = Enum.Font.GothamBold,
+    ZIndex = 5,
+    Parent = btn,
+})
+
+local btnLabel = make("TextLabel", {
+    Size = UDim2.new(1, -60, 1, 0),
+    Position = UDim2.new(0, 50, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "تشغيل الحماية",
+    TextColor3 = C.text,
+    TextSize = 15,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Center,
+    ZIndex = 5,
+    Parent = btn,
+})
+
+-- Status row
+local statusRow = make("Frame", {
+    Size = UDim2.new(1, -28, 0, 20),
+    Position = UDim2.new(0, 14, 0, 78),
+    BackgroundTransparency = 1,
+    ZIndex = 4,
+    Parent = Content,
+})
+
+local statusDot = make("Frame", {
+    Size = UDim2.new(0, 8, 0, 8),
+    Position = UDim2.new(0, 0, 0.5, -4),
+    BackgroundColor3 = C.yellow,
+    BorderSizePixel = 0,
+    ZIndex = 5,
+    Parent = statusRow,
+})
+round(statusDot, 4)
+
+local statusLbl = make("TextLabel", {
+    Size = UDim2.new(1, -14, 1, 0),
+    Position = UDim2.new(0, 14, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "متوقف",
+    TextColor3 = C.dim,
+    TextSize = 12,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 5,
+    Parent = statusRow,
+})
+
+-- Stat card builder
+local function makeStatCard(yPos, icon, label, initialVal, valColor)
+    local card = make("Frame", {
+        Size = UDim2.new(1, -28, 0, 56),
+        Position = UDim2.new(0, 14, 0, yPos),
+        BackgroundColor3 = C.card,
+        BorderSizePixel = 0,
+        ZIndex = 4,
+        Parent = Content,
+    })
+    round(card, 10)
+    make("UIStroke", {
+        Color = C.stroke,
+        Thickness = 1,
+        Transparency = 0.75,
+        Parent = card,
+    })
+    make("TextLabel", {
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(0, 10, 0.5, -15),
+        BackgroundTransparency = 1,
+        Text = icon,
+        TextSize = 18,
+        ZIndex = 5,
+        Parent = card,
+    })
+    make("TextLabel", {
+        Size = UDim2.new(1, -56, 0, 14),
+        Position = UDim2.new(0, 46, 0, 8),
+        BackgroundTransparency = 1,
+        Text = label,
+        TextColor3 = C.dim,
+        TextSize = 11,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 5,
+        Parent = card,
+    })
+    return make("TextLabel", {
+        Size = UDim2.new(1, -56, 0, 22),
+        Position = UDim2.new(0, 46, 0, 24),
+        BackgroundTransparency = 1,
+        Text = initialVal,
+        TextColor3 = valColor or C.text,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 5,
+        Parent = card,
+    })
+end
+
+local runtimeVal = makeStatCard(106, "⏱", "وقت التشغيل", "00:00:00", Color3.fromRGB(147, 197, 253))
+local idleVal = makeStatCard(168, "👤", "منذ آخر نشاط", "00:00:00", Color3.fromRGB(167, 243, 208))
+local afkVal = makeStatCard(230, "🚨", "AFK منذ", "لا يوجد", Color3.fromRGB(134, 239, 172))
+
+-- Action row
+local actionRow = make("Frame", {
+    Size = UDim2.new(1, -28, 0, 20),
+    Position = UDim2.new(0, 14, 0, 292),
+    BackgroundTransparency = 1,
+    ZIndex = 4,
+    Parent = Content,
+})
+
+make("TextLabel", {
+    Size = UDim2.new(0, 20, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "🏃",
+    TextSize = 12,
+    ZIndex = 5,
+    Parent = actionRow,
+})
+
+local actionLbl = make("TextLabel", {
+    Size = UDim2.new(1, -24, 1, 0),
+    Position = UDim2.new(0, 24, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "الحركة: —",
+    TextColor3 = Color3.fromRGB(253, 224, 71),
+    TextSize = 12,
+    Font = Enum.Font.GothamMedium,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 5,
+    Parent = actionRow,
+})
+
+-- Progress bar
+local progressBg = make("Frame", {
+    Size = UDim2.new(1, -28, 0, 8),
+    Position = UDim2.new(0, 14, 0, 320),
+    BackgroundColor3 = Color3.fromRGB(40, 40, 60),
+    BorderSizePixel = 0,
+    ZIndex = 4,
+    Parent = Content,
+})
+round(progressBg, 4)
+
+local progressFill = make("Frame", {
+    Size = UDim2.new(0, 0, 1, 0),
+    BackgroundColor3 = C.green,
+    BorderSizePixel = 0,
+    ZIndex = 5,
+    Parent = progressBg,
+})
+round(progressFill, 4)
+
+local progressLbl = make("TextLabel", {
+    Size = UDim2.new(1, -28, 0, 16),
+    Position = UDim2.new(0, 14, 0, 334),
+    BackgroundTransparency = 1,
+    Text = "اقتراب الطرد: 0%",
+    TextColor3 = C.dim,
+    TextSize = 10,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 4,
+    Parent = Content,
+})
+
+make("TextLabel", {
+    Size = UDim2.new(1, -28, 0, 20),
+    Position = UDim2.new(0, 14, 0, 356),
+    BackgroundTransparency = 1,
+    Text = "دورة الحركة: أمام ← عودة",
+    TextColor3 = Color3.fromRGB(100, 100, 130),
+    TextSize = 10,
+    Font = Enum.Font.Gotham,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = 4,
+    Parent = Content,
+})
+
+-- ============ STATE ============
+local isEnabled = false
+local isMinimized = false
+local runtimeStart = tick()
+local lastActivity = tick()
+local afkDetectedAt = nil
+local currentAction = "—"
+
+local function registerActivity()
+    lastActivity = tick()
+    afkDetectedAt = nil
+end
+
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    local t = input.UserInputType
+    if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.MouseButton2
+    or t == Enum.UserInputType.Keyboard or t == Enum.UserInputType.Touch then
+        registerActivity()
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input, gpe)
+    if gpe then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+        registerActivity()
+    end
+end)
+
+-- Camera rotation
+RunService:BindToRenderStep("AntiAFK_RotateCam", Enum.RenderPriority.Camera.Value + 1, function(dt)
+    if not isEnabled then return end
+    local cam = workspace.CurrentCamera
+    if cam then
+        cam.CFrame = cam.CFrame * CFrame.Angles(0, math.rad(ROTATION_SPEED * dt), 0)
+    end
+end)
+
+-- Movement via CFrame
+local function interpolateTo(targetCF, duration)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local startCF = root.CFrame
+    local startTime = tick()
+    while true do
+        if not isEnabled then
+            local r = char:FindFirstChild("HumanoidRootPart")
+            if r then r.CFrame = targetCF end
+            return
+        end
+        local t = (tick() - startTime) / duration
+        if t >= 1 then
+            local r = char:FindFirstChild("HumanoidRootPart")
+            if r then r.CFrame = targetCF end
+            return
+        end
+        local r = char:FindFirstChild("HumanoidRootPart")
+        if not r then return end
+        r.CFrame = startCF:Lerp(targetCF, t)
+        RunService.RenderStepped:Wait()
+    end
+end
+
+local function doMovementCycle()
+    if not isEnabled then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not root or hum.Health <= 0 then return end
+
+    local originCF = root.CFrame
+    local forwardCF = originCF + originCF.LookVector * MOVE_STUDS
+
+    currentAction = "🚶 للأمام"
+    interpolateTo(forwardCF, MOVE_DURATION)
+    task.wait(0.15)
+    if not isEnabled then return end
+
+    currentAction = "↩️ عودة"
+    interpolateTo(originCF, MOVE_DURATION)
+    task.wait(0.15)
+    currentAction = "—"
+end
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        if isEnabled then
+            pcall(doMovementCycle)
+            task.wait(1.5)
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- AFK detection
+LocalPlayer.Idled:Connect(function()
+    if not afkDetectedAt then afkDetectedAt = tick() end
+    if isEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+-- Toggle logic
+local function updateToggleVisual()
+    if isEnabled then
+        btnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 50, 60)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 30, 40)),
+        })
+        btnIcon.Text = "■"
+        btnLabel.Text = "إيقاف الحماية"
+        statusDot.BackgroundColor3 = C.green
+        statusLbl.Text = "يعمل — حماية نشطة"
+        statusLbl.TextColor3 = C.green
+    else
+        btnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, C.accent1),
+            ColorSequenceKeypoint.new(1, C.accent2),
+        })
+        btnIcon.Text = "▶"
+        btnLabel.Text = "تشغيل الحماية"
+        statusDot.BackgroundColor3 = C.yellow
+        statusLbl.Text = "متوقف"
+        statusLbl.TextColor3 = C.dim
+    end
+end
+
+btn.MouseButton1Click:Connect(function()
+    isEnabled = not isEnabled
+    updateToggleVisual()
+end)
+
+-- Minimize
+minBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        Content.Visible = false
+        tw(MainFrame, {Size = UDim2.new(0, 280, 0, 52)}, 0.25)
+        minBtn.Text = "+"
+    else
+        Content.Visible = true
+        tw(MainFrame, {Size = UDim2.new(0, 280, 0, 440)}, 0.25)
+        minBtn.Text = "–"
+    end
+end)
+
+-- Close
+closeBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Update loop
+RunService.Heartbeat:Connect(function()
+    local now = tick()
+
+    runtimeVal.Text = fmt(now - runtimeStart)
+
+    local idle = now - lastActivity
+    idleVal.Text = fmt(idle)
+
+    if idle >= AFK_THRESHOLD and not afkDetectedAt then
+        afkDetectedAt = lastActivity + AFK_THRESHOLD
+    end
+
+    if afkDetectedAt then
+        afkVal.Text = fmt(now - afkDetectedAt)
+        afkVal.TextColor3 = C.red
+        idleVal.TextColor3 = Color3.fromRGB(253, 186, 116)
+    else
+        afkVal.Text = "لا يوجد"
+        afkVal.TextColor3 = Color3.fromRGB(134, 239, 172)
+        idleVal.TextColor3 = Color3.fromRGB(167, 243, 208)
+    end
+
+    local idlePct = math.clamp(idle / AFK_THRESHOLD, 0, 1)
+    progressFill.Size = UDim2.new(idlePct, 0, 1, 0)
+    if idlePct < 0.5 then
+        progressFill.BackgroundColor3 = C.green
+    elseif idlePct < 0.8 then
+        progressFill.BackgroundColor3 = C.yellow
+    else
+        progressFill.BackgroundColor3 = C.red
+    end
+    progressLbl.Text = string.format("اقتراب الطرد: %d%%", math.floor(idlePct * 100))
+
+    actionLbl.Text = "الحركة: " .. currentAction
+
+    -- Sync shadow
+    shadow.Position = MainFrame.Position + UDim2.new(0, 4, 0, 6)
+    shadow.Size = MainFrame.Size
+end)
+
+print("✅ Anti-AFK Premium جاهز")
